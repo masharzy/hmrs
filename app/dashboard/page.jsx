@@ -38,7 +38,7 @@ export default function Dashboard() {
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
  const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",username:"",password:"",assignedClasses:"6-a"});
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",section:"a",description:""});
- const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState("");
+ const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
 
  async function request(resource,opts){
@@ -103,6 +103,19 @@ export default function Dashboard() {
  }
  function chooseSubject(id){
   setMarkSubject(id);setMarkScores(resultMap[id]||{});
+ }
+ async function uploadSchoolPhoto(){
+  if(!uploadFile)return;
+  setWorking(true);setError("");setSuccess("");
+  try{
+   const formData=new FormData();formData.append("file",uploadFile);
+   const token=await firebaseAuth().currentUser.getIdToken();
+   const response=await fetch("/api/school-photo",{method:"POST",headers:{Authorization:"Bearer "+token},body:formData});
+   const output=await response.json();
+   if(!response.ok)throw Error(output.error||"ছবি আপলোড হয়নি");
+   setPhoto(output.photoUrl);setUploadFile(null);setSuccess("বিদ্যালয়ের ছবি আপলোড ও প্রকাশিত হয়েছে");
+   await refresh();
+  }catch(e){setError(e.message)}finally{setWorking(false)}
  }
  const print=()=>window.print();
  if(busy)return <div className="container" style={{padding:70,textAlign:"center"}}>ড্যাশবোর্ড লোড হচ্ছে...</div>;
@@ -206,7 +219,9 @@ export default function Dashboard() {
        <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>ইউজার আইডি</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.username||"—"}</td><td>{roleNames[u.role]}</td><td>{(u.assignedClasses||[]).join(", ")}</td></tr>)}</tbody></table></div></>}
        {tab==="settings"&&<><h2 className="section-title">বিদ্যালয়ের ওয়েবসাইট সেটিংস</h2><div className="panel p-6 grid gap-4">
         <div className="alert">বিদ্যালয়ের প্রকৃত ছবি HTTPS URL হিসেবে যুক্ত করুন। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
-        <Field label="প্রতিষ্ঠানের ছবির URL (HTTPS)"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
+        <Field label="প্রতিষ্ঠানের প্রকৃত ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
+        <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> ছবি আপলোড করুন</button>
+        <Field label="অথবা HTTPS ছবির URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
         <Field label="প্রতিষ্ঠানের সংক্ষিপ্ত পরিচিতি"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
         {photo&&<img src={photo} alt="বিদ্যালয়ের ছবি প্রিভিউ" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
         <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>সেটিংস সংরক্ষণ</button>

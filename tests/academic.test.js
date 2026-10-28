@@ -47,3 +47,15 @@ test("fourth subject grade F does not fail compulsory subjects", () => {
 test("transcript remains incomplete if any subject missing", () => {
   assert.equal(evaluateTranscript({ grade: 6 }, {}).complete, false);
 });
+
+test("overall GPA letter is not derived from raw marks percentage", () => {
+ const student = { grade: 6 };
+ const marks = {};
+ for (const s of getSubjects(6)) {
+   // 70% of each subject means GP 4 / overall letter A
+   marks[s.id] = Object.fromEntries(s.parts.map(p => [p.key, p.max * 0.7]));
+ }
+ const r = evaluateTranscript(student, marks);
+ assert.equal(r.gpa, 4);
+ assert.equal(r.letter, "A");
+});
