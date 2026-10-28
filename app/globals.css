@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f9f8;color:#172b40;font-family:"Noto Sans Bengali",Arial,sans-serif;font-size:14px}
+h1,h2,h3,p{margin-top:0}
+a{text-decoration:none}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+::selection{background:#b9dcd6}
+.container{width:min(1180px,calc(100% - 38px));margin:0 auto}
+.panel{background:#fff;border:1px solid #e3e9e7;border-radius:10px;box-shadow:0 5px 20px rgba(16,54,48,.025)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #d7e2e0;border-radius:6px;padding:10px 16px;font-weight:700;background:#fff;color:#173b38;transition:.16s}
+.btn:hover{background:#f2f8f6;border-color:#99c4b9}
+.btn.primary{background:#176b61;color:#fff;border-color:#176b61}
+.btn.primary:hover{background:#0f544c}
+.btn.dark{background:#172b40;color:white}
+.btn.sm{padding:7px 11px;font-size:12px}
+.btn.danger{color:#9a2b2b;border-color:#efd5d5}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 9px;border-radius:5px;background:#eff6f3;color:#176b61}
+.chip.red{background:#fff0ef;color:#b04236}
+.chip.gray{background:#f2f4f7;color:#66788b}
+.kicker{color:#176b61;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:1.4px}
+.muted{color:#66788b}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#43556a;min-width:0}
+.field input,.field select,.field textarea{background:#fff;border:1px solid #dce5e5;border-radius:6px;outline:0;width:100%;padding:10px 11px;color:#172b40;min-height:40px}
+.field textarea{min-height:90px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#176b61;box-shadow:0 0 0 3px #176b6117}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.section-title{font-size:23px;letter-spacing:-.35px;font-weight:800}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}
+th{color:#66788b;font-weight:700;background:#fafbfb}
+td,th{padding:12px 14px;border-bottom:1px solid #eef1f0;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.notice-row{display:flex;gap:13px;border-bottom:1px solid #edf1ef;padding:16px 0}
+.notice-row:last-child{border-bottom:0}
+.notice-row:hover{background:#fafcfb}
+.dashboard-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px}
+.sidebar{position:sticky;top:85px;align-self:start;padding:12px}
+.sidebar button{display:flex;gap:11px;align-items:center;width:100%;text-align:left;background:transparent;border:0;color:#53657a;font-weight:600;padding:12px;border-radius:5px}
+.sidebar button.active{color:#176b61;background:#eaf4f0}
+.sidebar button:hover{background:#f2f6f5}
+.inline-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.page-head{padding:36px 0 24px}
+.alert{border:1px solid #e3e9e7;border-left:3px solid #176b61;padding:12px 15px;background:#f5faf7;color:#31574c;border-radius:6px;font-size:12px}
+.alert.error{border-left-color:#c34b4b;background:#fff8f7;color:#a43d3d}
+.stat{padding:21px}
+.stat strong{display:block;font-size:28px;letter-spacing:-1px}
+.empty{padding:35px;text-align:center;color:#66788b}
+#mark-print{display:none}
+@media(max-width:850px){.dashboard-layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow:auto;padding:7px}.sidebar button{min-width:max-content;width:auto}.hero-grid{grid-template-columns:1fr!important}.form-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.container{width:min(100% - 24px,1180px)}.section-title{font-size:21px}.desktop-only{display:none!important}.form-grid{grid-template-columns:1fr}.hero-title{font-size:32px!important}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.quick-grid a{min-height:110px}.mobile-wrap{flex-wrap:wrap}}
+@media print{
+ body *{visibility:hidden!important}#mark-print,#mark-print *{visibility:visible!important}
+ #mark-print{display:block!important;position:absolute;left:0;top:0;width:100%;padding:28px;color:black}
+ #mark-print table{border:1px solid #888}#mark-print td,#mark-print th{border:1px solid #aaa}
+ @page{size:A4;margin:15mm}
+}

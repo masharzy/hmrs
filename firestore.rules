@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All sensitive data is served by authenticated Next.js server routes.
+    // Firebase Admin SDK bypasses these rules; API role checks are mandatory.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
