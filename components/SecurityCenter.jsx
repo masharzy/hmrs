@@ -74,3 +74,4 @@ export default function SecurityCenter(){
    </section>)}</div>}
    <p className="text-xs muted mt-5">ডিভাইস শনাক্তকরণ ব্রাউজারে রাখা নিরাপদ cookie-এর মাধ্যমে হয়। Cookie মুছে ফেললে একই শারীরিক ফোনকে নতুন ডিভাইস হিসেবে দেখা যেতে পারে; এটি অব্যর্থ hardware পরিচয় নয়।</p>
  </div>;
+}
