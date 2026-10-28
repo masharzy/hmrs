@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { adminAuth, db } from "../../../lib/firebase-admin";
+import { normalizePhone, normalizePin, makePinCredential } from "../../../lib/phone-pin";
 import { installPrerequisites, classifyFirebaseFailure, checkFirebaseProjectIds, classifyInstallActionFailure } from "../../../lib/install-utils";
 import { fail, json, verifyOrigin } from "../../../lib/server-auth";
 
@@ -9,8 +10,8 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   name: z.string().trim().min(3, "কমপক্ষে ৩ অক্ষরের নাম লিখুন").max(120),
-  email: z.string().trim().email("সঠিক ইমেইল ঠিকানা লিখুন").max(160),
-  password: z.string().min(12, "পাসওয়ার্ড অন্তত ১২ অক্ষরের হতে হবে").max(128)
+  phone: z.string().trim().min(11).max(20),
+  pin: z.string().min(5).max(5)
 }).strict();
 const installation = () => db().collection("settings").doc("installation");
 const installationError = (message, status) => Object.assign(new Error(message), { status });
@@ -55,7 +56,9 @@ export async function POST(req) {
 
     const body = schema.safeParse(await req.json());
     if (!body.success) return fail(body.error.issues[0].message, 400);
-    const { name, email, password } = body.data;
+    const { name } = body.data;
+    const phone = normalizePhone(body.data.phone), pin = normalizePin(body.data.pin);
+    if (!phone || !pin) return fail("সঠিক মোবাইল নম্বর এবং ৫ সংখ্যার PIN দিন");
 
     const store = db();
     const ref = installation();
@@ -74,19 +77,22 @@ export async function POST(req) {
     reserved = true;
 
     stage = "create-firebase-user";
-    const user = await adminAuth().createUser({
-      email: email.toLowerCase(), password, displayName: name, emailVerified: false
-    });
+    const user = await adminAuth().createUser({ displayName: name });
     uid = user.uid;
 
     stage = "save-principal";
+    const phoneRef = store.collection("loginPhones").doc(phone);
+    const pinCredential = makePinCredential(pin);
     await store.runTransaction(async tx => {
-      const state = await tx.get(ref);
+      const [state, existingPhone] = await Promise.all([tx.get(ref), tx.get(phoneRef)]);
       if (state.data()?.status !== "installing" || state.data()?.nonce !== nonce)
         throw installationError("সেটআপের সময়সীমা শেষ হয়েছে, আবার চেষ্টা করুন", 409);
+      if (existingPhone.exists) throw installationError("এই মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে", 409);
       const profile = store.collection("users").doc(uid);
+      tx.create(phoneRef, { uid, createdAt: new Date().toISOString() });
+      tx.create(store.collection("loginCredentials").doc(uid), { ...pinCredential, phone, createdAt: new Date().toISOString() });
       tx.set(profile, {
-        name, email: email.toLowerCase(), role: "principal",
+        name, phone, pinEnabled: true, role: "principal",
         active: true, assignedClasses: [], createdAt: new Date().toISOString()
       });
       tx.set(ref, {
@@ -99,7 +105,8 @@ export async function POST(req) {
       });
     });
     completed = true;
-    return json({ ok: true, message: "প্রধান শিক্ষকের অ্যাকাউন্ট তৈরি হয়েছে" }, 201);
+    const customToken = await adminAuth().createCustomToken(uid);
+    return json({ ok: true, customToken, message: "প্রধান শিক্ষকের অ্যাকাউন্ট তৈরি হয়েছে" }, 201);
   } catch (e) {
     // If the commit succeeded but the server lost the response, never delete that principal.
     if (uid && !completed) {

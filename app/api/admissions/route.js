@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "../../../lib/firebase-admin";
 import { fail, handleError, json, verifyOrigin } from "../../../lib/server-auth";
+import { normalizePhone } from "../../../lib/phone-pin";
 const field = (limit = 100) => z.string().trim().min(1).max(limit);
 const optional = (limit = 100) => z.string().trim().max(limit).optional().default("");
 const phone = z.string().regex(/^01[3-9][0-9]{8}$/, "১১ সংখ্যার মোবাইল নম্বর দিন");
@@ -9,6 +10,7 @@ const schema = z.object({
   grade: z.coerce.number().int().min(6).max(10), section: field(10),
   group: z.enum(["science", "business", "humanities"]).optional().default("science"),
   fatherName: field(), fatherPhone: phone, motherName: field(), motherPhone: phone,
+  studentPhone: z.string().trim().min(1).max(20),
   guardianAddress: field(350), birthRegistration: field(40),
   previousSchool: field(150), previousClass: optional(30), previousResult: optional(80),
   paymentMethod: z.enum(["mobile_banking", "online_banking", "later"]),
@@ -22,6 +24,9 @@ export async function POST(req) {
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return fail(parsed.error.issues[0].message);
     const data = parsed.data;
+    const loginPhone = normalizePhone(data.studentPhone);
+    if (!loginPhone) return fail("লগইনের মোবাইল নম্বর সঠিক নয়");
+    data.studentPhone = loginPhone;
     if (data.website) return json({ ok: true, message: "আবেদন গ্রহণ করা হয়েছে" });
     const { website, ...saved } = data;
     const doc = await db().collection("admissions").add({

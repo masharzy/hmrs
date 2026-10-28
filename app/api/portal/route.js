@@ -1,6 +1,8 @@
 import { adminAuth, db } from "../../../lib/firebase-admin";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
+import { normalizePhone, normalizePin, makePinCredential } from "../../../lib/phone-pin";
+import { registerPhoneCredential } from "../../../lib/phone-accounts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -121,36 +123,38 @@ export async function POST(req) {
     }
     if (action === "account.create") {
       needRole(actor, ["principal"]);
-      const role = body.role, username = cleanText(body.username, 40).toLowerCase(),
-        password = String(body.password || ""), name = cleanText(body.name, 120);
-      if (!["teacher", "class_teacher"].includes(role) || !/^[a-z0-9._-]{3,40}$/.test(username)
-          || password.length < 8 || password.length > 100 || !name) return fail("ইউজারের তথ্য সঠিক নয়");
+      const role = body.role, name = cleanText(body.name, 120),
+        phone = normalizePhone(body.phone), pin = normalizePin(body.pin);
+      if (!["teacher", "class_teacher"].includes(role) || !name || !phone || !pin)
+        return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const assignedClasses = Array.isArray(body.assignedClasses)
         ? body.assignedClasses.map(v => cleanText(v, 20)).filter(v => /^(6|7|8|9|10)-[a-z0-9]+$/.test(v)).slice(0, 15) : [];
       if (role === "class_teacher" && !assignedClasses.length) return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি/শাখা দিন");
-      const user = await adminAuth().createUser({ email: username + "@staff.hmrs.school", password, displayName: name });
+      const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
-      await store.collection("users").doc(user.uid).set({ name, username, role, assignedClasses, active: true, createdAt: iso() });
+      await registerPhoneCredential({ uid: user.uid, phone, pin,
+        userPatch: { name, role, assignedClasses, active: true, createdAt: iso() }
+      });
       createdUid = null;
-      await audit(actor, action, username); return json({ ok: true });
+      await audit(actor, action, user.uid); return json({ ok: true });
     }
     if (action === "application.approve") {
       needRole(actor, ["principal", "class_teacher"]);
-      const id = cleanText(body.id, 150), roll = String(body.roll || ""), password = String(body.password || "");
+      const id = cleanText(body.id, 150), roll = String(body.roll || ""), pin = normalizePin(body.pin);
       const ref = store.collection("admissions").doc(id);
       const snap = await ref.get();
       if (!snap.exists) return fail("আবেদন পাওয়া যায়নি");
       const application = snap.data();
       if (!visible(actor, application)) return fail("এই শ্রেণির অনুমতি নেই", 403);
       if (application.status !== "pending") return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে");
-      if (!/^[1-9][0-9]{0,3}$/.test(roll) || password.length < 8 || password.length > 100) return fail("রোল ১–৯৯৯৯ এবং পাসওয়ার্ড অন্তত ৮ অক্ষর হতে হবে");
+      const phone = normalizePhone(body.phone || application.studentPhone || application.fatherPhone);
+      if (!/^[1-9][0-9]{0,3}$/.test(roll) || !pin || !phone) return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const idStudent = studentKey(application.grade, application.section, roll);
       if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
-      const email = "s" + application.grade + "-" + String(application.section).toLowerCase() + "-" + Number(roll) + "@students.hmrs.school";
-      const user = await adminAuth().createUser({ email, password, displayName: application.studentName });
+      const user = await adminAuth().createUser({ displayName: application.studentName });
       createdUid = user.uid;
       const student = {
-        uid: user.uid, applicationId: id, name: application.studentName, grade: Number(application.grade),
+        uid: user.uid, applicationId: id, name: application.studentName, phone, grade: Number(application.grade),
         section: application.section, roll: Number(roll), group: application.group || "science",
         elective: application.group === "science" ? "higher-math" : application.group === "humanities" ? "civics" : "agriculture",
         fourthSubject: "agriculture", optionalId: application.group === "science" ? "biology" : "agriculture", dob: application.dob, gender: application.gender,
@@ -159,13 +163,20 @@ export async function POST(req) {
         guardianAddress: application.guardianAddress, birthRegistration: application.birthRegistration,
         previousSchool: application.previousSchool, due: 0, createdAt: iso()
       };
+      const phoneRef = store.collection("loginPhones").doc(phone);
+      const credentialRef = store.collection("loginCredentials").doc(user.uid);
+      const pinCredential = makePinCredential(pin);
       await store.runTransaction(async t => {
-        const currentApp = await t.get(ref);
-        const existing = await t.get(store.collection("students").doc(idStudent));
+        const [currentApp, existing, existingPhone] = await Promise.all([
+          t.get(ref), t.get(store.collection("students").doc(idStudent)), t.get(phoneRef)
+        ]);
         if (existing.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
+        if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
         t.set(store.collection("students").doc(idStudent), student);
+        t.create(phoneRef, { uid: user.uid, createdAt: iso() });
+        t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
         t.set(store.collection("users").doc(user.uid), { role: "student", name: student.name, active: true,
-          studentId: idStudent, createdAt: iso() });
+          phone, pinEnabled: true, studentId: idStudent, createdAt: iso() });
         t.update(ref, { status: "approved", studentId: idStudent, approvedBy: actor.uid, approvedAt: iso() });
       });
       createdUid = null;

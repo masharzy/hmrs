@@ -7,6 +7,7 @@ import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine
 import { firebaseAuth } from "../../lib/firebase-client";
 import { evaluateTranscript, getSubjects } from "../../lib/academic";
 import Marksheet from "../../components/Marksheet";
+import PinInput from "../../components/PinInput";
 
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const roleNames={principal:"প্রতিষ্ঠান প্রধান",class_teacher:"শ্রেণি শিক্ষক",teacher:"শিক্ষক",student:"শিক্ষার্থী"};
@@ -36,7 +37,7 @@ export default function Dashboard() {
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
- const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",username:"",password:"",assignedClasses:"6-a"});
+ const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6-a"});
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",section:"a",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
@@ -129,6 +130,7 @@ export default function Dashboard() {
   </div>
   <main className="container py-7">
    <div className="flex flex-wrap justify-between items-end gap-3 mb-6"><div><span className="kicker">HMRS PORTAL</span><h1 className="section-title mt-1 mb-1">{roleNames[actor.role]} ড্যাশবোর্ড</h1><p className="muted text-xs mb-0">বিদ্যালয়ের নিরাপদ তথ্য ও ব্যবস্থাপনা কেন্দ্র</p></div><button className="btn sm" disabled={working} onClick={()=>refresh().catch(e=>setError(e.message))}><RefreshCw size={14}/> রিফ্রেশ</button></div>
+   {actor && !actor.pinEnabled && <div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
    {error&&<div role="alert" className="alert error mb-4">{error} <button type="button" onClick={()=>setError("")} className="float-right">×</button></div>}
    {success&&<div role="status" className="alert mb-4">{success}</div>}
    <div className="dashboard-layout">
@@ -210,13 +212,13 @@ export default function Dashboard() {
        </div><div className="grid gap-2">{(data.notices||[]).map(n=><div className="panel p-4 flex items-center justify-between gap-3" key={n.id}><div><b>{n.title}</b><div className="muted text-xs">{n.message}</div></div><button className="btn sm danger" onClick={()=>{if(confirm("নোটিশটি মুছে ফেলবেন?"))mutate("notice.delete",{id:n.id})}}><X size={14}/> মুছুন</button></div>)}</div></>}
        {tab==="accounts"&&<><h2 className="section-title">শিক্ষক অ্যাকাউন্ট তৈরি</h2><div className="panel p-5"><div className="form-grid">
         <Field label="নাম"><Input value={login.name} onChange={v=>setLogin(o=>({...o,name:v}))}/></Field>
-        <Field label="ইউজার আইডি (English)"><Input value={login.username} onChange={v=>setLogin(o=>({...o,username:v}))}/></Field>
-        <Field label="পাসওয়ার্ড (কমপক্ষে ৮ অক্ষর)"><Input type="password" value={login.password} onChange={v=>setLogin(o=>({...o,password:v}))}/></Field>
+        <Field label="মোবাইল নম্বর"><Input type="tel" value={login.phone} onChange={v=>setLogin(o=>({...o,phone:v}))} placeholder="01712345678 / +8801712345678"/></Field>
+        <PinInput label="লগইন PIN" value={login.pin} onChange={v=>setLogin(o=>({...o,pin:v}))}/>
         <Field label="ভূমিকা"><Select value={login.role} onChange={v=>setLogin(o=>({...o,role:v}))} choices={[["teacher","শিক্ষক"],["class_teacher","শ্রেণি শিক্ষক"]]}/></Field>
         {login.role==="class_teacher"&&<Field label="নিজ শ্রেণি/শাখা (যেমন 6-a,7-b)"><Input value={login.assignedClasses} onChange={v=>setLogin(o=>({...o,assignedClasses:v}))}/></Field>}
-       </div><p className="muted text-xs mt-4">শিক্ষকের পাসওয়ার্ড শুধু Firebase Authentication-এ সংরক্ষিত হবে। পাসওয়ার্ড নিরাপদভাবে শিক্ষককে প্রদান করুন।</p>
-       <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",username:"",password:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
-       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>ইউজার আইডি</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.username||"—"}</td><td>{roleNames[u.role]}</td><td>{(u.assignedClasses||[]).join(", ")}</td></tr>)}</tbody></table></div></>}
+       </div><p className="muted text-xs mt-4">শিক্ষকের PIN নিরাপদভাবে প্রদান করুন। PIN সরাসরি সংরক্ষিত হয় না; ভুল PIN বারবার দিলে লগইন সাময়িক বন্ধ থাকে।</p>
+       <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",phone:"",pin:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
+       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{(u.assignedClasses||[]).join(", ")}</td></tr>)}</tbody></table></div></>}
        {tab==="settings"&&<><h2 className="section-title">বিদ্যালয়ের ওয়েবসাইট সেটিংস</h2><div className="panel p-6 grid gap-4">
         <div className="alert">বিদ্যালয়ের প্রকৃত ছবি HTTPS URL হিসেবে যুক্ত করুন। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
         <Field label="প্রতিষ্ঠানের প্রকৃত ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
@@ -234,11 +236,12 @@ export default function Dashboard() {
 }
 
 function AdmissionApproval({item,mutate,busy,principal}){
- const [roll,setRoll]=useState(""),[password,setPassword]=useState("");
+ const [roll,setRoll]=useState(""),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||""),[pin,setPin]=useState("");
  return <div className="flex flex-wrap gap-3 mt-4 items-end">
   <label className="field" style={{maxWidth:90}}>রোল <input value={roll} onChange={e=>setRoll(e.target.value)} inputMode="numeric" required/></label>
-  <label className="field" style={{maxWidth:170}}>প্রাথমিক পাসওয়ার্ড <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>
-  <button className="btn sm primary" disabled={busy} onClick={()=>mutate("application.approve",{id:item.id,roll,password})}><Check size={14}/> ভর্তি অনুমোদন</button>
+  <label className="field" style={{maxWidth:230}}>লগইন মোবাইল <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+8801712345678" required/></label>
+  <PinInput label="শিক্ষার্থীর PIN" value={pin} onChange={setPin}/>
+  <button className="btn sm primary" disabled={busy} onClick={()=>mutate("application.approve",{id:item.id,roll,phone,pin})}><Check size={14}/> ভর্তি অনুমোদন</button>
   <button className="btn sm danger" disabled={busy} onClick={()=>{if(confirm("আবেদন বাতিল করবেন?"))mutate("application.reject",{id:item.id})}}><X size={14}/> বাতিল</button>
   {principal&&item.paymentStatus!=="verified_manually"&&<button className="btn sm" disabled={busy} onClick={()=>{if(confirm("বাস্তবে পেমেন্ট যাচাই করেছেন?"))mutate("payment.verify",{id:item.id})}}><CreditCard size={14}/> পেমেন্ট যাচাই হয়েছে</button>}
  </div>;
