@@ -9,7 +9,7 @@ export default function SiteHeader() {
     <div className="container flex items-center justify-between" style={{height:72,gap:20}}>
       <Link href="/" className="flex items-center gap-3" aria-label="বিদ্যালয়ের হোম পেজ">
         <div style={{height:43,width:43,borderRadius:8,background:"#176b61",color:"white"}} className="flex items-center justify-center"><GraduationCap size={24}/></div>
-        <div><div style={{fontSize:15,fontWeight:800,lineHeight:1.45}}>হাজী মতিউর রহমান সরকার</div><div style={{fontSize:11,color:"#66788b"}}>উচ্চ বিদ্যালয় <span style={{marginLeft:7,color:"#177263"}}>EIIN 112359</span></div></div>
+        <div><div style={{fontSize:15,fontWeight:800,lineHeight:1.45}}>হাজী মতিউর রহমান সরকার</div><div style={{fontSize:11,color:"#66788b"}}>উচ্চ বিদ্যালয় <span style={{marginLeft:7,color:"#177263"}}>EIIN ১১২৩৫৯</span></div></div>
       </Link>
       <nav className="desktop-only flex items-center gap-7" aria-label="মূল নেভিগেশন">
         {items.map(([label,href])=><Link key={href} className="text-sm font-semibold hover:text-primary" href={href}>{label}</Link>)}

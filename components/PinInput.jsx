@@ -1,10 +1,8 @@
 "use client";
 import { useRef } from "react";
+import { toAsciiDigits, toBanglaDigits } from "../lib/bangla-numbers";
 
-const digits = text => String(text||"").replace(/[০-৯٠-٩]/g,c => {
- const bn="০১২৩৪৫৬৭৮৯", ar="٠١٢٣٤٥٦٧٨٩";
- return String(bn.includes(c)?bn.indexOf(c):ar.indexOf(c));
-}).replace(/\D/g,"");
+const digits = text => toAsciiDigits(text).replace(/\D/g,"");
 
 export default function PinInput({ value="", onChange, disabled=false, label="পাঁচ সংখ্যার PIN", autoFocus=false }){
  const inputs=useRef([]);
@@ -23,7 +21,7 @@ export default function PinInput({ value="", onChange, disabled=false, label="�
        key={i} ref={el=>inputs.current[i]=el} type="password"
        inputMode="numeric" pattern="[0-9]*" maxLength={1}
        autoComplete="off" autoFocus={autoFocus&&i===0}
-       className="pin-cell" aria-label={"PIN digit "+(i+1)}
+       className="pin-cell" aria-label={"PIN সংখ্যা "+toBanglaDigits(i+1)}
        value={pin[i]||""} disabled={disabled}
        onChange={e=>write(i,e.target.value)}
        onPaste={e=>{e.preventDefault();write(i,e.clipboardData.getData("text"))}}

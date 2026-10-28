@@ -26,7 +26,7 @@ export default function Home(){
       <SchoolPhoto/>
      </div>
      <div style={{position:"absolute",bottom:18,left:18,background:"white",borderRadius:7,padding:"12px 16px",boxShadow:"0 5px 20px #0002"}}>
-      <div style={{fontWeight:800,fontSize:13}}>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</div><div className="muted text-xs mt-1">সোনারগাঁ, নারায়ণগঞ্জ · EIIN 112359</div>
+      <div style={{fontWeight:800,fontSize:13}}>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</div><div className="muted text-xs mt-1">সোনারগাঁ, নারায়ণগঞ্জ · EIIN ১১২৩৫৯</div>
      </div>
      
     </div>
