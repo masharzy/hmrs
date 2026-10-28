@@ -61,3 +61,40 @@ tr:last-child td{border-bottom:none}
  #mark-print table{border:1px solid #888}#mark-print td,#mark-print th{border:1px solid #aaa}
  @page{size:A4;margin:15mm}
 }
+
+/* Thumb-friendly, app-like portal shell */
+.login-stage{min-height:calc(100dvh - 72px);padding:30px 14px 54px;background:radial-gradient(circle at 50% 2%,#e6f5ef 0,transparent 50%),#f6f9f8}
+.login-shell{max-width:490px;margin:0 auto}
+.login-surface{border:1px solid #e0eae6;border-radius:18px;padding:28px 30px 26px;background:#fff;box-shadow:0 18px 60px #123a2b10}
+.login-symbol{width:54px;height:54px;background:#e7f4ec;color:#176b61;border-radius:15px;display:grid;place-items:center;margin:auto}
+.login-heading{text-align:center;font-size:23px;font-weight:800;letter-spacing:-.3px;margin-bottom:8px}
+.portal-switch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.portal-option{display:flex;flex-direction:column;align-items:center;gap:7px;justify-content:center;min-height:74px;border:1px solid #e0e9e5;border-radius:11px;padding:9px 2px;font-size:10px;font-weight:700;color:#647588;text-align:center;transition:.16s}
+.portal-option.selected{color:#176b61;background:#eaf6ef;border-color:#80bcb0;box-shadow:inset 0 0 0 1px #80bcb0}
+.portal-option:active{transform:scale(.975)}
+.phone-input-wrap{display:flex;align-items:center;gap:10px;border:1px solid #dce5e5;border-radius:9px;background:#fff;padding-left:13px}
+.phone-input-wrap:focus-within{border-color:#176b61;box-shadow:0 0 0 3px #176b6117}
+.phone-input-wrap input{border:0!important;box-shadow:none!important;min-height:53px!important;font-size:15px!important;min-width:0;padding-left:0!important}
+.pin-label{font-size:12px;font-weight:700;color:#43556a;margin-bottom:10px}
+.pin-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.pin-cell{width:100%;height:61px;min-width:0;min-height:58px;text-align:center;border:1.5px solid #d7e3df;border-radius:11px;background:#f9fbfa;outline:0;font-size:23px;font-weight:800;color:#173b38;box-shadow:none;appearance:none}
+.pin-cell:focus{border-color:#176b61;background:#fff;box-shadow:0 0 0 3px #176b611a}
+.pin-cell:disabled{opacity:.55}
+.login-submit{min-height:52px;font-size:14px;border-radius:10px!important}
+@media(max-width:850px){
+ .dashboard-layout{padding-bottom:100px}
+ .dashboard-layout .sidebar{position:fixed;bottom:0;top:auto;left:0;right:0;z-index:28;background:#fff;border:0;border-top:1px solid #e1eae5;border-radius:15px 15px 0 0;box-shadow:0 -8px 30px #133a241a;padding:8px 7px calc(8px + env(safe-area-inset-bottom));gap:2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;align-items:center}
+ .dashboard-layout .sidebar::-webkit-scrollbar{display:none}
+ .dashboard-layout .sidebar button{min-width:80px;max-width:105px;min-height:56px;display:flex;flex-direction:column;justify-content:center;gap:4px;font-size:10px;text-align:center;padding:7px 9px;flex:0 0 auto}
+ .dashboard-layout .sidebar button svg{width:19px;height:19px}
+}
+@media(max-width:480px){
+ .login-stage{padding:18px 12px 38px}
+ .login-surface{border-radius:16px;padding:26px 18px}
+ .login-heading{font-size:20px}
+ .portal-option{min-height:70px;font-size:9.5px}
+ .pin-grid{gap:8px}
+ .pin-cell{height:57px;font-size:21px}
+ .dashboard-layout .panel{max-width:100%}
+ .dashboard-layout td,.dashboard-layout th{padding:10px}
+}

@@ -11,17 +11,17 @@ Next.js App Router, JavaScript, React, Tailwind CSS, Firebase Authentication, Fi
 3. Enable **Email/Password** provider in Firebase Authentication and create a Firestore database.
 4. Deploy the included firestore.rules (all client access denied; private records are accessed only through role-checked server endpoints).
 5. Deploy to Vercel with Firebase variables and `APP_ORIGIN` set to the canonical URL with `https://` (for example `https://hmrshs.vercel.app`). A bare hostname is also handled; requests from the site's actual host are accepted, including other Vercel aliases.
-6. Visit `/install` over HTTPS, and create the principal's account with name, email and strong password. No setup key or UID lookup is required. The installer registers one principal only and marks the Firestore installation record as complete.
-7. Sign in at `/login/principal` with the created email and password.
+6. First-time `/install` uses name, a Bangladesh mobile number and a 5-digit PIN. Once the school is installed, this page cannot create new principals.
+7. For **already installed** principal, use `/migrate` *once* with the existing email/password to register mobile + PIN. The old Firebase password is randomized server-side afterward.
 
 **Security warning:** Without a setup key or another ownership check, the first person to successfully submit the public `/install` page can become principal. Keep the site private until the authorized principal installs it; perform setup immediately after Firebase connection. After installation, subsequent registration is blocked. For institutional production use, add an owner-verification step before enabling a fresh install.
 
 **Important:** The GitHub repository intentionally contains no Firebase secrets and no seeded student personal data. The site cannot perform real logins or save applications until you supply a Firebase project. For Vercel, set FIREBASE_PRIVATE_KEY to the full PEM value; escaped newlines are supported.
 
 ### Login identities
-- Student login (class, section, roll, password) maps internally to Firebase email s{grade}-{section}-{roll}@students.hmrs.school.
-- Staff accounts use {username}@staff.hmrs.school, created only by principal.
-- Principal signs in with the email and password created once at `/install`; role authorization is stored in Firestore `users/{uid}`.
+- Every portal uses a Bangladesh mobile number (`01...`, `8801...`, `+8801...`) and 5-digit PIN, preserving leading zeros.
+- Staff accounts are created by principal with mobile+PIN; students receive unique mobile+PIN on approval.
+- Legacy accounts migrate once at `/migrate`; afterward the old password is randomized and not used again.
 - Section identifiers: a (ক), b (খ), c (গ). Additional identifiers are supported in the backend.
 
 ### Modules
@@ -53,3 +53,10 @@ npm run build
 
 ### CI
 GitHub Actions runs tests and a production build for pushes and pull requests. 
+
+### Phone-first portal
+- Firebase custom tokens are minted server-side after validating phone + PIN (no raw PIN stored in Firebase Auth).
+- PIN credentials are scrypt-salted in `loginCredentials` and phone mappings in `loginPhones`; direct Firestore client access remains forbidden.
+- Five failures per 15 minutes lock phone/PIN login temporarily. Phone-number entry is NOT SMS verification or proof of SIM ownership; OTP, recovery and anti-abuse improvements are still required.
+- One phone per account, including students; siblings sharing a guardian phone need a future profile selection design or different numbers.
+- App manifest gives installable app feel; no offline cache or push notifications implemented yet.

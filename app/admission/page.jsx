@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Landmark, Smartphone, GraduationCap } from "lucide-react";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
-const empty={studentName:"",dob:"",gender:"male",grade:"6",section:"a",group:"science",fatherName:"",fatherPhone:"",motherName:"",motherPhone:"",guardianAddress:"",birthRegistration:"",previousSchool:"",previousClass:"",previousResult:"",paymentMethod:"later",paymentReference:"",website:""};
+const empty={studentName:"",dob:"",gender:"male",grade:"6",section:"a",group:"science",fatherName:"",fatherPhone:"",motherName:"",motherPhone:"",studentPhone:"",guardianAddress:"",birthRegistration:"",previousSchool:"",previousClass:"",previousResult:"",paymentMethod:"later",paymentReference:"",website:""};
 const stages=["শিক্ষার্থীর তথ্য","অভিভাবকের তথ্য","পূর্ববর্তী বিদ্যালয় ও পেমেন্ট"];
 function F({label,name,value,onChange,type="text",options,required=true,placeholder=""}){
  return <label className="field">{label}{options?<select name={name} value={value} onChange={onChange}>{options.map(([v,t])=><option value={v} key={v}>{t}</option>)}</select>:<input name={name} value={value} onChange={onChange} type={type} required={required} placeholder={placeholder}/>}</label>;
@@ -33,6 +33,8 @@ export default function Admission(){
     <F label="পিতার মোবাইল *" name="fatherPhone" type="tel" value={data.fatherPhone} onChange={change} placeholder="01XXXXXXXXX"/>
     <F label="মাতার নাম *" name="motherName" value={data.motherName} onChange={change}/>
     <F label="মাতার মোবাইল *" name="motherPhone" type="tel" value={data.motherPhone} onChange={change} placeholder="01XXXXXXXXX"/>
+    <div className="sm:col-span-2"><F label="শিক্ষার্থীর লগইন মোবাইল (প্রয়োজনে অভিভাবকের নম্বর) *" name="studentPhone" type="tel" value={data.studentPhone} onChange={change} placeholder="01712345678 অথবা +8801712345678"/></div>
+    <p className="sm:col-span-2 muted text-xs">একই মোবাইল নম্বর একাধিক লগইন অ্যাকাউন্টে ব্যবহার করা যাবে না।</p>
     <div className="sm:col-span-2"><F label="বর্তমান ঠিকানা *" name="guardianAddress" value={data.guardianAddress} onChange={change}/></div>
    </div>}
    {step===2&&<div className="grid gap-6">
