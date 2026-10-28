@@ -23,3 +23,10 @@ test("signed device IDs and ban cookie cannot be forged",()=>{
  assert.ok(currentDeviceBan(req,id)>Date.now());
 });
 test("device label is coarse, not a fingerprint",()=>assert.match(describeDevice("Mozilla/5.0 (iPhone) Safari/605"),/iPhone/));
+
+test("expired 12-hour device ban starts a fresh five-try count",()=>{
+ const expired={failures:5,lockedUntil:1000},now=1001;
+ const next=nextFailureState(expired,{},now);
+ assert.equal(next.device.failures,1);
+ assert.equal(next.device.lockedUntil,0);
+});

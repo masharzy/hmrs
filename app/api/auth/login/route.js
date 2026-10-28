@@ -42,7 +42,10 @@ export async function POST(req){
    const d=ds.data()||{},a=as?.data()||{},person=us?.data(),stored=cs?.data();
    if(Number(d.lockedUntil)>now)return {kind:"device-locked",until:Number(d.lockedUntil)};
    if(a.locked===true)return {kind:"account-locked"};
-   const valid=person?.active===true&&person.role===role&&stored?.phone===phone&&verifyPin(pin,stored);
+   const pinMatches=stored?.phone===phone&&verifyPin(pin,stored);
+   const valid=person?.active===true&&person.role===role&&pinMatches;
+   // A correct PIN with the wrong portal is not a wrong-PIN guess.
+   if(pinMatches&&!valid)return {kind:"incorrect"};
    if(valid){
     tx.set(deviceRef,{failures:0,lockedUntil:0,label,lastSuccessAt:info.at},{merge:true});
     tx.set(accountRef,{failures:0,lastSuccessAt:info.at},{merge:true});
