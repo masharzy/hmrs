@@ -10,7 +10,7 @@ Next.js App Router, JavaScript, React, Tailwind CSS, Firebase Authentication, Fi
 2. Copy .env.example to .env.local and configure Firebase Web App and Admin service-account environment variables.
 3. Enable **Email/Password** provider in Firebase Authentication and create a Firestore database.
 4. Deploy the included firestore.rules (all client access denied; private records are accessed only through role-checked server endpoints).
-5. Deploy to Vercel with Firebase variables and `APP_ORIGIN` set to the canonical URL.
+5. Deploy to Vercel with Firebase variables and `APP_ORIGIN` set to the canonical URL with `https://` (for example `https://hmrshs.vercel.app`). A bare hostname is also handled; requests from the site's actual host are accepted, including other Vercel aliases.
 6. Visit `/install` over HTTPS, and create the principal's account with name, email and strong password. No setup key or UID lookup is required. The installer registers one principal only and marks the Firestore installation record as complete.
 7. Sign in at `/login/principal` with the created email and password.
 
