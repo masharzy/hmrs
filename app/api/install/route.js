@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { adminAuth, db } from "../../../lib/firebase-admin";
-import { installPrerequisites } from "../../../lib/install-utils";
+import { installPrerequisites, classifyFirebaseFailure, checkFirebaseProjectIds } from "../../../lib/install-utils";
 import { fail, json, verifyOrigin } from "../../../lib/server-auth";
 
 export const runtime = "nodejs";
@@ -18,12 +18,16 @@ const installationError = (message, status) => Object.assign(new Error(message),
 export async function GET() {
   const missing = installPrerequisites(process.env);
   if (missing.length) return json({ installed: false, ready: false, missing });
+  const mismatch = checkFirebaseProjectIds(process.env);
+  if (mismatch) return json({ installed: false, ready: false, error: mismatch.hint, code: mismatch.code });
   try {
     const snapshot = await installation().get();
     const installed = snapshot.exists && snapshot.data()?.status === "installed";
     return json({ installed, ready: true });
-  } catch {
-    return json({ installed: false, ready: false, error: "Firebase Firestore সংযোগ বা অনুমতি যাচাই করুন" });
+  } catch (e) {
+    const issue = classifyFirebaseFailure(e);
+    console.error("Install Firestore readiness error:", issue.code, String(e?.code ?? "").slice(0, 36));
+    return json({ installed: false, ready: false, error: issue.hint, code: issue.code });
   }
 }
 
@@ -36,6 +40,8 @@ export async function POST(req) {
       return fail("অনুরোধটি অনেক বড়", 413);
     if (installPrerequisites(process.env).length)
       return fail("প্রথমে Firebase environment variables সেট করুন", 503);
+    const mismatch = checkFirebaseProjectIds(process.env);
+    if (mismatch) return fail(mismatch.hint, 503);
 
     const body = schema.safeParse(await req.json());
     if (!body.success) return fail(body.error.issues[0].message, 400);
