@@ -23,8 +23,9 @@ export async function POST(req) {
     if (!parsed.success) return fail(parsed.error.issues[0].message);
     const data = parsed.data;
     if (data.website) return json({ ok: true, message: "আবেদন গ্রহণ করা হয়েছে" });
+    const { website, ...saved } = data;
     const doc = await db().collection("admissions").add({
-      ...data, website: undefined, status: "pending", paymentStatus: "unverified",
+      ...saved, status: "pending", paymentStatus: "unverified",
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     });
     return json({ ok: true, applicationId: doc.id, status: "pending" }, 201);

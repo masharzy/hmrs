@@ -3,6 +3,7 @@ import { ArrowRight, BookOpenCheck, ClipboardList, FileText, GraduationCap, Scho
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import NoticeBoard from "../components/NoticeBoard";
+import SchoolPhoto from "../components/SchoolPhoto";
 const quick = [
   { label:"ভর্তির আবেদন",desc:"অনলাইনে আবেদন করুন",icon:ClipboardList,href:"/admission",primary:true },
   { label:"শিক্ষার্থী লগইন",desc:"ফলাফল, হাজিরা ও পাওনা",icon:GraduationCap,href:"/login/student" },
@@ -22,12 +23,12 @@ export default function Home(){
     </div>
     <div className="relative">
      <div style={{border:"7px solid white",borderRadius:14,boxShadow:"0 22px 55px #1a58402b",overflow:"hidden",background:"#d9e8e4"}}>
-      <img alt="বিদ্যালয় ভবনের প্রতীকী চিত্র; প্রতিষ্ঠান প্রধান প্রকৃত ছবি যুক্ত করতে পারবেন" src="/school-placeholder.svg" style={{width:"100%",aspectRatio:"1.42",objectFit:"cover"}}/>
+      <SchoolPhoto/>
      </div>
      <div style={{position:"absolute",bottom:18,left:18,background:"white",borderRadius:7,padding:"12px 16px",boxShadow:"0 5px 20px #0002"}}>
       <div style={{fontWeight:800,fontSize:13}}>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</div><div className="muted text-xs mt-1">সোনারগাঁ, নারায়ণগঞ্জ · EIIN 112359</div>
      </div>
-     <div style={{position:"absolute",top:13,right:13,background:"#fffffff0",color:"#5a6b68",fontSize:10,padding:"5px 8px",borderRadius:4}}>প্রতীকী চিত্র — প্রকৃত ছবি আপলোড সাপেক্ষ</div>
+     
     </div>
    </div>
   </section>

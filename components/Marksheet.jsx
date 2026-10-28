@@ -1,8 +1,8 @@
 "use client";
 import { evaluateTranscript } from "../lib/academic";
-export default function Marksheet({student,marks,exam,printId="mark-print"}){
+export default function Marksheet({student,marks,exam,printId="mark-print",report}){
  if(!student||!exam)return null;
- const result=evaluateTranscript(student,marks||{});
+ const result=report||evaluateTranscript(student,marks||{});
  return <div id={printId}>
   <div style={{textAlign:"center",paddingBottom:16,borderBottom:"2px solid #234"}}>
    <h2 style={{fontSize:21,fontWeight:800,margin:0}}>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</h2>

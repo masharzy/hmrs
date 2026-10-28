@@ -133,7 +133,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center gap-3 flex-wrap"><div><b>{ex.name}</b><div className="muted text-xs mt-1">ফলাফল: {result.letter} · GPA: {result.gpa??"অসম্পূর্ণ"}</div></div><button className="btn sm" onClick={()=>{setExamId(ex.id);print()}}><Printer size={15}/> নম্বরপত্র প্রিন্ট</button></div>
         <div className="table-wrap mt-4"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত</th><th>গ্রেড</th></tr></thead><tbody>{result.rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}</td><td>{r.status==="complete"?r.received:"—"} / {r.subject.max}</td><td>{r.letter||"—"}</td></tr>)}</tbody></table></div>
        </div>)}</>}
-       {profile?.student&&<Marksheet student={profile.student} exam={profile.results?.find(x=>x.exam.id===examId)?.exam} marks={Object.fromEntries((profile.results?.find(x=>x.exam.id===examId)?.result?.rows||[]).map(r=>[r.subjectId,{}]))}/>}
+       {profile?.student&&<Marksheet student={profile.student} exam={profile.results?.find(x=>x.exam.id===examId)?.exam} report={profile.results?.find(x=>x.exam.id===examId)?.result}/>}
        {/* Student printing uses the precomputed report below; no private API bypass. */}
        {profile?.student&&profile.results?.filter(x=>x.exam.id===examId).map(({exam:ex,result})=><div key={ex.id} id="student-report-print" style={{display:"none"}}>
         <h2>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</h2><p>{ex.name} — {profile.student.name} · শ্রেণি {profile.student.grade} · রোল {profile.student.roll}</p>

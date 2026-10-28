@@ -34,9 +34,9 @@ export async function GET(req) {
       const examsSnap = await store.collection("exams").where("published", "==", true).limit(30).get();
       const published = asDocs(examsSnap);
       const results = [];
+      const allMarks = await store.collection("marks").where("studentId", "==", student.id).limit(1000).get();
       for (const exam of published) {
-        const marks = await store.collection("marks").where("studentId", "==", student.id).where("examId", "==", exam.id).get();
-        const markMap = Object.fromEntries(marks.docs.map(m => [m.data().subjectId, m.data().scores]));
+        const markMap = Object.fromEntries(allMarks.docs.filter(m => m.data().examId === exam.id).map(m => [m.data().subjectId, m.data().scores]));
         results.push({ exam, result: evaluateTranscript(student, markMap) });
       }
       return json({ actor, student, dues, attendance: asDocs(attendance), results });
@@ -152,8 +152,8 @@ export async function POST(req) {
       const student = {
         uid: user.uid, applicationId: id, name: application.studentName, grade: Number(application.grade),
         section: application.section, roll: Number(roll), group: application.group || "science",
-        elective: application.group === "science" ? "higher-math" : "agriculture",
-        fourthSubject: "agriculture", optionalId: "", dob: application.dob, gender: application.gender,
+        elective: application.group === "science" ? "higher-math" : application.group === "humanities" ? "civics" : "agriculture",
+        fourthSubject: "agriculture", optionalId: application.group === "science" ? "biology" : "agriculture", dob: application.dob, gender: application.gender,
         fatherName: application.fatherName, fatherPhone: application.fatherPhone,
         motherName: application.motherName, motherPhone: application.motherPhone,
         guardianAddress: application.guardianAddress, birthRegistration: application.birthRegistration,
@@ -253,6 +253,7 @@ export async function POST(req) {
       const { getSubjects } = await import("../../../lib/academic");
       const subjects = getSubjects(student.grade, group, elective, fourthSubject);
       if (!subjects.some(s => s.id === optionalId)) return fail("চতুর্থ বিষয় সঠিক নয়");
+      if (group === "science" && !["biology", elective].includes(optionalId)) return fail("বিজ্ঞান বিভাগের চতুর্থ বিষয়টি সঠিক নয়");
       if (group !== "science" && optionalId !== (group === "business" ? elective : fourthSubject)) return fail("চতুর্থ বিষয়টি নির্বাচন করুন");
       await store.collection("students").doc(student.id).update({ group, elective, fourthSubject, optionalId });
       await audit(actor, action, student.id); return json({ ok: true });
