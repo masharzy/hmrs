@@ -39,6 +39,6 @@ export default function Login(){
    {error&&<div role="alert" className="alert error">{error}</div>}
    <button disabled={busy} type="submit" className="btn primary w-full mt-2">{busy?"যাচাই হচ্ছে...":"লগইন করুন"} <LogIn size={17}/></button>
   </form>
- </div><p className="text-center muted text-xs mt-5"><School size={14} className="inline mr-1"/> লগইন তথ্য বিদ্যালয় কর্তৃপক্ষ থেকে সংগ্রহ করুন।</p>
+ </div>{role==="principal"&&<p className="text-center text-xs mt-5"><Link href="/install" className="text-primary font-bold hover:underline">প্রথমবার বিদ্যালয় সেটআপ করুন</Link></p>}<p className="text-center muted text-xs mt-5"><School size={14} className="inline mr-1"/> লগইন তথ্য বিদ্যালয় কর্তৃপক্ষ থেকে সংগ্রহ করুন।</p>
  </main><SiteFooter/></>;
 }
