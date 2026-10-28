@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root{color-scheme:light}
 *{box-sizing:border-box}
-body{margin:0;background:#f7f9f8;color:#172b40;font-family:"Noto Sans Bengali",Arial,sans-serif;font-size:14px}
+body{margin:0;background:#f7f9f8;color:#172b40;font-family:"Hind Siliguri",system-ui,sans-serif;font-size:14px}
 h1,h2,h3,p{margin-top:0}
 a{text-decoration:none}
 button,input,select,textarea{font:inherit}
@@ -97,4 +97,63 @@ tr:last-child td{border-bottom:none}
  .pin-cell{height:57px;font-size:21px}
  .dashboard-layout .panel{max-width:100%}
  .dashboard-layout td,.dashboard-layout th{padding:10px}
+}
+
+.admission-page{min-height:calc(100dvh - 72px);padding:24px 0 56px;background:linear-gradient(155deg,#edf7f1,#f7f9f8 320px)}
+.admission-container{max-width:860px;margin:auto;padding:0 16px}
+.admission-back{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#5c766b;margin-bottom:25px}
+.admission-intro{display:flex;align-items:center;gap:16px;margin-bottom:26px}
+.admission-emblem{width:58px;height:58px;flex:none;display:grid;place-items:center;background:#176b61;color:#fff;border-radius:13px}
+.admission-title{font-size:clamp(23px,4vw,30px);font-weight:700;margin:4px 0 6px;line-height:1.4}
+.admission-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:18px}
+.admission-step{display:flex;align-items:center;gap:10px;padding:13px;background:#fff;border:1px solid #dfe7e2;border-radius:11px;color:#81918b;min-height:77px}
+.admission-step.current{background:#f0faf5;color:#176b61;border-color:#76b59f}
+.admission-step.completed{color:#176b61;border-color:#cbe5d7}
+.admission-step-index{flex:none;display:grid;place-items:center;width:33px;height:33px;background:#eef2f0;border-radius:9px;font-weight:700}
+.current .admission-step-index,.completed .admission-step-index{background:#176b61;color:#fff}
+.admission-step-info{display:flex;flex-direction:column;gap:2px}
+.admission-step-info strong{font-size:12px;line-height:1.4}
+.admission-step-info small{font-size:10px}
+.admission-card{background:#fff;border:1px solid #e1eae4;border-radius:16px;box-shadow:0 10px 36px #164a340c;overflow:hidden}
+.admission-card-head{display:flex;align-items:center;gap:14px;background:#fafdfb;border-bottom:1px solid #e7efe9;padding:23px 28px}
+.admission-card-icon{width:45px;height:45px;flex:none;border-radius:12px;background:#e8f4ec;color:#176b61;display:grid;place-items:center}
+.admission-eyebrow{font-size:11px;font-weight:700;color:#176b61}
+.admission-card-head h2{font-size:21px;font-weight:700;margin:2px 0}
+.admission-card-head p{font-size:12px;color:#7a8980;margin:0}
+.admission-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 20px;padding:26px 28px 14px}
+.admission-wide{grid-column:1/-1}
+.admission-field{display:flex;flex-direction:column;gap:8px;min-width:0}
+.admission-field-label{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#3d584c}
+.required-indicator{color:#cf4b4b}
+.admission-optional{font-size:10px;color:#8d9692;font-weight:400}
+.admission-field input,.admission-field select{width:100%;min-height:48px;padding:12px 13px;background:#fff;border:1px solid #dbe5df;border-radius:9px;color:#193e36;outline:0;font-size:14px}
+.admission-field input:focus,.admission-field select:focus{border-color:#176b61;box-shadow:0 0 0 3px #176b611b}
+.admission-field input::placeholder{color:#9cafaa}
+.admission-field.has-error input,.admission-field.has-error select{border-color:#d24747!important;background:#fff8f8}
+.admission-field-error{display:flex;gap:6px;align-items:flex-start;font-size:11px;line-height:1.6;color:#b22e35;margin:0}
+.admission-field-error svg{flex:none;margin-top:2px}
+.admission-helper{display:flex;align-items:flex-start;gap:9px;background:#eff8f3;color:#527763;padding:12px;border-radius:9px;border:1px solid #d6e9dd;font-size:11px;line-height:1.7}
+.admission-helper svg{flex:none}
+.admission-payment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.admission-payment{display:flex;flex-direction:column;align-items:flex-start;gap:9px;position:relative;text-align:left;font-size:12px;font-weight:600;padding:14px;min-height:91px;border:1px solid #dce5df;border-radius:10px;background:white;color:#536b60}
+.admission-payment.selected{background:#eff9f2;border-color:#70ab92;color:#176b61;box-shadow:inset 0 0 0 1px #70ab92}
+.admission-payment-check{position:absolute;top:12px;right:12px}
+.admission-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 28px 0;border-top:1px solid #edf1ed;padding:22px 0 26px}
+.admission-actions .btn{min-height:45px;border-radius:9px;padding:9px 18px}
+.admission-next{min-width:160px}
+.admission-footer-note{display:flex;align-items:center;justify-content:center;gap:8px;color:#7c9083;margin-top:22px;font-size:11px;text-align:center}
+.admission-toast{position:fixed;right:18px;top:88px;z-index:80;display:flex;gap:11px;align-items:flex-start;max-width:min(420px,calc(100vw - 24px));padding:15px 16px;background:white;border:1px solid #ecc2c2;border-left:4px solid #c34040;border-radius:11px;box-shadow:0 12px 40px #4f21212b;color:#9e3438}
+.admission-toast p{flex:1;margin:0;font-size:13px;font-weight:600}
+.admission-toast>svg{flex:none}
+.admission-toast button{border:0;padding:0;background:transparent;color:inherit}
+.admission-honeypot{position:absolute!important;left:-10000px!important;opacity:0!important;pointer-events:none!important}
+.admission-success{background:#fff;border:1px solid #dcebe1;border-radius:14px;padding:42px 30px;text-align:center}
+.admission-success-icon{display:grid;place-items:center;color:#176b61;margin-bottom:16px}
+.admission-id{background:#f0faf4;border:1px dashed #84b99c;border-radius:10px;padding:17px;overflow-wrap:anywhere;margin:20px 0;font-weight:700}
+@media(max-width:680px){
+.admission-page{padding-top:17px}.admission-container{padding:0 12px}.admission-intro{gap:12px;margin-bottom:20px}.admission-emblem{width:47px;height:47px}
+.admission-steps{gap:6px;margin-bottom:13px}.admission-step{flex-direction:column;justify-content:center;gap:5px;min-height:69px;padding:9px 3px;text-align:center}.admission-step-index{width:26px;height:26px;font-size:12px}.admission-step-info strong{font-size:10px}.admission-step-info small{display:none}
+.admission-card-head{padding:19px 17px}.admission-card-head h2{font-size:18px}.admission-fields{grid-template-columns:1fr;padding:22px 17px 8px;gap:19px}.admission-wide{grid-column:auto}
+.admission-payment-grid{gap:7px}.admission-payment{padding:12px 8px;font-size:10px;min-height:86px}.admission-payment svg{width:19px}
+.admission-actions{margin:8px 17px 0;padding:20px 0}.admission-actions .btn{padding:9px 12px;font-size:12px}.admission-next{min-width:0}.admission-toast{top:76px;left:12px;right:12px;max-width:none}
 }

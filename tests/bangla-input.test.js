@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { toAsciiDigits, toBanglaDigits, parseBanglaNumber, gradeLabel } from "../lib/bangla-numbers.js";
 import { normalizeAdmissionData, validateAdmission, validateAdmissionStep, firstInvalidStep } from "../lib/admission-validation.js";
 const valid = {
- studentName:"সুমাইয়া আক্তার", dob:"২০১৪-০৫-১৪", birthRegistration:"২০১৪১২৩৪৫৬৭৮৯০১২৩৪",
+ studentName:"সুমাইয়া আক্তার", dob:"২০১৪-০৫-১৪", birthRegistration:"২০১৪১২৩৪৫৬৭৮৯০১২৩",
  gender:"female", grade:"৬", section:"a", group:"science",
  fatherName:"মোঃ রহমান", fatherPhone:"+৮৮০১৭১২৩৪৫৬৭৮",
  motherName:"মোছাঃ রহিমা", motherPhone:"০১৮১২৩৪৫৬৭৮",
@@ -20,7 +20,7 @@ test("Bangla, English, Arabic digit parsing", () => {
 test("valid Bangla admission fields normalize to canonical values", () => {
  const v=normalizeAdmissionData(valid);
  assert.equal(v.dob,"2014-05-14");
- assert.equal(v.birthRegistration,"201412345678901234");
+ assert.equal(v.birthRegistration,"20141234567890123");
  assert.equal(v.grade,"6");
  assert.equal(v.fatherPhone,"01712345678");
  assert.equal(v.studentPhone,"01912345678");
