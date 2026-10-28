@@ -1,6 +1,7 @@
 import { adminAuth, db } from "../../../lib/firebase-admin";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
+import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential } from "../../../lib/phone-pin";
 import { registerPhoneCredential } from "../../../lib/phone-accounts";
 
@@ -63,7 +64,7 @@ export async function GET(req) {
       return json({ items: asDocs(snap) });
     }
     if (resource === "attendance") {
-      const date = u.searchParams.get("date");
+      const date = toAsciiDigits(u.searchParams.get("date"));
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "")) return fail("সঠিক তারিখ দিন");
       const snap = await store.collection("attendance").where("date", "==", date).limit(900).get();
       return json({ items: asDocs(snap).filter(a => visible(actor, a)) });
@@ -128,7 +129,7 @@ export async function POST(req) {
       if (!["teacher", "class_teacher"].includes(role) || !name || !phone || !pin)
         return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const assignedClasses = Array.isArray(body.assignedClasses)
-        ? body.assignedClasses.map(v => cleanText(v, 20)).filter(v => /^(6|7|8|9|10)-[a-z0-9]+$/.test(v)).slice(0, 15) : [];
+        ? body.assignedClasses.map(v => toAsciiDigits(cleanText(v, 20))).filter(v => /^(6|7|8|9|10)-[a-z0-9]+$/.test(v)).slice(0, 15) : [];
       if (role === "class_teacher" && !assignedClasses.length) return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি/শাখা দিন");
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
@@ -140,7 +141,7 @@ export async function POST(req) {
     }
     if (action === "application.approve") {
       needRole(actor, ["principal", "class_teacher"]);
-      const id = cleanText(body.id, 150), roll = String(body.roll || ""), pin = normalizePin(body.pin);
+      const id = cleanText(body.id, 150), roll = toAsciiDigits(body.roll || ""), pin = normalizePin(body.pin);
       const ref = store.collection("admissions").doc(id);
       const snap = await ref.get();
       if (!snap.exists) return fail("আবেদন পাওয়া যায়নি");
@@ -194,7 +195,7 @@ export async function POST(req) {
     if (action === "attendance.set") {
       needRole(actor, allowedStaff);
       const student = await studentFor(actor, cleanText(body.studentId, 100));
-      const date = cleanText(body.date, 15), status = body.status;
+      const date = toAsciiDigits(cleanText(body.date, 15)), status = body.status;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !["present", "absent", "left_early"].includes(status)) return fail("তারিখ বা উপস্থিতি সঠিক নয়");
       const key = date + "_" + student.id;
       await store.collection("attendance").doc(key).set({
@@ -226,7 +227,7 @@ export async function POST(req) {
       const exam = await store.collection("exams").doc(examId).get();
       if (!exam.exists) return fail("পরীক্ষা পাওয়া যায়নি");
       if (exam.data().published && actor.role !== "principal") return fail("প্রকাশিত ফল প্রধান শিক্ষক ছাড়া পরিবর্তন করতে পারবেন না");
-      const scores = body.scores;
+      const scores = Object.fromEntries(Object.entries(body.scores||{}).map(([part,value])=>[part,parseBanglaNumber(value)]));
       validateMarkForStudent(student, subjectId, scores);
       const key = examId + "_" + student.id + "_" + subjectId;
       await store.collection("marks").doc(key).set({
@@ -237,7 +238,7 @@ export async function POST(req) {
     }
     if (action === "ledger.add") {
       needRole(actor, ["principal", "class_teacher"]);
-      const type = body.type, amount = Number(body.amount), grade = Number(body.grade),
+      const type = body.type, amount = parseBanglaNumber(body.amount), grade = parseBanglaNumber(body.grade),
         section = cleanText(body.section, 10), description = cleanText(body.description, 250);
       if (!["income", "expense"].includes(type) || !Number.isFinite(amount) || amount <= 0 || amount > 10000000 ||
           !validGrade(grade) || !/^[a-z0-9]{1,10}$/i.test(section) || !description) return fail("হিসাবের তথ্য যাচাই করুন");
@@ -250,7 +251,7 @@ export async function POST(req) {
     if (action === "student.dues") {
       needRole(actor, ["principal", "class_teacher"]);
       const student = await studentFor(actor, cleanText(body.studentId, 120));
-      const amount = Number(body.amount);
+      const amount = parseBanglaNumber(body.amount);
       if (!Number.isFinite(amount) || amount < 0 || amount > 10000000) return fail("সঠিক পাওনা দিন");
       await store.collection("students").doc(student.id).update({ due: amount, dueUpdatedAt: iso() });
       await audit(actor, action, student.id); return json({ ok: true });
