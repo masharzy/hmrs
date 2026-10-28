@@ -29,6 +29,29 @@ export async function GET(req) {
     const u = new URL(req.url);
     const resource = u.searchParams.get("resource") || "profile";
     const store = db();
+    // Fast identity-only endpoint. Never load marks, attendance or exams during sign-in.
+    if(resource==="identity")return json({actor});
+    if(actor.role==="student"&&resource.startsWith("student.")){
+      const student=await studentFor(actor,actor.studentId);
+      const base={actor,student,dues:student.due||0};
+      if(resource==="student.profile")return json(base);
+      if(resource==="student.records"){
+        const snap=await store.collection("attendance").where("studentId","==",student.id).limit(250).get();
+        return json({...base,attendance:asDocs(snap)});
+      }
+      if(resource==="student.results"){
+        const [examsSnap,allMarks]=await Promise.all([
+          store.collection("exams").where("published","==",true).limit(30).get(),
+          store.collection("marks").where("studentId","==",student.id).limit(1000).get()
+        ]);
+        const results=asDocs(examsSnap).map(exam=>{
+          const marks=Object.fromEntries(allMarks.docs.filter(m=>m.data().examId===exam.id)
+            .map(m=>[m.data().subjectId,m.data().scores]));
+          return {exam,result:evaluateTranscript(student,marks)};
+        });
+        return json({...base,results});
+      }
+    }
     if (resource === "profile") {
       if (actor.role !== "student") return json({ actor });
       const student = await studentFor(actor, actor.studentId);

@@ -1,11 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
 import { ArrowLeft, ArrowRight, GraduationCap, School, ShieldCheck, UserRound, UsersRound, UserCog, Smartphone } from "lucide-react";
 import SiteHeader from "../../../components/SiteHeader";
 import { firebaseAuth } from "../../../lib/firebase-client";
+import { normalizeBDPhone } from "../../../lib/admission-validation";
+import { toBanglaDigits } from "../../../lib/bangla-numbers";
 import PinInput from "../../../components/PinInput";
 
 const roles=[
@@ -18,18 +20,30 @@ export default function Login(){
  const {role}=useParams(), router=useRouter();
  const active=roles.find(v=>v.key===role);
  const [phone,setPhone]=useState(""),[pin,setPin]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [device,setDevice]=useState(null),[recognized,setRecognized]=useState(null),[lockedUntil,setLockedUntil]=useState(0);
+ useEffect(()=>{fetch("/api/auth/device",{credentials:"same-origin",cache:"no-store"}).then(r=>r.json()).then(v=>{setDevice(v.device);setLockedUntil(v.lockedUntil||0)}).catch(()=>{});},[]);
+ async function recognize(value){
+   const valid=normalizeBDPhone(value);
+   if(!valid){setRecognized(null);return;}
+   try{const res=await fetch("/api/auth/device?phone="+encodeURIComponent(valid),{credentials:"same-origin",cache:"no-store"});
+     const data=await res.json();setRecognized(data.recognized||null);
+     if(data.lockedUntil)setLockedUntil(data.lockedUntil);
+   }catch{setRecognized(null);}
+ }
+ const isLocked=lockedUntil>Date.now();
  if(!active)return <main className="container py-16">পোর্টাল পাওয়া যায়নি। <Link href="/">হোম</Link></main>;
  async function submit(e){
   e.preventDefault();setBusy(true);setError("");
   try{
-   const response=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,pin,role}),cache:"no-store"});
+   if(isLocked)throw Error("এই ডিভাইস ১২ ঘণ্টার জন্য লক রয়েছে।");
+   const response=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone,pin,role}),cache:"no-store"});
    const body=await response.json();
-   if(!response.ok)throw Error(body.error||"লগইন করা যায়নি");
-   const credential=await signInWithCustomToken(firebaseAuth(),body.customToken);
-   const token=await credential.user.getIdToken();
-   const profile=await fetch("/api/portal?resource=profile",{headers:{Authorization:"Bearer "+token},cache:"no-store"});
-   if(!profile.ok)throw Error("অ্যাকাউন্টে প্রবেশাধিকার পাওয়া যায়নি");
-   router.replace("/dashboard");
+   if(!response.ok){
+     if(body.lockedUntil)setLockedUntil(body.lockedUntil);
+     throw Error(body.error||"লগইন করা যায়নি");
+   }
+   await signInWithCustomToken(firebaseAuth(),body.customToken);
+   router.replace("/dashboard/overview");
   }catch(err){setError(err.message?.includes("auth/")?"সাইন-ইন সম্পন্ন হয়নি। আবার চেষ্টা করুন।":err.message);setPin("");}finally{setBusy(false)}
  }
  return <><SiteHeader/><main className="login-stage">
@@ -53,16 +67,19 @@ export default function Login(){
          <label className="field">মোবাইল নম্বর
            <div className="phone-input-wrap"><Smartphone size={19} color="#71869a"/>
              <input required type="tel" inputMode="tel" autoComplete="tel-national"
-               name="phone" value={phone} onChange={e=>setPhone(e.target.value)}
+               name="phone" value={phone} onChange={e=>{setPhone(e.target.value);setRecognized(null)}} onBlur={e=>recognize(e.target.value)}
                placeholder="01712345678 অথবা +8801712345678" maxLength={20}/></div>
          </label>
-         <PinInput value={pin} onChange={setPin} disabled={busy}/>
+         {recognized&&<div className="device-recognition"><ShieldCheck size={18}/><div><strong>{recognized.name}</strong><p className="text-xs mb-0">এই ব্রাউজারে আগে {roles.find(r=>r.key===recognized.role)?.title||"ব্যবহারকারী"} হিসেবে লগইন করেছেন</p></div></div>}
+         {device&&<div className="text-xs muted">বর্তমান ডিভাইস: {device.label} · #{device.id}</div>}
+         {isLocked&&<div className="alert error" role="alert">এই ডিভাইস থেকে {new Date(lockedUntil).toLocaleString("bn-BD",{dateStyle:"medium",timeStyle:"short"})} পর্যন্ত লগইন বন্ধ থাকবে।</div>}
+         <PinInput value={pin} onChange={setPin} disabled={busy||isLocked}/>
          {error&&<div className="alert error" role="alert">{error}</div>}
-         <button type="submit" className="btn primary login-submit" disabled={busy||pin.length!==5}>
+         <button type="submit" className="btn primary login-submit" disabled={busy||isLocked||pin.length!==5}>
            {busy?"প্রবেশ করা হচ্ছে...":"পোর্টালে প্রবেশ করুন"} <ArrowRight size={19}/>
          </button>
        </form>
-       <p className="text-center muted text-xs mt-6 mb-0">PIN কাউকে জানাবেন না। বারবার ভুল PIN দিলে কিছু সময় লগইন বন্ধ থাকবে।</p>
+       <p className="text-center muted text-xs mt-6 mb-0">PIN কাউকে জানাবেন না। ৫ বার ভুল PIN-এ ডিভাইস ১২ ঘণ্টা বন্ধ; ২০ বার ভুলে অ্যাকাউন্ট প্রধান শিক্ষকের অনুমতি ছাড়া খুলবে না।</p>
      </div>
      <p className="muted text-xs text-center mt-5">
        পুরোনো ইমেইল/পাসওয়ার্ড অ্যাকাউন্ট আছে? <Link className="font-bold" href="/migrate" style={{color:"#176b61"}}>একবার ফোন + PIN সেট করুন</Link>
