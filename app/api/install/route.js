@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { adminAuth, db } from "../../../lib/firebase-admin";
-import { installPrerequisites, classifyFirebaseFailure, checkFirebaseProjectIds } from "../../../lib/install-utils";
+import { installPrerequisites, classifyFirebaseFailure, checkFirebaseProjectIds, classifyInstallActionFailure } from "../../../lib/install-utils";
 import { fail, json, verifyOrigin } from "../../../lib/server-auth";
 
 export const runtime = "nodejs";
@@ -23,6 +23,16 @@ export async function GET() {
   try {
     const snapshot = await installation().get();
     const installed = snapshot.exists && snapshot.data()?.status === "installed";
+    if (!installed) {
+      try {
+        // Read-only Firebase Auth connectivity check. No accounts are created.
+        await adminAuth().listUsers(1);
+      } catch (e) {
+        const issue = classifyInstallActionFailure(e, "check-auth");
+        console.error("Install Firebase Auth readiness:", issue.code, String(e?.code ?? "").slice(0, 48));
+        return json({ installed: false, ready: false, error: issue.hint, code: issue.code });
+      }
+    }
     return json({ installed, ready: true });
   } catch (e) {
     const issue = classifyFirebaseFailure(e);
@@ -33,7 +43,7 @@ export async function GET() {
 
 export async function POST(req) {
   let reserved = false, uid = null, completed = false;
-  let nonce = "";
+  let nonce = "", stage = "validate";
   try {
     verifyOrigin(req);
     if (Number(req.headers.get("content-length") || 0) > 4096)
@@ -51,6 +61,7 @@ export async function POST(req) {
     const ref = installation();
     nonce = randomUUID();
     const now = Date.now();
+    stage = "reserve-install";
     await store.runTransaction(async tx => {
       const snap = await tx.get(ref);
       const previous = snap.data();
@@ -62,11 +73,13 @@ export async function POST(req) {
     });
     reserved = true;
 
+    stage = "create-firebase-user";
     const user = await adminAuth().createUser({
       email: email.toLowerCase(), password, displayName: name, emailVerified: false
     });
     uid = user.uid;
 
+    stage = "save-principal";
     await store.runTransaction(async tx => {
       const state = await tx.get(ref);
       if (state.data()?.status !== "installing" || state.data()?.nonce !== nonce)
@@ -97,7 +110,10 @@ export async function POST(req) {
       } catch { /* Cannot verify; do not delete potentially installed account. */ return fail("সেটআপের অবস্থা যাচাই করা যায়নি", 503); }
       try { await adminAuth().deleteUser(uid); } catch { /* orphan requires admin cleanup */ }
     }
-    return fail(e.status ? e.message : "সেটআপ সম্পন্ন করা যায়নি। Firebase কনফিগারেশন যাচাই করুন।", e.status || 400);
+    if (e.status) return fail(e.message, e.status);
+    const issue = classifyInstallActionFailure(e, stage);
+    console.error("Install principal creation failed:", stage, issue.code, String(e?.code ?? "").slice(0, 48));
+    return Response.json({ error: issue.hint, code: issue.code, stage }, { status: 503, headers: { "Cache-Control": "no-store" } });
   } finally {
     if (reserved && !completed && nonce) {
       try {

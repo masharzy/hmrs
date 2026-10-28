@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { installPrerequisites, classifyFirebaseFailure, checkFirebaseProjectIds } from "../lib/install-utils.js";
+import { installPrerequisites, classifyFirebaseFailure, checkFirebaseProjectIds, classifyInstallActionFailure } from "../lib/install-utils.js";
 
 test("first-time setup only requires Firebase service and web configuration", () => {
   const env = {
@@ -26,4 +26,13 @@ test("diagnostic error codes map safely without exposing service key", () => {
 test("mismatched project names detected", () => {
   assert.equal(checkFirebaseProjectIds({ FIREBASE_PROJECT_ID:"a", NEXT_PUBLIC_FIREBASE_PROJECT_ID:"b" }).code,"project-id-mismatch");
   assert.equal(checkFirebaseProjectIds({ FIREBASE_PROJECT_ID:"a", NEXT_PUBLIC_FIREBASE_PROJECT_ID:"a" }),null);
+});
+
+test("principal installer returns safe, actionable Firebase Auth errors", () => {
+  assert.equal(classifyInstallActionFailure({ code: "auth/email-already-exists" }, "create-firebase-user").code, "auth-email-already-exists");
+  assert.equal(classifyInstallActionFailure({ code: "auth/insufficient-permission" }, "create-firebase-user").code, "firebase-auth-permission-denied");
+  assert.equal(classifyInstallActionFailure({ code: "auth/configuration-not-found" }, "check-auth").code, "firebase-auth-not-configured");
+  assert.equal(classifyInstallActionFailure({ code: 7, message: "PERMISSION_DENIED" }, "reserve-install").code, "service-account-permission");
+  assert.equal(classifyInstallActionFailure({ code: "unknown", message: "unknown failure" }, "save-principal").code, "firestore-write-failed");
+  assert.equal(classifyInstallActionFailure({ code: "unknown", message: "unknown failure" }, "create-firebase-user").code, "firebase-auth-request-failed");
 });
