@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, LockKeyhole, School, ShieldCheck, UserRoundPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, LockKeyhole, School, ShieldCheck, UserRoundPlus } from "lucide-react";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 import { firebaseAuth } from "../../lib/firebase-client";
@@ -11,7 +11,7 @@ import { firebaseAuth } from "../../lib/firebase-client";
 export default function InstallPage() {
   const router = useRouter();
   const [status, setStatus] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "", setupKey: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [installedNow, setInstalledNow] = useState(false);
@@ -36,13 +36,13 @@ export default function InstallPage() {
     try {
       const response = await fetch("/api/install", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name, email: form.email, password: form.password, setupKey: form.setupKey })
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password })
       });
       const result = await response.json();
       if (!response.ok) throw Error(result.error || "অ্যাকাউন্ট তৈরি করা যায়নি");
       setInstalledNow(true);
       setStatus({ installed: true, ready: true });
-      setForm(v => ({ ...v, password: "", confirm: "", setupKey: "" }));
+      setForm(v => ({ ...v, password: "", confirm: "" }));
       try {
         await signInWithEmailAndPassword(firebaseAuth(), form.email, form.password);
         router.replace("/dashboard");
@@ -70,18 +70,15 @@ export default function InstallPage() {
         <h2 className="section-title">সেটআপ সম্পন্ন হয়েছে</h2>
         <p className="muted text-sm">প্রতিষ্ঠানের জন্য প্রধান শিক্ষকের অ্যাকাউন্ট তৈরি করা হয়েছে। নিরাপত্তার জন্য এই ফর্ম দিয়ে আর নতুন প্রধান শিক্ষক তৈরি করা যাবে না।</p>
         <Link href="/login/principal" className="btn primary mt-3">প্রধান শিক্ষক লগইন <ArrowRight size={16}/></Link>
-        {installedNow && <p className="text-xs muted mt-5 mb-0">এখন Vercel থেকে INSTALL_SETUP_KEY মুছে দিতে পারো।</p>}
       </div> :
       !status.ready ? <div className="alert error">
         <b>Firebase configuration এখনো প্রস্তুত নয়।</b>
         <p className="mt-2 mb-1">{status.error || "প্রথমে Vercel → Settings → Environment Variables-এ প্রয়োজনীয় তথ্য বসাও।"}</p>
         {!!status.missing?.length && <p className="mt-2 mb-0 text-xs">Missing: {status.missing.join(", ")}</p>}
       </div> :
-      !status.setupKeyConfigured ? <div className="alert error">
-        প্রথমে Vercel Environment Variables-এ <code>INSTALL_SETUP_KEY</code> (অন্তত ৩২ অক্ষরের random key) যোগ করে Redeploy করো।
-      </div> :
       <>
-        <p className="muted text-sm mb-6">শুধু বিদ্যালয়ের অনুমোদিত প্রধান শিক্ষক প্রথমবার এই ফর্ম পূরণ করবেন। এরপর installer স্থায়ীভাবে বন্ধ থাকবে।</p>
+        <p className="muted text-sm mb-6">প্রথমবার প্রধান শিক্ষকের নাম, ইমেইল ও পাসওয়ার্ড দিয়ে অ্যাকাউন্ট তৈরি করুন। একবার সফল হলে এই ফর্ম স্থায়ীভাবে বন্ধ থাকবে।</p>
+        <div className="alert mb-5"><ShieldCheck size={16} className="inline mr-2"/>প্রথম সেটআপের আগে এই URL গোপন রাখুন। যে কেউ আগে সেটআপ করে ফেললে প্রতিষ্ঠান প্রধানের অ্যাকাউন্ট তার নিয়ন্ত্রণে চলে যেতে পারে।</div>
         <form className="grid gap-4" onSubmit={submit}>
           <label className="field">প্রধান শিক্ষকের নাম
             <input required minLength={3} maxLength={120} name="name" autoComplete="name" value={form.name} onChange={change} placeholder="পূর্ণ নাম"/>
@@ -97,11 +94,8 @@ export default function InstallPage() {
               <input required minLength={12} name="confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={change}/>
             </label>
           </div>
-          <label className="field">Setup Key (শুধু Vercel-এ রাখা গোপন key)
-            <input required minLength={32} maxLength={256} name="setupKey" type="password" autoComplete="off" value={form.setupKey} onChange={change} placeholder="INSTALL_SETUP_KEY"/>
-          </label>
           {error && <div className="alert error" role="alert">{error}</div>}
-          <div className="alert flex items-start gap-2"><ShieldCheck size={16} className="shrink-0 mt-1"/> এই key ওয়েবসাইটের source code-এ থাকবে না। প্রধান শিক্ষকের পাসওয়ার্ড Firebase Authentication নিরাপদে সংরক্ষণ করবে।</div>
+          <div className="alert flex items-start gap-2"><ShieldCheck size={16} className="shrink-0 mt-1"/> পাসওয়ার্ড Firebase Authentication-এ সংরক্ষিত হবে। অ্যাকাউন্ট তৈরি হওয়ার পর প্রধান শিক্ষক লগইন করতে পারবেন।</div>
           <button type="submit" disabled={busy} className="btn primary w-full mt-2"><UserRoundPlus size={16}/>{busy ? "অ্যাকাউন্ট তৈরি হচ্ছে..." : "প্রধান শিক্ষক অ্যাকাউন্ট তৈরি করো"} <ArrowRight size={16}/></button>
         </form>
       </>}

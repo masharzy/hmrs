@@ -10,10 +10,11 @@ Next.js App Router, JavaScript, React, Tailwind CSS, Firebase Authentication, Fi
 2. Copy .env.example to .env.local and configure Firebase Web App and Admin service-account environment variables.
 3. Enable **Email/Password** provider in Firebase Authentication and create a Firestore database.
 4. Deploy the included firestore.rules (all client access denied; private records are accessed only through role-checked server endpoints).
-5. Set a random `INSTALL_SETUP_KEY` (minimum 32 characters) **only in server environment variables**. Example generator: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Never expose it in source code or a NEXT_PUBLIC_ variable.
-6. Run npm run dev locally, or deploy on Vercel with the same variables and `APP_ORIGIN` set to the canonical site URL.
-7. Visit `/install` over HTTPS. Supply your principal name, email, strong password, and `INSTALL_SETUP_KEY`. The backend creates the Firebase Authentication user and Firestore principal role, then permanently marks installation complete. **No manual UID or `HEAD_TEACHER_UID` is required.**
-8. Sign in using the principal's email and password at `/login/principal`. Remove `INSTALL_SETUP_KEY` from Vercel after successful first-time installation, then redeploy; it is no longer used by the application.
+5. Deploy to Vercel with Firebase variables and `APP_ORIGIN` set to the canonical URL.
+6. Visit `/install` over HTTPS, and create the principal's account with name, email and strong password. No setup key or UID lookup is required. The installer registers one principal only and marks the Firestore installation record as complete.
+7. Sign in at `/login/principal` with the created email and password.
+
+**Security warning:** Without a setup key or another ownership check, the first person to successfully submit the public `/install` page can become principal. Keep the site private until the authorized principal installs it; perform setup immediately after Firebase connection. After installation, subsequent registration is blocked. For institutional production use, add an owner-verification step before enabling a fresh install.
 
 **Important:** The GitHub repository intentionally contains no Firebase secrets and no seeded student personal data. The site cannot perform real logins or save applications until you supply a Firebase project. For Vercel, set FIREBASE_PRIVATE_KEY to the full PEM value; escaped newlines are supported.
 
@@ -40,7 +41,7 @@ Rules are in lib/academic.js and covered by tests/academic.test.js. Grades 6-8 c
 
 ### Security notes
 - Firebase ID tokens checked on every private API request; Firestore client reads/writes denied.
-- Role and class-scoped authorization checked on the server. `/install` requires a high-entropy server-side setup key and a Firestore one-time installation lock. Principal identity is created server-side and stored by UID in Firestore; the installer cannot be used again after success.
+- Role and class-scoped authorization checked on the server. `/install` uses a Firestore transaction to reserve the first registration and locks itself after success. Without an ownership check it remains vulnerable to a first-visitor takeover before setup, so do not expose an uninstalled school publicly.
 - Passwords are held by Firebase Authentication, not Firestore. Never send passwords by WhatsApp, and require users to change initial passwords operationally.
 - Attendance and sensitive records are never exposed in public API; audit entries are written for private operations.
 - Before production, configure App Check/captcha and distributed rate limiting on the public admission endpoint, backup/retention, guardian consent, account recovery, and transaction-safe payment integration.

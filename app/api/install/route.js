@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { adminAuth, db } from "../../../lib/firebase-admin";
-import { correctInstallKey, installPrerequisites } from "../../../lib/install-utils";
+import { installPrerequisites } from "../../../lib/install-utils";
 import { fail, json, verifyOrigin } from "../../../lib/server-auth";
 
 export const runtime = "nodejs";
@@ -10,20 +10,18 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   name: z.string().trim().min(3, "কমপক্ষে ৩ অক্ষরের নাম লিখুন").max(120),
   email: z.string().trim().email("সঠিক ইমেইল ঠিকানা লিখুন").max(160),
-  password: z.string().min(12, "পাসওয়ার্ড অন্তত ১২ অক্ষরের হতে হবে").max(128),
-  setupKey: z.string().min(32, "একটি সঠিক setup key দিন").max(256)
+  password: z.string().min(12, "পাসওয়ার্ড অন্তত ১২ অক্ষরের হতে হবে").max(128)
 }).strict();
 const installation = () => db().collection("settings").doc("installation");
 const installationError = (message, status) => Object.assign(new Error(message), { status });
 
 export async function GET() {
   const missing = installPrerequisites(process.env);
-  const keyReady = !!process.env.INSTALL_SETUP_KEY && process.env.INSTALL_SETUP_KEY.length >= 32;
   if (missing.length) return json({ installed: false, ready: false, missing });
   try {
     const snapshot = await installation().get();
     const installed = snapshot.exists && snapshot.data()?.status === "installed";
-    return json({ installed, ready: true, setupKeyConfigured: keyReady });
+    return json({ installed, ready: true });
   } catch {
     return json({ installed: false, ready: false, error: "Firebase Firestore সংযোগ বা অনুমতি যাচাই করুন" });
   }
@@ -38,14 +36,10 @@ export async function POST(req) {
       return fail("অনুরোধটি অনেক বড়", 413);
     if (installPrerequisites(process.env).length)
       return fail("প্রথমে Firebase environment variables সেট করুন", 503);
-    if (!process.env.INSTALL_SETUP_KEY || process.env.INSTALL_SETUP_KEY.length < 32)
-      return fail("INSTALL_SETUP_KEY প্রথমে Vercel-এ সেট করুন", 503);
 
     const body = schema.safeParse(await req.json());
     if (!body.success) return fail(body.error.issues[0].message, 400);
-    const { name, email, password, setupKey } = body.data;
-    if (!correctInstallKey(setupKey, process.env.INSTALL_SETUP_KEY))
-      return fail("Setup key সঠিক নয়", 403);
+    const { name, email, password } = body.data;
 
     const store = db();
     const ref = installation();
