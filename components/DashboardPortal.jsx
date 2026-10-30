@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -45,6 +45,7 @@ export default function DashboardPortal() {
  const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6-a"});
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",section:"a",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
+ const photoUploadInput=useRef(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
 
  async function request(resource,opts){
@@ -141,7 +142,9 @@ export default function DashboardPortal() {
    const response=await fetch("/api/school-photo",{method:"POST",headers:{Authorization:"Bearer "+token},body:formData});
    const output=await response.json();
    if(!response.ok)throw Error(output.error||"ছবি আপলোড হয়নি");
-   setPhoto(output.photoUrl);setUploadFile(null);setSuccess("বিদ্যালয়ের ছবি আপলোড ও প্রকাশিত হয়েছে");
+   setPhoto(output.photoUrl);setUploadFile(null);
+   if(photoUploadInput.current)photoUploadInput.current.value="";
+   setSuccess("ImgBB-তে ছবি আপলোড হয়েছে এবং হোমপেজে প্রকাশিত হয়েছে");
    await refresh();
   }catch(e){setError(e.message)}finally{setWorking(false)}
  }
@@ -249,12 +252,12 @@ export default function DashboardPortal() {
        <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",phone:"",pin:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
        <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{(u.assignedClasses||[]).join(", ")}</td></tr>)}</tbody></table></div></>}
        {tab==="settings"&&<><h2 className="section-title">বিদ্যালয়ের ওয়েবসাইট সেটিংস</h2><div className="panel p-6 grid gap-4">
-        <div className="alert">বিদ্যালয়ের প্রকৃত ছবি HTTPS URL হিসেবে যুক্ত করুন। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
-        <Field label="প্রতিষ্ঠানের প্রকৃত ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
+        <div className="alert">ছবি আপলোড করলে ImgBB-তে সংরক্ষিত হবে এবং হোমপেজের হিরো সেকশনে স্বয়ংক্রিয়ভাবে দেখাবে। আলাদা করে সেটিংস সংরক্ষণ করতে হবে না। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
+        <Field label="হোমপেজের ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
         <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> ছবি আপলোড করুন</button>
         <Field label="অথবা HTTPS ছবির URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
         <Field label="প্রতিষ্ঠানের সংক্ষিপ্ত পরিচিতি"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
-        {photo&&<img src={photo} alt="বিদ্যালয়ের ছবি প্রিভিউ" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
+        {photo&&<img key={photo} src={photo} alt="বিদ্যালয়ের ছবি প্রিভিউ" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
         <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>সেটিংস সংরক্ষণ</button>
        </div></>}
       </>}
