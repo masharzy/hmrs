@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evaluateSubject, evaluateTranscript, getSubjects } from "../lib/academic.js";
+import { evaluateSubject, evaluateTranscript, getSubjects, validateMarkForStudent } from "../lib/academic.js";
 
 test("grade 6 Bangla papers combine and 33% threshold is inclusive", () => {
   const s = getSubjects(6).find(s => s.id === "bangla");
@@ -58,4 +58,31 @@ test("overall GPA letter is not derived from raw marks percentage", () => {
  const r = evaluateTranscript(student, marks);
  assert.equal(r.gpa, 4);
  assert.equal(r.letter, "A");
+});
+
+test("higher math in grades 9 and 10 has the same CQ, MCQ and practical breakdown as physics", () => {
+  for (const grade of [9, 10]) {
+    const subjects = getSubjects(grade, "science", "higher-math");
+    const higherMath = subjects.find(s => s.id === "higher-math");
+    const physics = subjects.find(s => s.id === "physics");
+    assert.deepEqual(higherMath.parts, physics.parts);
+    assert.deepEqual(higherMath.parts.map(p => [p.key, p.max, p.pass]), [
+      ["cq", 50, 17], ["mcq", 25, 8], ["practical", 25, 8]
+    ]);
+    assert.equal(higherMath.max, 100);
+    assert.equal(evaluateSubject(higherMath, { cq: 17, mcq: 8, practical: 8 }).passed, true);
+    assert.equal(evaluateSubject(higherMath, { cq: 18, mcq: 8, practical: 7 }).passed, false);
+    assert.equal(evaluateSubject(higherMath, { cq: 50, mcq: 25 }).status, "missing");
+  }
+});
+
+test("higher math mark submission requires and validates practical marks", () => {
+  for (const grade of [9, 10]) {
+    const student = { grade, group: "science", elective: "higher-math" };
+    assert.throws(() => validateMarkForStudent(student, "higher-math", { cq: 50, mcq: 25 }), /নম্বর সঠিক নয়/);
+    assert.throws(() => validateMarkForStudent(student, "higher-math", { cq: 50, mcq: 25, practical: 26 }), /নম্বর সঠিক নয়/);
+    const result = validateMarkForStudent(student, "higher-math", { cq: 40, mcq: 20, practical: 20 });
+    assert.equal(result.received, 80);
+    assert.equal(result.letter, "A+");
+  }
 });
