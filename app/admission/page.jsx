@@ -55,8 +55,12 @@ export default function Admission(){
   return ()=>clearTimeout(timer);
  },[toast]);
  function change(name,value){
-  setForm(f=>({...f,[name]:value}));
-  setErrors(e=>{if(!e[name])return e;const next={...e};delete next[name];return next});
+  setForm(f=>{
+   if(name!=="grade")return {...f,[name]:value};
+   const group=Number(value)>=9?(["science","business","humanities"].includes(f.group)?f.group:"science"):"";
+   return {...f,grade:value,group};
+  });
+  setErrors(e=>{if(!e[name] && !(name==="grade"&&e.group))return e;const next={...e};delete next[name];if(name==="grade")delete next.group;return next});
  }
  function focusError(fields){
   const first=Object.keys(fields)[0];
