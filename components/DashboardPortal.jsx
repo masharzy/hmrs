@@ -239,14 +239,27 @@ export default function DashboardPortal() {
         </div>)}{!admissions.length&&<div className="panel empty">কোনো আবেদন নেই।</div>}</div>
         <Pager total={admissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
        </>}
-       {tab==="attendance"&&<><div className="flex justify-between items-center gap-3 flex-wrap"><h2 className="section-title">দৈনিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
-        <div className="alert">অনুপস্থিত ও পালিয়ে যাওয়া শিক্ষার্থীর ক্ষেত্রে WhatsApp বাটনে ক্লিক করলে মেসেজ খুলবে; পাঠানোর সিদ্ধান্ত শিক্ষক নিজে নেবেন।</div>
-        <div className="panel table-wrap"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা চিহ্নিত করুন</th><th>অভিভাবক</th></tr></thead><tbody>{filtered.map(s=>{
+       {tab==="attendance"&&<>
+        <div className="dashboard-toolbar"><h2 className="section-title">দৈনিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
+        <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map(s=>{
          const record=data.attendance?.find(a=>a.studentId===s.id);
-         return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td><td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
+         return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
+          <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
           <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
           <td>{record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</td>
-         </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div></>}
+         </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div>
+        <div className="dashboard-mobile-records">{pageItems.map(s=>{
+          const record=data.attendance?.find(a=>a.studentId===s.id);
+          return <div key={s.id} className="panel dashboard-mobile-record">
+           <div className="flex justify-between items-center gap-2"><div><b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}</p></div>
+            <span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></div>
+           <div className="inline-actions mt-3">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}
+            {record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</div>
+          </div>;
+        })}</div>
+        <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
+       </>}
        {tab==="marks"&&<><h2 className="section-title">পরীক্ষা ও নম্বর ব্যবস্থাপনা</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
