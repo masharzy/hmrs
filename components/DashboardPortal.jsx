@@ -10,6 +10,8 @@ import { evaluateTranscript, getSubjects } from "../lib/academic";
 import Marksheet from "./Marksheet";
 import PinInput from "./PinInput";
 import SecurityCenter from "./SecurityCenter";
+import DashboardShell, { DashboardSkeleton } from "./DashboardShell";
+import DashboardOverview from "./DashboardOverview";
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
@@ -39,7 +41,6 @@ export default function DashboardPortal() {
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
  const loadedRoutes=useRef(new Set()),routeCache=useRef(new Map()),loadSequence=useRef(0);
- const [mobileNavOpen,setMobileNavOpen]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],users:[],settings:{}});
@@ -176,26 +177,26 @@ export default function DashboardPortal() {
   }catch(e){setError(e.message)}finally{setWorking(false)}
  }
  const print=()=>window.print();
- if(busy)return <div className="dashboard-loading"><div className="dashboard-loading-ring"/><b>ড্যাশবোর্ড প্রস্তুত হচ্ছে</b><p className="muted text-xs">অ্যাকাউন্ট যাচাই করা হচ্ছে...</p></div>;
+ if(busy)return <div className="hmrs-auth-loading" aria-busy="true" aria-label="অ্যাকাউন্ট যাচাই চলছে"><div className="hmrs-auth-icon"><School size={24}/></div><div className="hmrs-auth-lines"><span/><span/></div><div className="hmrs-auth-layout"><span/><span/><span/><span/></div></div>;
  if(!actor)return <main className="container py-16"><div className="panel p-8"><h1 className="section-title">ড্যাশবোর্ডে প্রবেশ করা যায়নি</h1><p className="alert error">{error||"অ্যাকাউন্ট পাওয়া যায়নি"}</p><Link className="btn primary mt-4" href="/login/student">পুনরায় লগইন</Link></div></main>;
- const options=(arr,place="নির্বাচন করুন")=>[[ "",place],...arr];
- return <><div style={{background:"white",borderBottom:"1px solid #e3e9e7"}}>
-   <div className="container flex items-center justify-between flex-wrap gap-3 py-3">
-    <Link href="/" className="flex items-center gap-2 font-extrabold"><span className="p-2 rounded" style={{background:"#176b61",color:"white"}}><School size={19}/></span>HMRS <span className="muted font-medium text-xs desktop-only">School Management</span></Link>
-    <div className="inline-actions"><span className="chip">{roleNames[actor.role]}</span><span className="text-xs muted desktop-only">{actor.name||"ব্যবহারকারী"}</span><button className="btn sm" onClick={async()=>{await signOut(firebaseAuth());router.replace("/")}}><LogOut size={14}/> লগআউট</button></div>
-   </div>
-  </div>
-  <main className="container py-7">
-   <div className="dashboard-section-head"><div><span className="kicker">HMRS · {roleNames[actor.role]}</span><h1 className="section-title mt-1 mb-1">{(roles[actor.role]||[]).find(([key])=>key===tab)?.[1]||"ড্যাশবোর্ড"}</h1><p className="muted text-xs mb-0">বিদ্যালয়ের ডিজিটাল ব্যবস্থাপনা কেন্দ্র</p></div><button className="btn sm" disabled={working||loadingSection} onClick={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}><RefreshCw size={14}/> রিফ্রেশ</button></div>
-   {actor && !actor.pinEnabled && <div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
-   {error&&<div role="alert" className="alert error mb-4">{error} <button type="button" onClick={()=>setError("")} className="float-right">×</button></div>}
+ const options=(arr,place="নির্বাচন করুন")=>[["",place],...arr];
+ const showPlaceholder=tab!=="security" && !routeCache.current.has(tab);
+ return <>
+  <DashboardShell
+   actor={actor}
+   roleName={roleNames[actor.role]}
+   routes={roles[actor.role]||[]}
+   active={tab}
+   loading={loadingSection}
+   onNavigate={()=>{setError("");setSuccess("")}}
+   onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}
+   onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
+  >
+   {actor&&!actor.pinEnabled&&<div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
+   {error&&<div role="alert" className="alert error mb-4">{error}<button type="button" onClick={()=>setError("")} className="float-right" aria-label="ত্রুটি বন্ধ করুন">×</button></div>}
    {success&&<div role="status" className="alert mb-4">{success}</div>}
-   <button className="dashboard-mobile-menu btn primary" type="button" aria-expanded={mobileNavOpen} aria-controls="dashboard-navigation" onClick={()=>setMobileNavOpen(v=>!v)}><Menu size={17}/> মেনু</button>
-   {mobileNavOpen&&<button className="dashboard-nav-backdrop" type="button" aria-label="মেনু বন্ধ করুন" onClick={()=>setMobileNavOpen(false)}/>}
-   <div className="dashboard-layout">
-    <aside id="dashboard-navigation" className={"panel sidebar dashboard-nav"+(mobileNavOpen?" is-open":"")} aria-label="ড্যাশবোর্ড মেনু">{(roles[actor.role]||[]).map(([key,label,Icon])=><Link key={key} href={"/dashboard/"+key} aria-current={tab===key?"page":undefined} className={tab===key?"active":""} onClick={()=>{setMobileNavOpen(false);setError("");setSuccess("")}}><Icon size={18}/><span>{label}</span></Link>)}</aside>
-    <section className="min-w-0 grid gap-5 dashboard-section-content">
-     {loadingSection&&<div className="dashboard-fetching"><div className="dashboard-loading-ring"/> তথ্য হালনাগাদ হচ্ছে...</div>}
+   <section className="hmrs-main-content dashboard-section-content">
+    {showPlaceholder?<DashboardSkeleton kind={tab}/>:<>
      {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
      {actor.role==="student"?<>
        {tab==="overview"&&<><div className="panel p-6"><span className="kicker">STUDENT PROFILE</span><h2 className="section-title mt-2">{profile?.student?.name}</h2><div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mt-5">{[
@@ -218,8 +219,7 @@ export default function DashboardPortal() {
        </div>)}
       </>:
       <>
-       {tab==="overview"&&<><div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[[toBanglaDigits(summary.students),"শিক্ষার্থী",Users],[toBanglaDigits(summary.applications),"অপেক্ষমাণ আবেদন",ClipboardCheck],[toBanglaDigits(summary.present),"আজ উপস্থিত",CalendarCheck2],[toBanglaDigits(summary.absent),"অনুপস্থিত/বহির্গমন",FileText]].map(([val,label,Icon])=><div className="panel stat" key={label}><div className="flex justify-between items-center muted text-xs">{label}<Icon size={17} color="#176b61"/></div><strong>{val}</strong></div>)}</div>
-        <div className="panel p-6"><h2 className="font-extrabold mb-2">স্বাগতম, {actor.name}</h2><p className="muted mb-0">বাম পাশের মেনু থেকে শিক্ষার্থী তালিকা, হাজিরা ও পরীক্ষার নম্বর ব্যবস্থাপনা করুন। {actor.role==="principal"?"প্রধান শিক্ষক হিসেবে সকল প্রশাসনিক ফিচার আপনার জন্য উন্মুক্ত।":""}</p></div></>}
+        {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
        {tab==="students"&&<>
         <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থী তালিকা</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
          <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label></div>
@@ -324,9 +324,9 @@ export default function DashboardPortal() {
         <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>সেটিংস সংরক্ষণ</button>
        </div></>}
       </>}
-    </section>
-   </div>
-  </main>
+    </>}
+   </section>
+  </DashboardShell>
   {actor.role==="principal"&&editing&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={async values=>{
    const action=editing.type==="student"?"student.update":"application.update";
    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
