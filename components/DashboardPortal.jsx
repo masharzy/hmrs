@@ -230,10 +230,15 @@ export default function DashboardPortal() {
         </div>)}{!filtered.length&&<div className="panel empty">শিক্ষার্থী পাওয়া যায়নি</div>}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="admissions"&&<><h2 className="section-title">ভর্তি আবেদন ও অনুমোদন</h2><div className="grid gap-3">{(data.admissions||[]).map(a=><div key={a.id} className="panel p-5">
-        <div className="flex flex-wrap justify-between items-start gap-2"><div><b className="text-base">{a.studentName}</b><p className="muted text-xs mt-1 mb-0">শ্রেণি {toBanglaDigits(a.grade)} · শাখা {sectionName(a.section)} · পিতা: {a.fatherName} · {toBanglaDigits(a.fatherPhone)}</p><p className="muted text-xs mt-1 mb-0">পূর্ববর্তী বিদ্যালয়: {a.previousSchool} · পেমেন্ট: {a.paymentMethod} / {a.paymentStatus}</p></div><span className={"chip "+(a.status==="pending"?"":"gray")}>{a.status}</span></div>
-        {a.status==="pending"&&<AdmissionApproval item={a} busy={working} mutate={mutate} principal={actor.role==="principal"}/>}
-       </div>)}{!data.admissions?.length&&<div className="panel empty">কোনো আবেদন নেই।</div>}</div></>}
+       {tab==="admissions"&&<><div className="dashboard-toolbar"><div><h2 className="section-title">ভর্তি আবেদন ও অনুমোদন</h2><p className="muted text-xs">{toBanglaDigits(admissions.length)}টি আবেদন</p></div></div>
+        <div className="grid gap-3">{admissions.slice((admissionsCurrentPage-1)*20,admissionsCurrentPage*20).map(a=><div key={a.id} className="panel p-5 dashboard-application">
+         <div className="flex flex-wrap justify-between items-start gap-2"><div><b className="text-base">{a.studentName}</b><p className="muted text-xs mt-1 mb-0">শ্রেণি {formatClass(toBanglaDigits(a.grade),a.group)} · পিতা: {a.fatherName} · {toBanglaDigits(a.fatherPhone)}</p><p className="muted text-xs mt-1 mb-0">পূর্ববর্তী বিদ্যালয়: {a.previousSchool} · পেমেন্ট: {a.paymentMethod} / {a.paymentStatus}</p></div><span className={"chip "+(a.status==="pending"?"":"gray")}>{a.status}</span></div>
+         {actor.role==="principal"&&a.status!=="approved"&&<div className="inline-actions mt-3"><button className="btn sm" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> আবেদন এডিট</button></div>}
+         {a.status==="pending"&&<AdmissionApproval item={a} busy={working} mutate={mutate} principal={actor.role==="principal"}/>}
+         {a.status==="approved"&&actor.role==="principal"&&<p className="muted text-xs mt-3">ভর্তি সম্পন্ন — সংশ্লিষ্ট শিক্ষার্থীর তথ্য শিক্ষার্থী তালিকা থেকে এডিট করুন।</p>}
+        </div>)}{!admissions.length&&<div className="panel empty">কোনো আবেদন নেই।</div>}</div>
+        <Pager total={admissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
+       </>}
        {tab==="attendance"&&<><div className="flex justify-between items-center gap-3 flex-wrap"><h2 className="section-title">দৈনিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
         <div className="alert">অনুপস্থিত ও পালিয়ে যাওয়া শিক্ষার্থীর ক্ষেত্রে WhatsApp বাটনে ক্লিক করলে মেসেজ খুলবে; পাঠানোর সিদ্ধান্ত শিক্ষক নিজে নেবেন।</div>
         <div className="panel table-wrap"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা চিহ্নিত করুন</th><th>অভিভাবক</th></tr></thead><tbody>{filtered.map(s=>{
