@@ -224,3 +224,63 @@ tr:last-child td{border-bottom:none}
  .security-unlock{flex-direction:column;align-items:stretch}
  .dashboard-section-head h1{font-size:21px}
 }
+
+
+/* Dashboard UI: fast paginated records and mobile-first administration */
+.dashboard-toolbar{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.dashboard-toolbar h2{margin:0}
+.dashboard-toolbar p{margin:5px 0 0}
+.dashboard-search{max-width:340px;width:100%}
+.dashboard-mobile-records{display:none}
+.dashboard-mobile-record{padding:15px 16px;min-width:0}
+.dashboard-mobile-record p{overflow-wrap:anywhere}
+.dashboard-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 1px}
+.dashboard-mobile-menu,.dashboard-nav-backdrop{display:none}
+.record-modal-backdrop{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#102b26a8;padding:16px}
+.record-modal{display:flex;flex-direction:column;width:min(100%,730px);max-height:calc(100dvh - 32px);background:#fff;border:1px solid #dce7e1;border-radius:16px;box-shadow:0 25px 85px #10251e52;overflow:hidden}
+.record-modal-head{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:18px 22px;border-bottom:1px solid #e6eee9}
+.record-modal-head h2{display:flex;gap:9px;align-items:center;font-size:18px;font-weight:800;margin:0}
+.record-modal-head p{margin:5px 0 0}
+.record-modal>form{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.record-modal-body{overflow-y:auto;min-height:0;padding:22px;overscroll-behavior:contain}
+.record-modal-body .form-grid{gap:15px}
+.record-modal-body .record-wide{grid-column:1/-1}
+.record-modal-body .field input,.record-modal-body .field select,.record-modal-body .field textarea{min-height:45px}
+.record-modal-actions{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #e6eee9;padding:15px 22px;background:#fff}
+.record-delete-modal{max-width:490px}
+.record-delete-modal .record-modal-body p{line-height:1.7}
+@media(max-width:850px){
+ .dashboard-layout{display:block!important;padding-bottom:80px}
+ .dashboard-mobile-menu{display:inline-flex;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;align-items:center;gap:7px;box-shadow:0 8px 26px #163a2c50;min-height:48px;padding:10px 19px}
+ .dashboard-nav-backdrop{display:block;position:fixed;inset:0;z-index:39;background:#102b2655;border:0}
+ .dashboard-layout .sidebar.dashboard-nav{
+  position:fixed;left:12px;right:12px;bottom:calc(73px + env(safe-area-inset-bottom));top:auto;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:5px;
+  width:auto;max-height:min(67dvh,550px);overflow-y:auto;overflow-x:hidden;
+  padding:12px;border:1px solid #dce9e1;border-radius:17px;background:#fff;z-index:45;
+  box-shadow:0 14px 45px #17382c40;visibility:hidden;opacity:0;pointer-events:none;
+  transform:translateY(12px);transition:transform .15s,opacity .15s
+ }
+ .dashboard-layout .sidebar.dashboard-nav.is-open{visibility:visible;opacity:1;pointer-events:auto;transform:translateY(0)}
+ .dashboard-layout .dashboard-nav a{width:100%;min-width:0;max-width:none;min-height:52px;flex-direction:row;justify-content:flex-start;align-items:center;gap:9px;font-size:12px;text-align:left;padding:10px}
+ .dashboard-section-content{gap:14px}
+ .dashboard-section-head{margin-bottom:14px}
+}
+@media(max-width:760px){
+ .dashboard-desktop-table{display:none!important}
+ .dashboard-mobile-records{display:grid;gap:10px}
+ .dashboard-toolbar{align-items:stretch;flex-direction:column;gap:10px}
+ .dashboard-search{max-width:none}
+ .dashboard-layout .panel:not(.sidebar){border-radius:12px}
+ .dashboard-section-content .stat{padding:15px}
+ .dashboard-section-content .stat strong{font-size:23px}
+ .dashboard-section-content table{min-width:460px}
+ .record-modal-backdrop{padding:7px;align-items:end}
+ .record-modal{width:100%;max-height:94dvh;border-radius:18px 18px 9px 9px}
+ .record-modal-head{padding:15px 16px}
+ .record-modal-body{padding:15px 16px}
+ .record-modal-body .form-grid{grid-template-columns:1fr;gap:12px}
+ .record-modal-body .record-wide{grid-column:auto}
+ .record-modal-actions{padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+ .record-modal-actions .btn{min-height:44px}
+}
