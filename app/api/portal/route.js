@@ -4,6 +4,7 @@ import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../
 import { admissionSchema } from "../../../lib/admission-schema";
 import { normalizeStudentEdit } from "../../../lib/student-admin";
 import { getSubjects } from "../../../lib/academic";
+import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
@@ -75,25 +76,17 @@ export async function GET(req) {
       return json({ actor, student, dues, attendance: asDocs(attendance), results });
     }
     needRole(actor, allowedStaff);
+    if (resource === "dashboard.data") {
+      const result = await getDashboardData(actor,{
+        section:u.searchParams.get("section")||"overview",
+        date:u.searchParams.get("date")||undefined,
+        examId:u.searchParams.get("examId")||""
+      });
+      return json({actor,...result});
+    }
     if (resource === "overview.summary") {
-      const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-      const isScoped=actor.role==="class_teacher";
-      const allowed=isScoped?[...new Set((actor.assignedClasses||[]).map(v=>Number(String(v).split("-")[0])).filter(v=>v>=6&&v<=10))]:[];
-      if(isScoped&&!allowed.length)return json({summary:{students:0,applications:0,present:0,absent:0}});
-      const [studentsSnap, appsSnap, attSnap]=await Promise.all([
-        isScoped?store.collection("students").where("grade","in",allowed).select("grade").get()
-          :store.collection("students").count().get(),
-        actor.role==="teacher"?Promise.resolve(null)
-          :isScoped?store.collection("admissions").where("grade","in",allowed).select("grade","status").get()
-          :store.collection("admissions").where("status","==","pending").count().get(),
-        store.collection("attendance").where("date","==",today).select("grade","status").get()
-      ]);
-      const studentCount=isScoped?studentsSnap.size:studentsSnap.data().count;
-      const applications=actor.role==="teacher"?0:isScoped
-        ?appsSnap.docs.filter(d=>d.data().status==="pending").length:appsSnap.data().count;
-      const attendance=attSnap.docs.map(d=>d.data()).filter(a=>!isScoped||allowed.includes(Number(a.grade)));
-      const present=attendance.filter(a=>a.status==="present").length;
-      return json({summary:{students:studentCount,applications,present,absent:attendance.length-present}});
+      needRole(actor, allowedStaff);
+      return json({summary:await getDashboardSummary(actor,store)});
     }
     if (resource === "students") {
       const snap = await store.collection("students").limit(900).get();
