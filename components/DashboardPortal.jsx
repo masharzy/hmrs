@@ -41,6 +41,8 @@ export default function DashboardPortal() {
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
  const loadedRoutes=useRef(new Set()),routeCache=useRef(new Map()),loadSequence=useRef(0);
+ const dateSequence=useRef(0),examSequence=useRef(0);
+ const [changingDate,setChangingDate]=useState(false),[changingExam,setChangingExam]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],users:[],settings:{}});
@@ -80,9 +82,9 @@ export default function DashboardPortal() {
   setLoadingSection(true);
   try{
    const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam)});
-   routeCache.current.set(section,{profile:r.profile,data:r.data});
-   loadedRoutes.current.add(section);
    if(loadSequence.current===seq){
+    routeCache.current.set(section,{profile:r.profile,data:r.data});
+    loadedRoutes.current.add(section);
     if(r.profile)setProfile(r.profile);
     if(r.data){
      setData(old=>({...old,...r.data}));
@@ -123,19 +125,35 @@ export default function DashboardPortal() {
   setWorking(true);setError("");setSuccess("");
   try{
    const r=await request("",{body:{action,...params}});
-   setSuccess("তথ্য সফলভাবে সংরক্ষিত হয়েছে");
-   loadedRoutes.current.clear();routeCache.current.clear();
+   setSuccess("পরিবর্তন সংরক্ষিত হয়েছে");
    if(action==="attendance.set"){
-    setData(o=>({...o,attendance:[...(o.attendance||[]).filter(v=>v.studentId!==params.studentId),{
-     studentId:params.studentId,date:params.date,status:params.status
-    }]}));
-    loadedRoutes.current.add("attendance");
-   }else if(action==="marks.set"){
-    setData(o=>({...o,marks:[...(o.marks||[]).filter(v=>!(v.studentId===params.studentId&&v.subjectId===params.subjectId)),{
-     studentId:params.studentId,subjectId:params.subjectId,examId:params.examId,scores:params.scores
-    }]}));
-    loadedRoutes.current.add("marks");
-   }else await refresh(actor,date,examId,tab,true);
+    const current=routeCache.current.get("attendance");
+    const record={studentId:params.studentId,date:params.date,status:params.status};
+    const items=[...(current?.data?.attendance||data.attendance||[]).filter(v=>v.studentId!==params.studentId),record];
+    setData(old=>({...old,attendance:items}));
+    if(current)routeCache.current.set("attendance",{...current,data:{...current.data,attendance:items}});
+    routeCache.current.delete("overview");
+    return r;
+   }
+   if(action==="marks.set"){
+    const current=routeCache.current.get("marks");
+    const record={studentId:params.studentId,subjectId:params.subjectId,examId:params.examId,scores:params.scores};
+    const items=[...(current?.data?.marks||data.marks||[]).filter(v=>!(v.studentId===params.studentId&&v.subjectId===params.subjectId)),record];
+    setData(old=>({...old,marks:items}));
+    if(current)routeCache.current.set("marks",{...current,data:{...current.data,marks:items}});
+    return r;
+   }
+   const affected=action.startsWith("student.")?["students","attendance","marks","finance","overview","admissions"]
+    :action.startsWith("application.")?["admissions","students","overview","attendance","marks"]
+    :action.startsWith("payment.")?["admissions","finance"]
+    :action.startsWith("ledger.")?["finance"]
+    :action.startsWith("notice.")?["notices"]
+    :action.startsWith("account.")?["accounts"]
+    :action.startsWith("settings.")?["settings"]
+    :action.startsWith("exam.")?["marks"]
+    :[];
+   for(const section of affected)if(section!==tab)routeCache.current.delete(section);
+   await refresh(actor,date,examId,tab,true);
    return r;
   }catch(e){setError(e.message);return null}finally{setWorking(false)}
  }
@@ -151,8 +169,33 @@ export default function DashboardPortal() {
  const subject=subjects.find(s=>s.id===markSubject);
  const resultMap=useMemo(()=>Object.fromEntries((data.marks||[]).filter(m=>m.studentId===selectedStudent).map(m=>[m.subjectId,m.scores])),[data.marks,selectedStudent]);
  const summary=data.overview||{students:0,applications:0,present:0,absent:0};
- async function changeDate(v){setDate(v);routeCache.current.delete("attendance");loadedRoutes.current.delete("attendance");try{const att=await request("attendance",{params:"date="+encodeURIComponent(v)});setData(o=>({...o,attendance:att.items}))}catch(e){setError(e.message)}}
- async function changeExam(v){setExamId(v);routeCache.current.delete("marks");loadedRoutes.current.delete("marks");try{const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};setData(o=>({...o,marks:m.items}))}catch(e){setError(e.message)}}
+ async function changeDate(v){
+  setDate(v);
+  const seq=++dateSequence.current;
+  setChangingDate(true);
+  try{
+   const att=await request("attendance",{params:"date="+encodeURIComponent(v)});
+   if(seq!==dateSequence.current)return;
+   setData(o=>({...o,attendance:att.items}));
+   const current=routeCache.current.get("attendance");
+   if(current)routeCache.current.set("attendance",{...current,data:{...current.data,attendance:att.items}});
+  }catch(e){if(seq===dateSequence.current)setError(e.message)}
+  finally{if(seq===dateSequence.current)setChangingDate(false)}
+ }
+ async function changeExam(v){
+  setExamId(v);
+  const seq=++examSequence.current;
+  setChangingExam(true);
+  setData(o=>({...o,marks:[]}));
+  try{
+   const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};
+   if(seq!==examSequence.current)return;
+   setData(o=>({...o,marks:m.items}));
+   const current=routeCache.current.get("marks");
+   if(current)routeCache.current.set("marks",{...current,data:{...current.data,marks:m.items}});
+  }catch(e){if(seq===examSequence.current)setError(e.message)}
+  finally{if(seq===examSequence.current)setChangingExam(false)}
+ }
  function chooseStudent(id){
   setSelectedStudent(id);setMarkSubject("");setMarkScores({});
   const s=students.find(t=>t.id===id);
@@ -173,7 +216,7 @@ export default function DashboardPortal() {
    setPhoto(output.photoUrl);setUploadFile(null);
    if(photoUploadInput.current)photoUploadInput.current.value="";
    setSuccess("ImgBB-তে ছবি আপলোড হয়েছে এবং হোমপেজে প্রকাশিত হয়েছে");
-   await refresh();
+   await refresh(actor,date,examId,"settings",true);
   }catch(e){setError(e.message)}finally{setWorking(false)}
  }
  const print=()=>window.print();
@@ -254,7 +297,7 @@ export default function DashboardPortal() {
          const record=data.attendance?.find(a=>a.studentId===s.id);
          return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
           <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
-          <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
+          <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
           <td>{record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</td>
          </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=>{
@@ -262,7 +305,7 @@ export default function DashboardPortal() {
           return <div key={s.id} className="panel dashboard-mobile-record">
            <div className="flex justify-between items-center gap-2"><div><b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}</p></div>
             <span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></div>
-           <div className="inline-actions mt-3">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}
+           <div className="inline-actions mt-3">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}
             {record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</div>
           </div>;
         })}</div>
@@ -284,7 +327,7 @@ export default function DashboardPortal() {
          <Field label="বিষয় নির্বাচন"><Select value={markSubject} onChange={chooseSubject} choices={options(subjects.map(s=>[s.id,s.name+" ("+toBanglaDigits(s.max)+")"]))}/></Field>
          {subject&&<div className="mt-5">
           <div className="form-grid">{subject.parts.map(part=><Field key={part.key} label={part.label+" / "+toBanglaDigits(part.max)+(part.pass!==undefined?" (পাস "+toBanglaDigits(part.pass)+")":"")}><Input type="number" min="0" step="0.01" value={markScores[part.key]??""} onChange={v=>setMarkScores(o=>({...o,[part.key]:v===""?"":v}))}/></Field>)}</div>
-          <button disabled={working||exam.published&&actor.role!=="principal"} className="btn primary mt-4" onClick={()=>mutate("marks.set",{studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> নম্বর সংরক্ষণ</button>
+          <button disabled={working||changingExam||(exam.published&&actor.role!=="principal")} className="btn primary mt-4" onClick={()=>mutate("marks.set",{studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> নম্বর সংরক্ষণ</button>
          </div>}
          <div className="table-wrap mt-5"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত নম্বর</th><th>গ্রেড</th><th>অবস্থা</th></tr></thead><tbody>{evaluateTranscript(chosen,resultMap).rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}{r.subjectId===chosen.optionalId?" (৪র্থ)":""}</td><td>{toBanglaDigits(r.received??"—")} / {toBanglaDigits(r.subject.max)}</td><td>{r.letter||"—"}</td><td>{r.status==="complete"?(r.passed?"পাস":"ফেল"):"অসম্পূর্ণ"}</td></tr>)}</tbody></table></div>
         </div><Marksheet student={chosen} marks={resultMap} exam={exam}/></>}
