@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { loadPublicData } from "../lib/public-client";
 export default function SchoolPhoto(){
  const [src,setSrc]=useState("/school-placeholder.svg");
- useEffect(()=>{let live=true;fetch("/api/public",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+ useEffect(()=>{let live=true;loadPublicData().then(d=>{
   const url=d?.settings?.photoUrl;
   if(live&&typeof url==="string"&&/^https:\/\//i.test(url))setSrc(url);
  }).catch(()=>{});return()=>{live=false}},[]);
