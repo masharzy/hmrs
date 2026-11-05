@@ -18,6 +18,9 @@ test("all roles keep the same secure route navigation with mobile and desktop ac
  assert.match(shell,/hmrs-mobile-dock/);
  assert.match(shell,/hmrs-mobile-drawer/);
  assert.match(shell,/aria-current=\{active===key/);
+ assert.match(shell,/window\.history\.pushState\(null,"",href\)/);
+ assert.match(shell,/dashboardPaths\.has/);
+ assert.match(overview,/DashboardRouteLink/);
  assert.match(portal,/onLogout=\{async/);
 });
 test("overview uses real summary data and fast working links, not placeholder metrics",()=>{
