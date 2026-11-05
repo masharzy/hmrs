@@ -277,3 +277,63 @@
  .hmrs-student-links{grid-template-columns:1fr}
  .hmrs-student-info header{padding:16px 18px}
 }
+
+
+/* Routine administration — compact image-first publishing workspace */
+.routine-admin{display:grid;grid-template-columns:minmax(320px,.95fr) minmax(0,1.05fr);align-items:start;gap:18px}
+.routine-admin .panel{overflow:hidden}
+.routine-admin-title{display:flex;align-items:center;gap:11px;padding:18px 20px;border-bottom:1px solid #e7eef0;background:#fbfdfd}
+.routine-admin-title>div{flex:1}
+.routine-admin-title h2,.routine-list-head h2{font-size:16px;font-weight:800;line-height:1.5;margin:0}
+.routine-admin-title p,.routine-list-head p{font-size:11px;color:#83939b;margin:4px 0 0}
+.routine-admin-icon{display:grid;place-items:center;background:#e9f6f1;color:#0f796b;border-radius:10px;width:39px;height:39px;flex:none}
+.routine-editor-body{display:grid;gap:17px;padding:20px}
+.routine-editor-body .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.routine-editor-body .form-grid>.field:last-child:nth-child(3){grid-column:1/-1}
+.routine-uploader-block{display:grid;gap:11px}
+.routine-uploader-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}
+.routine-uploader-head strong{font-size:12px;font-weight:800}
+.routine-uploader-head small{font-size:10px;color:#82929c}
+.routine-file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.routine-dropzone{display:block;position:relative;border:1.7px dashed #a7cbc1;background:#f7fbf9;border-radius:12px;min-height:215px;cursor:pointer;overflow:hidden;transition:.15s}
+.routine-dropzone:hover,.routine-dropzone:focus-visible,.routine-dropzone.is-dragging{border-color:#0f8073;background:#edf8f3;outline:3px solid #0f766e18}
+.routine-upload-empty{display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;min-height:215px;padding:25px 15px;text-align:center}
+.routine-upload-empty-icon{display:grid;place-items:center;width:55px;height:55px;border-radius:14px;background:#e5f4ee;color:#0f8073;margin-bottom:4px}
+.routine-upload-empty b{font-size:12px;color:#2b5148}
+.routine-upload-empty small{font-size:10.5px;color:#8c9ba1}
+.routine-upload-select{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#0f796c;font-weight:800;padding:7px 11px;background:#e8f6f0;border-radius:7px;margin-top:4px}
+.routine-upload-preview{position:relative;display:grid;place-items:center;height:280px;background:#eff4f3}
+.routine-upload-preview img{width:100%;height:100%;object-fit:contain}
+.routine-upload-preview span{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;white-space:nowrap;padding:7px 11px;background:#ffffffea;color:#155d52;font-size:10.5px;font-weight:750;border:1px solid #dbe9e3;border-radius:7px}
+.routine-file-selected{display:flex;align-items:center;gap:9px;border-radius:8px;background:#f0f6f8;border:1px solid #e3eaed;padding:10px;color:#607987;font-size:11px}
+.routine-file-selected>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.routine-file-selected button{display:grid;place-items:center;background:transparent;border:0;color:#71868b}
+.routine-editor-body .routine-upload-action{justify-self:start}
+.routine-upload-ready,.routine-feedback{display:flex;align-items:center;gap:7px;color:#0f7962;font-size:11px;font-weight:750;margin:0}
+.routine-publish{display:flex;align-items:flex-start;gap:12px;padding:14px;border:1px solid #dce9e3;background:#f8fbfa;border-radius:10px;cursor:pointer}
+.routine-publish input{accent-color:#0c796b;margin-top:4px;width:16px;height:16px}
+.routine-publish span{display:grid;gap:4px}
+.routine-publish b{font-size:12px}
+.routine-publish small{font-size:10px;color:#83939b}
+.routine-form-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:15px;border-top:1px solid #eaf0f1}
+.routine-list-area{display:grid;gap:13px;min-width:0}
+.routine-list-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.routine-cards{display:grid;gap:12px}
+.routine-admin-card{display:flex;align-items:stretch;gap:13px;padding:12px;min-height:142px}
+.routine-card-thumb{position:relative;display:grid;place-items:center;flex:none;width:120px;background:#f1f6f5;border:1px solid #e5ecea;border-radius:9px;overflow:hidden}
+.routine-card-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.routine-card-thumb svg{position:absolute;right:8px;bottom:8px;background:#ffffffea;color:#176d61;width:25px;height:25px;padding:5px;border-radius:6px}
+.routine-card-info{display:grid;align-content:center;gap:9px;min-width:0;flex:1;padding:3px 1px}
+.routine-card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.routine-card-info h3{font-size:13px;font-weight:800;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.routine-card-info p{font-size:11px;color:#7d8e98;margin:0}
+.routine-card-actions{display:flex;gap:7px;flex-wrap:wrap}
+.routine-empty-list{display:grid;place-items:center;gap:9px;text-align:center;padding:55px 18px;color:#6f8890}
+.routine-empty-list b{font-size:13px}
+.routine-empty-list p{font-size:11px;margin:0}
+.routine-full-backdrop{position:fixed;inset:0;z-index:120;background:#101c23cf;display:grid;place-items:center;padding:18px}
+.routine-full-modal{position:relative;width:min(95vw,980px);max-height:95dvh;overflow:auto;background:#fff;border-radius:13px;padding:15px}
+.routine-full-modal img{max-height:88dvh;width:100%;height:auto;object-fit:contain}
+.routine-full-close{position:sticky;top:0;margin-left:auto;display:grid;place-items:center;z-index:2;border:0;background:#173b36;color:#fff;border-radius:8px;width:36px;height:36px}
+@media(max-width:1150px){.routine-admin{grid-template-columns:1fr}.routine-admin-card{min-height:150px}}
+@media(max-width:720px){.routine-admin{gap:15px}.routine-admin-title,.routine-editor-body{padding:16px}.routine-editor-body .form-grid{grid-template-columns:1fr}.routine-editor-body .form-grid>.field:last-child:nth-child(3){grid-column:auto}.routine-admin-card{gap:11px;padding:10px;min-height:137px}.routine-card-thumb{width:97px}.routine-upload-preview{height:245px}.routine-form-actions .btn{flex:1}}
