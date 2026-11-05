@@ -22,12 +22,12 @@ export default function RoutineBoard(){
   window.addEventListener("keydown",onKey);
   return ()=>{window.removeEventListener("keydown",onKey);document.body.style.overflow=oldOverflow};
  },[selected]);
- if(!loading&&!routines.length)return null;
  return <section className="container home-routine-section" id="routines">
   <div className="home-routine-head"><div><span className="kicker">ACADEMIC ROUTINE</span><h2 className="section-title mt-2 mb-1">ক্লাস ও পরীক্ষার রুটিন</h2>
    <p className="muted text-sm mb-0">আপনার শ্রেণির রুটিন দেখতে ছবিতে ক্লিক করুন</p></div></div>
   <div className="home-routines">
    {loading?[0,1,2].map(i=><div className="panel home-routine-skeleton" key={i}/>)
+    :!routines.length?<div className="panel home-routine-empty"><CalendarRange size={23}/><p>এই মুহূর্তে কোনো রুটিন প্রকাশিত হয়নি।</p></div>
     :routines.map(r=><button className="home-routine-card panel" key={r.id} type="button" onClick={()=>setSelected(r)}>
      <div className="home-routine-thumb"><img src={r.imageUrl} alt={r.title} loading="lazy"/><span><Maximize2 size={16}/> বিস্তারিত দেখুন</span></div>
      <div className="home-routine-details"><small>{r.kind==="exam"?"পরীক্ষার রুটিন":"ক্লাস রুটিন"} · {routineGradeLabel(r.grade,r.group)}</small>
