@@ -267,13 +267,13 @@ export default function DashboardPortal() {
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map(s=><tr key={s.id}>
          <td className="font-bold">{s.name}</td><td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
          <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
-         <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);router.push("/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
+         <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
           {actor.role==="principal"&&<><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
            <button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button></>}</div></td>
         </tr>)}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী পাওয়া যায়নি</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
          <b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)} · পাওনা ৳ {toBanglaDigits(s.due||0)}</p>
-         <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);router.push("/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
+         <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
           {actor.role==="principal"&&<><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
            <button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button></>}</div>
         </div>)}{!filtered.length&&<div className="panel empty">শিক্ষার্থী পাওয়া যায়নি</div>}</div>
