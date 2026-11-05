@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 
 const iso = () => new Date().toISOString();
 const allowedStaff = ["teacher", "class_teacher", "principal"];
-const asDocs = snap => snap.docs.map(d => { const { section, ...data } = d.data(); return { id: d.id, ...data }; });
+const asDocs = snap => snap.docs.map(d => { const { section, editTokenHash, ...data } = d.data(); return { id: d.id, ...data }; });
 const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
 
