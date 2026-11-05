@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { DashboardRouteLink } from "./DashboardShell";
 import { ArrowRight, ArrowUpRight, CalendarCheck2, ClipboardCheck, FilePenLine, FileText, GraduationCap, ShieldCheck, Users, Wallet } from "lucide-react";
 import { toBanglaDigits } from "../lib/bangla-numbers";
 
@@ -27,12 +27,12 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
     <h2>স্বাগতম, {actor?.name||"ব্যবহারকারী"}</h2>
     <p>শিক্ষার্থী, ভর্তি, হাজিরা এবং পরীক্ষার প্রয়োজনীয় তথ্য এখান থেকেই পরিচালনা করুন।</p>
     <div className="hmrs-overview-hero-actions">
-     <Link href={keys.has("students")?"/dashboard/students":"/dashboard/overview"} className="hmrs-hero-primary">
+     <DashboardRouteLink href={keys.has("students")?"/dashboard/students":"/dashboard/overview"} className="hmrs-hero-primary">
       <Users size={17}/> শিক্ষার্থী তালিকা <ArrowRight size={16}/>
-     </Link>
-     <Link href={keys.has("admissions")?"/dashboard/admissions":"/dashboard/attendance"} className="hmrs-hero-secondary">
+     </DashboardRouteLink>
+     <DashboardRouteLink href={keys.has("admissions")?"/dashboard/admissions":"/dashboard/attendance"} className="hmrs-hero-secondary">
       {keys.has("admissions")?"ভর্তি আবেদন":"দৈনিক হাজিরা"} <ArrowUpRight size={16}/>
-     </Link>
+     </DashboardRouteLink>
     </div>
    </div>
    <div className="hmrs-hero-graphic" aria-hidden="true"><GraduationCap size={112} strokeWidth={1.1}/></div>
@@ -53,11 +53,11 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
      <span className="hmrs-module-count">{toBanglaDigits(shortcutKeys.length)}টি কার্যক্রম</span></header>
     <div className="hmrs-shortcut-list">{shortcutKeys.map(key=>{
      const {label,desc,Icon}=links[key];
-     return <Link href={"/dashboard/"+key} className="hmrs-shortcut" key={key}>
+     return <DashboardRouteLink href={"/dashboard/"+key} className="hmrs-shortcut" key={key}>
       <span className="hmrs-shortcut-icon"><Icon size={19}/></span>
       <span className="hmrs-shortcut-info"><strong>{label}</strong><small>{desc}</small></span>
       <ArrowUpRight size={17} className="hmrs-shortcut-arrow"/>
-     </Link>;
+     </DashboardRouteLink>;
     })}</div>
    </section>
    <section className="hmrs-overview-module hmrs-priority-panel">
@@ -67,14 +67,14 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
      <span className="hmrs-priority-icon"><ClipboardCheck size={20}/></span>
      <div><strong>{toBanglaDigits(summary.applications??0)}টি অপেক্ষমাণ আবেদন</strong>
       <p>{keys.has("admissions")?"নতুন ভর্তি আবেদন যাচাই ও অনুমোদন করুন।":"প্রয়োজনীয় তথ্য প্রধান শিক্ষক যাচাই করবেন।"}</p>
-      {keys.has("admissions")&&<Link href="/dashboard/admissions">আবেদন দেখুন <ArrowRight size={15}/></Link>}
+      {keys.has("admissions")&&<DashboardRouteLink href="/dashboard/admissions">আবেদন দেখুন <ArrowRight size={15}/></DashboardRouteLink>}
      </div>
     </div>
     <div className="hmrs-priority-block">
      <span className="hmrs-priority-icon"><CalendarCheck2 size={20}/></span>
      <div><strong>{toBanglaDigits(summary.present??0)} জনের হাজিরা চিহ্নিত</strong>
       <p>আজকের উপস্থিতি ও অনুপস্থিতি তালিকা দেখুন।</p>
-      {keys.has("attendance")&&<Link href="/dashboard/attendance">হাজিরা দেখুন <ArrowRight size={15}/></Link>}
+      {keys.has("attendance")&&<DashboardRouteLink href="/dashboard/attendance">হাজিরা দেখুন <ArrowRight size={15}/></DashboardRouteLink>}
      </div>
     </div>
     <div className="hmrs-priority-footer"><ShieldCheck size={16}/>
