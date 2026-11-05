@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { X, Pencil, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
-import { toBanglaDigits } from "../lib/bangla-numbers";
+import { toBanglaDigits, gradeLabel } from "../lib/bangla-numbers";
 import { groupNames } from "../lib/student-admin";
 
 const groups=[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
@@ -42,7 +42,7 @@ export function Pager({total,page,size=25,onChange}){
 }
 
 function choicesFor(key,values){
- if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),toBanglaDigits(v)+"ম শ্রেণি"]);
+ if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),gradeLabel(v)]);
  if(key==="group")return groups;
  if(key==="gender")return [["male","ছেলে"],["female","মেয়ে"],["other","অন্যান্য"]];
  if(key==="paymentMethod")return [["mobile_banking","মোবাইল ব্যাংকিং"],["online_banking","অনলাইন ব্যাংকিং"],["later","পরে পরিশোধ"]];
@@ -109,7 +109,7 @@ export function DeleteStudentModal({student,working,error,onClose,onDelete}){
     <button className="btn sm" onClick={onClose} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
    <form onSubmit={e=>{e.preventDefault();onDelete(typed)}}>
     <div className="record-modal-body">
-     <p id="student-delete-description">**{student.name}**-এর অ্যাকাউন্ট, হাজিরা ও পরীক্ষার নম্বর স্থায়ীভাবে মুছে যাবে। এই কাজ ফিরিয়ে আনা যাবে না।</p>
+     <p id="student-delete-description"><b>{student.name}</b>-এর অ্যাকাউন্ট, হাজিরা ও পরীক্ষার নম্বর স্থায়ীভাবে মুছে যাবে। এই কাজ ফিরিয়ে আনা যাবে না।</p>
      <label className="field mt-4">নিশ্চিত করতে পুরো নাম লিখুন: <b>{student.name}</b>
       <input autoFocus autoComplete="off" value={typed} onChange={e=>setTyped(e.target.value)} placeholder="সম্পূর্ণ নাম"/>
      </label>
