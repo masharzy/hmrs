@@ -373,8 +373,8 @@ export default function DashboardPortal() {
    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
    if(await mutate(action,payload))setEditing(null);
   }}/>}
-  {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async confirmName=>{
-   if(await mutate("student.delete",{studentId:deleting.id,confirmName})){
+  {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async()=>{
+   if(await mutate("student.delete",{studentId:deleting.id,confirmed:true})){
     if(selectedStudent===deleting.id)chooseStudent("");
     setDeleting(null);
    }
