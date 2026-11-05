@@ -64,6 +64,9 @@ export default function DashboardPortal() {
  async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab,force=false){
   if(!who)return;
   if(!force && routeCache.current.has(section)){
+   // Invalidate any older in-flight route request before restoring cached data.
+   ++loadSequence.current;
+   setLoadingSection(false);
    const cached=routeCache.current.get(section);
    if(cached.profile)setProfile(cached.profile);
    if(cached.data){
@@ -76,13 +79,15 @@ export default function DashboardPortal() {
   setLoadingSection(true);
   try{
    const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam)});
-   if(r.profile)setProfile(r.profile);
-   if(r.data){
-    setData(old=>({...old,...r.data}));
-    if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
-   }
    routeCache.current.set(section,{profile:r.profile,data:r.data});
    loadedRoutes.current.add(section);
+   if(loadSequence.current===seq){
+    if(r.profile)setProfile(r.profile);
+    if(r.data){
+     setData(old=>({...old,...r.data}));
+     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
+    }
+   }
   }finally{if(loadSequence.current===seq)setLoadingSection(false)}
  }
  useEffect(()=>{
