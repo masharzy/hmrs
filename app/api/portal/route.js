@@ -193,6 +193,13 @@ export async function POST(req) {
       const userRef=old.uid ? store.collection("users").doc(old.uid) : null;
       const credRef=old.uid ? store.collection("loginCredentials").doc(old.uid) : null;
       const applicationRef=old.applicationId ? store.collection("admissions").doc(old.applicationId) : null;
+      // Keep cached grade and student name on existing attendance/marks in sync with edits.
+      const historyChanged=Number(old.grade)!==next.grade || old.name!==next.name;
+      const [historicMarks,historicAttendance]=historyChanged?await Promise.all([
+        store.collection("marks").where("studentId","==",id).get(),
+        store.collection("attendance").where("studentId","==",id).get()
+      ]):[{docs:[]},{docs:[]}];
+      if(historicMarks.size+historicAttendance.size>380)return fail("অনেক পুরোনো রেকর্ড আছে; নিরাপদভাবে পরিবর্তনের জন্য প্রশাসকের সহায়তা প্রয়োজন",409);
       await store.runTransaction(async tx=>{
         const [current,newRoll,oldRoll,newPhone,oldPhone,credential,application]=await Promise.all([
           tx.get(studentRef),tx.get(newRollRef),rollChanged?tx.get(oldRollRef):null,
@@ -213,6 +220,10 @@ export async function POST(req) {
           if(oldPhone?.exists&&oldPhone.data()?.uid===old.uid)tx.delete(oldPhoneRef);
           if(credential?.exists)tx.update(credRef,{phone:next.phone});
         }
+        for(const record of historicMarks.docs)tx.update(record.ref,{grade:next.grade,section:FieldValue.delete()});
+        for(const record of historicAttendance.docs)tx.update(record.ref,{
+          grade:next.grade,studentName:next.name,section:FieldValue.delete()
+        });
         if(application?.exists)tx.update(applicationRef,{
           studentName:next.name,grade:next.grade,group:next.group,
           dob:next.dob,gender:next.gender,birthRegistration:next.birthRegistration,
