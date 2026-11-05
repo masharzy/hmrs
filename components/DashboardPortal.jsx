@@ -231,7 +231,7 @@ export default function DashboardPortal() {
    roleName={roleNames[actor.role]}
    routes={roles[actor.role]||[]}
    active={tab}
-   loading={loadingSection}
+   loading={loadingSection||changingDate||changingExam}
    onNavigate={()=>{setError("");setSuccess("")}}
    onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}
    onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
