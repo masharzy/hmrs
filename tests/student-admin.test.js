@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {normalizeStudentEdit,formatClass} from "../lib/student-admin.js";
 import {normalizeAdmissionData,validateAdmission} from "../lib/admission-validation.js";
 import {admissionSchema} from "../lib/admission-schema.js";
+import {classKey,studentKey,canAccessGrade} from "../lib/school-identity.js";
 
 const base={
  name:"সুমাইয়া আক্তার",grade:"৯",roll:"০৫",group:"science",
@@ -50,4 +51,18 @@ test("admission normalization never sends a section, with a mandatory group only
  const upper=normalizeAdmissionData({...raw,grade:"৯",group:"business"});
  assert.equal(admissionSchema.safeParse(upper).success,true);
  assert.equal(upper.group,"business");
+});
+
+test("student IDs are grade-roll only and class teachers retain access to legacy grade-section assignments",()=>{
+ assert.equal(classKey("৯"),"9");
+ assert.equal(studentKey("৯","০৫"),"9-5");
+ const old={role:"class_teacher",assignedClasses:["9-a","10-b"]};
+ assert.equal(canAccessGrade(old,9),true);
+ assert.equal(canAccessGrade(old,"১০"),true);
+ assert.equal(canAccessGrade(old,8),false);
+ const current={role:"class_teacher",assignedClasses:["6","7"]};
+ assert.equal(canAccessGrade(current,6),true);
+ assert.equal(canAccessGrade(current,9),false);
+ assert.equal(canAccessGrade({role:"principal",assignedClasses:[]},8),true);
+ assert.equal(canAccessGrade({role:"student",assignedClasses:[]},8),false);
 });
