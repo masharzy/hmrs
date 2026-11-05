@@ -8,7 +8,7 @@ import { toBanglaDigits, gradeLabel } from "../../lib/bangla-numbers";
 import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep } from "../../lib/admission-validation";
 
 const initial={
- studentName:"",dob:"",gender:"male",grade:"6",section:"a",group:"science",
+ studentName:"",dob:"",gender:"male",grade:"6",group:"",
  birthRegistration:"",fatherName:"",fatherPhone:"",motherName:"",motherPhone:"",
  studentPhone:"",guardianAddress:"",previousSchool:"",previousClass:"",
  previousResult:"",paymentMethod:"later",paymentReference:"",website:""
@@ -19,7 +19,6 @@ const steps=[
  {title:"পূর্ববর্তী বিদ্যালয়",description:"শিক্ষাগত তথ্য ও পেমেন্ট",icon:School}
 ];
 const classOptions=[6,7,8,9,10].map(g=>[String(g),gradeLabel(g)]);
-const sectionOptions=[["a","ক শাখা"],["b","খ শাখা"],["c","গ শাখা"]];
 const groupOptions=[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
 const paymentOptions=[
  {value:"mobile_banking",title:"মোবাইল ব্যাংকিং",icon:Smartphone},
