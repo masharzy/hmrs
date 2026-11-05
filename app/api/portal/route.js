@@ -5,6 +5,7 @@ import { admissionSchema } from "../../../lib/admission-schema";
 import { normalizeStudentEdit } from "../../../lib/student-admin";
 import { getSubjects } from "../../../lib/academic";
 import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
+import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
@@ -238,7 +239,7 @@ export async function POST(req) {
     if (action === "student.delete") {
       needRole(actor, ["principal"]);
       const id=cleanText(body.studentId,120),student=await studentFor(actor,id);
-      if(cleanText(body.confirmName,100)!==student.name) return fail("নিশ্চিত করতে শিক্ষার্থীর সম্পূর্ণ নাম লিখুন");
+      if(body.confirmed!==true) return fail("শিক্ষার্থী মুছে ফেলার আগে নিশ্চিত করুন");
       const studentRef=store.collection("students").doc(id);
       // Revoking access before deleting school records prevents further account sign-in.
       await store.runTransaction(async tx=>{
@@ -285,6 +286,28 @@ export async function POST(req) {
       }
       await studentRef.delete();
       await audit(actor,action,id);return json({ok:true});
+    }
+    if (action === "routine.save") {
+      needRole(actor, ["principal"]);
+      const routine=normalizeRoutine(body);
+      const id=cleanText(body.id,140);
+      const ref=id?store.collection("routines").doc(id):store.collection("routines").doc();
+      const previous=id?await ref.get():null;
+      if(id&&!previous.exists)return fail("রুটিনটি পাওয়া যায়নি",404);
+      const now=iso();
+      await ref.set({...routine,createdAt:previous?.data()?.createdAt||now,updatedAt:now,updatedBy:actor.uid},{merge:false});
+      await audit(actor,action,ref.id);
+      return json({ok:true,id:ref.id});
+    }
+    if (action === "routine.delete") {
+      needRole(actor, ["principal"]);
+      const id=cleanText(body.id,140);
+      if(!id)return fail("রুটিন নির্বাচন করুন");
+      const ref=store.collection("routines").doc(id);
+      if(!(await ref.get()).exists)return fail("রুটিনটি পাওয়া যায়নি",404);
+      await ref.delete();
+      await audit(actor,action,id);
+      return json({ok:true});
     }
     if (action === "notice.save") {
       needRole(actor, ["principal"]);

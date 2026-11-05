@@ -14,6 +14,7 @@ const SecurityCenter=dynamic(()=>import("./SecurityCenter"),{ssr:false});
 import DashboardShell, { DashboardSkeleton } from "./DashboardShell";
 import DashboardOverview from "./DashboardOverview";
 import DashboardStudentHome from "./DashboardStudentHome";
+const RoutineManager=dynamic(()=>import("./RoutineManager"),{ssr:false});
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
@@ -25,7 +26,7 @@ const roles={
  student: [["overview","আমার ড্যাশবোর্ড",LayoutDashboard],["records","হাজিরা ও পাওনা",CalendarCheck2],["results","ফলাফল ও নম্বরপত্র",GraduationCap]],
  teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine]],
  class_teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","শ্রেণির হিসাব",Wallet]],
- principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings]]
+ principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["routines","রুটিন",CalendarCheck2],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
@@ -47,7 +48,7 @@ export default function DashboardPortal() {
  const [changingDate,setChangingDate]=useState(false),[changingExam,setChangingExam]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
- const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],users:[],settings:{}});
+ const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
@@ -150,6 +151,7 @@ export default function DashboardPortal() {
     :action.startsWith("payment.")?["admissions","finance"]
     :action.startsWith("ledger.")?["finance"]
     :action.startsWith("notice.")?["notices"]
+    :action.startsWith("routine.")?["routines"]
     :action.startsWith("account.")?["accounts"]
     :action.startsWith("settings.")?["settings"]
     :action.startsWith("exam.")?["marks"]
@@ -346,6 +348,7 @@ export default function DashboardPortal() {
         <label className="flex gap-2 items-center text-xs"><input type="checkbox" checked={notice.published} onChange={e=>setNotice(o=>({...o,published:e.target.checked}))}/> প্রকাশ করুন</label>
         <button disabled={working} className="btn primary justify-self-start" onClick={async()=>{const r=await mutate("notice.save",notice);if(r)setNotice({title:"",message:"",published:true})}}><Send size={15}/> নোটিশ সংরক্ষণ</button>
        </div><div className="grid gap-2">{(data.notices||[]).map(n=><div className="panel p-4 flex items-center justify-between gap-3" key={n.id}><div><b>{n.title}</b><div className="muted text-xs">{n.message}</div></div><button className="btn sm danger" onClick={()=>{if(confirm("নোটিশটি মুছে ফেলবেন?"))mutate("notice.delete",{id:n.id})}}><X size={14}/> মুছুন</button></div>)}</div></>}
+       {tab==="routines"&&actor.role==="principal"&&<RoutineManager items={data.routines||[]} working={working} mutate={mutate}/>}
        {tab==="accounts"&&<><h2 className="section-title">শিক্ষক অ্যাকাউন্ট তৈরি</h2><div className="panel p-5"><div className="form-grid">
         <Field label="নাম"><Input value={login.name} onChange={v=>setLogin(o=>({...o,name:v}))}/></Field>
         <Field label="মোবাইল নম্বর"><Input type="tel" value={login.phone} onChange={v=>setLogin(o=>({...o,phone:v}))} placeholder="01712345678 / +8801712345678"/></Field>
@@ -373,8 +376,8 @@ export default function DashboardPortal() {
    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
    if(await mutate(action,payload))setEditing(null);
   }}/>}
-  {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async confirmName=>{
-   if(await mutate("student.delete",{studentId:deleting.id,confirmName})){
+  {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async()=>{
+   if(await mutate("student.delete",{studentId:deleting.id,confirmed:true})){
     if(selectedStudent===deleting.id)chooseStudent("");
     setDeleting(null);
    }

@@ -3,6 +3,7 @@ import { ArrowRight, BookOpenCheck, ClipboardList, FileText, GraduationCap, Scho
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import NoticeBoard from "../components/NoticeBoard";
+import RoutineBoard from "../components/RoutineBoard";
 import SchoolPhoto from "../components/SchoolPhoto";
 const quick = [
   { label:"ভর্তির আবেদন",desc:"অনলাইনে আবেদন করুন",icon:ClipboardList,href:"/admission",primary:true },
@@ -41,6 +42,7 @@ export default function Home(){
    </div>
   </section>
   <section className="container" id="notices"><div className="grid gap-6" style={{gridTemplateColumns:"minmax(0,1fr)"}}><NoticeBoard/></div></section>
+  <RoutineBoard/>
   <section className="container mt-12"><div className="panel p-8 flex flex-wrap items-center justify-between gap-6" style={{background:"#e9f4f0"}}>
    <div><div className="kicker mb-1">ADMISSION</div><h2 style={{fontSize:21,fontWeight:800,marginBottom:4}}>নতুন শিক্ষার্থী ভর্তির আবেদন</h2><p className="muted mb-0">শিক্ষার্থীর তথ্য দিয়ে এখনই আবেদন সম্পন্ন করুন।</p></div><Link href="/admission" className="btn primary">আবেদন ফর্ম <ArrowRight size={16}/></Link>
   </div></section>

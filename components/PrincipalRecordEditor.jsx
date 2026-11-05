@@ -102,22 +102,16 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
 }
 
 export function DeleteStudentModal({student,working,error,onClose,onDelete}){
- const [typed,setTyped]=useState("");
  return <div className="record-modal-backdrop">
   <section className="record-modal record-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="student-delete-title" aria-describedby="student-delete-description">
    <div className="record-modal-head"><h2 id="student-delete-title"><AlertTriangle size={20}/> শিক্ষার্থী মুছে ফেলবেন?</h2>
-    <button className="btn sm" onClick={onClose} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
-   <form onSubmit={e=>{e.preventDefault();onDelete(typed)}}>
-    <div className="record-modal-body">
-     <p id="student-delete-description"><b>{student.name}</b>-এর অ্যাকাউন্ট, হাজিরা ও পরীক্ষার নম্বর স্থায়ীভাবে মুছে যাবে। এই কাজ ফিরিয়ে আনা যাবে না।</p>
-     <label className="field mt-4">নিশ্চিত করতে পুরো নাম লিখুন: <b>{student.name}</b>
-      <input autoFocus autoComplete="off" value={typed} onChange={e=>setTyped(e.target.value)} placeholder="সম্পূর্ণ নাম"/>
-     </label>
-     {error&&<p role="alert" className="alert error mt-3">{error}</p>}
-    </div>
-    <div className="record-modal-actions"><button type="button" className="btn" onClick={onClose} disabled={working}>বাতিল</button>
-     <button className="btn danger" type="submit" disabled={working||typed.trim()!==student.name}><Trash2 size={15}/> {working?"মুছে ফেলা হচ্ছে...":"স্থায়ীভাবে ডিলিট"}</button></div>
-   </form>
+    <button type="button" className="btn sm" onClick={onClose} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
+   <div className="record-modal-body">
+    <p id="student-delete-description"><b>{student.name}</b> (শ্রেণি {gradeLabel(student.grade)}, রোল {toBanglaDigits(student.roll)})-এর অ্যাকাউন্ট, হাজিরা ও পরীক্ষার নম্বর স্থায়ীভাবে মুছে যাবে। এই কাজ ফিরিয়ে আনা যাবে না।</p>
+    {error&&<p role="alert" className="alert error mt-3">{error}</p>}
+   </div>
+   <div className="record-modal-actions"><button type="button" className="btn" onClick={onClose} disabled={working}>বাতিল</button>
+    <button className="btn danger" type="button" onClick={()=>onDelete()} disabled={working}><Trash2 size={15}/> {working?"মুছে ফেলা হচ্ছে...":"হ্যাঁ, ডিলিট করুন"}</button></div>
   </section>
  </div>;
 }

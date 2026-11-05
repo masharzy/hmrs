@@ -11,20 +11,21 @@ const descriptions={
  marks:"পরীক্ষা তৈরি, নম্বর প্রদান ও ফলাফল প্রকাশ",
  finance:"প্রতিষ্ঠানের আর্থিক হিসাব ও বকেয়া",
  notices:"বিদ্যালয়ের নোটিশ তৈরি এবং প্রকাশ",
+ routines:"শ্রেণি ও পরীক্ষার রুটিন প্রকাশ এবং পরিবর্তন",
  accounts:"শিক্ষক ও শ্রেণি শিক্ষকের অ্যাকাউন্ট",
  security:"লগইন নিরাপত্তা ও অ্যাকাউন্ট নিয়ন্ত্রণ",
  settings:"হোমপেজ এবং প্রতিষ্ঠানের তথ্য",
  records:"নিজের উপস্থিতি ও পাওনার বিবরণ",
  results:"পরীক্ষার ফলাফল ও নম্বরপত্র"
 };
-const workRoutes=new Set(["overview","students","admissions","attendance","marks","records","results"]);
+const workRoutes=new Set(["overview","students","admissions","attendance","marks","routines","records","results"]);
 const navGroups=(items)=>[
  {label:"মূল কার্যক্রম",items:items.filter(([key])=>workRoutes.has(key))},
  {label:"পরিচালনা ও সেটিংস",items:items.filter(([key])=>!workRoutes.has(key))}
 ].filter(group=>group.items.length);
 const mainDockKeys=["overview","students","admissions","attendance","records","results"];
 
-const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","accounts","security","settings","records","results"]);
+const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","routines","accounts","security","settings","records","results"]);
 
 // Use Next.js-integrated native history to avoid an extra RSC route request.
 // Regular href remains usable for accessibility, refresh, and modified clicks.
