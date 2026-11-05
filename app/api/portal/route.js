@@ -238,7 +238,7 @@ export async function POST(req) {
     if (action === "student.delete") {
       needRole(actor, ["principal"]);
       const id=cleanText(body.studentId,120),student=await studentFor(actor,id);
-      if(cleanText(body.confirmName,100)!==student.name) return fail("নিশ্চিত করতে শিক্ষার্থীর সম্পূর্ণ নাম লিখুন");
+      if(body.confirmed!==true) return fail("শিক্ষার্থী মুছে ফেলার আগে নিশ্চিত করুন");
       const studentRef=store.collection("students").doc(id);
       // Revoking access before deleting school records prevents further account sign-in.
       await store.runTransaction(async tx=>{
