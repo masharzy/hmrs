@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { DashboardRouteLink } from "./DashboardShell";
 import { ArrowUpRight, BookOpenCheck, CalendarCheck2, GraduationCap, UserRound, Wallet } from "lucide-react";
 import { gradeLabel, toBanglaDigits } from "../lib/bangla-numbers";
 import { groupNames } from "../lib/student-admin";
@@ -31,8 +31,8 @@ export default function DashboardStudentHome({profile}){
    <div className="hmrs-student-facts">{entries.map(([label,value])=><div key={label}><small>{label}</small><strong>{value||"—"}</strong></div>)}</div>
   </section>
   <div className="hmrs-student-links">
-   <Link href="/dashboard/records"><CalendarCheck2 size={19}/><span><strong>হাজিরা ও পাওনা</strong><small>নিজের উপস্থিতি ও বকেয়া দেখুন</small></span><ArrowUpRight size={16}/></Link>
-   <Link href="/dashboard/results"><GraduationCap size={19}/><span><strong>ফলাফল ও নম্বরপত্র</strong><small>প্রকাশিত পরীক্ষার ফলাফল দেখুন</small></span><ArrowUpRight size={16}/></Link>
+   <DashboardRouteLink href="/dashboard/records"><CalendarCheck2 size={19}/><span><strong>হাজিরা ও পাওনা</strong><small>নিজের উপস্থিতি ও বকেয়া দেখুন</small></span><ArrowUpRight size={16}/></DashboardRouteLink>
+   <DashboardRouteLink href="/dashboard/results"><GraduationCap size={19}/><span><strong>ফলাফল ও নম্বরপত্র</strong><small>প্রকাশিত পরীক্ষার ফলাফল দেখুন</small></span><ArrowUpRight size={16}/></DashboardRouteLink>
   </div>
  </div>;
 }
