@@ -149,7 +149,7 @@ export async function POST(req) {
       const id = cleanText(body.id, 150), ref = store.collection("admissions").doc(id);
       const snap = await ref.get();
       if (!snap.exists) return fail("আবেদন পাওয়া যায়নি", 404);
-      if (snap.data().status === "approved") return fail("ভর্তি অনুমোদিত শিক্ষার্থীকে শিক্ষার্থী তালিকা থেকে সম্পাদনা করুন", 409);
+      if (!["pending","rejected"].includes(snap.data().status)) return fail("শুধু অনিষ্পন্ন/বাতিল আবেদন সম্পাদনা করা যাবে", 409);
       const values = normalizeAdmissionData({ ...snap.data(), ...(body.values || {}) });
       const errors = validateAdmission(values);
       if (Object.keys(errors).length) return json({ error:"আবেদনের তথ্য সঠিক নয়", fieldErrors: errors, step:firstInvalidStep(errors) }, 422);
@@ -230,7 +230,13 @@ export async function POST(req) {
       if(cleanText(body.confirmName,100)!==student.name) return fail("নিশ্চিত করতে শিক্ষার্থীর সম্পূর্ণ নাম লিখুন");
       const studentRef=store.collection("students").doc(id);
       // Revoking access before deleting school records prevents further account sign-in.
-      await studentRef.update({deleting:true});
+      await store.runTransaction(async tx=>{
+        const userRef=student.uid?store.collection("users").doc(student.uid):null;
+        const [current,account]=await Promise.all([tx.get(studentRef),userRef?tx.get(userRef):null]);
+        if(!current.exists)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+        tx.update(studentRef,{deleting:true});
+        if(account?.exists)tx.update(userRef,{active:false});
+      });
       if(student.uid) {
         try {await adminAuth().deleteUser(student.uid);}
         catch(e){if(e.code!=="auth/user-not-found")throw e;}
@@ -316,10 +322,11 @@ export async function POST(req) {
       if (application.status !== "pending") return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে");
       const phone = normalizePhone(body.phone || application.studentPhone || application.fatherPhone);
       if (!/^[1-9][0-9]{0,3}$/.test(roll) || !pin || !phone) return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
-      const idStudent = studentKey(application.grade, roll);
+      const studentRef = store.collection("students").doc();
+      const idStudent = studentRef.id;
       const duplicateRoll = await store.collection("students").where("grade", "==", Number(application.grade)).limit(950).get();
       if (duplicateRoll.docs.some(d => Number(d.data().roll) === Number(roll))) return fail("এই শ্রেণিতে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
-      const rollRef = store.collection("studentRolls").doc(idStudent);
+      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll));
       if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
       const user = await adminAuth().createUser({ displayName: application.studentName });
       createdUid = user.uid;
@@ -338,11 +345,11 @@ export async function POST(req) {
       const pinCredential = makePinCredential(pin);
       await store.runTransaction(async t => {
         const [currentApp, existing, existingPhone, existingRoll] = await Promise.all([
-          t.get(ref), t.get(store.collection("students").doc(idStudent)), t.get(phoneRef), t.get(rollRef)
+          t.get(ref), t.get(studentRef), t.get(phoneRef), t.get(rollRef)
         ]);
         if (existing.exists || existingRoll.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
         if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
-        t.set(store.collection("students").doc(idStudent), student);
+        t.create(studentRef, student);
         t.create(rollRef, { studentId: idStudent, grade: student.grade, roll: student.roll });
         t.create(phoneRef, { uid: user.uid, createdAt: iso() });
         t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
