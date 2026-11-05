@@ -24,6 +24,22 @@ const navGroups=(items)=>[
 ].filter(group=>group.items.length);
 const mainDockKeys=["overview","students","admissions","attendance","records","results"];
 
+const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","accounts","security","settings","records","results"]);
+
+// Use Next.js-integrated native history to avoid an extra RSC route request.
+// Regular href remains usable for accessibility, refresh, and modified clicks.
+export function DashboardRouteLink({href,children,onNavigate,...rest}){
+ function activate(event){
+  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+  if(typeof href!=="string"||!href.startsWith("/dashboard/"))return;
+  if(!dashboardPaths.has(href.slice("/dashboard/".length)))return;
+  event.preventDefault();
+  if(window.location.pathname!==href)window.history.pushState(null,"",href);
+  onNavigate?.();
+ }
+ return <a {...rest} href={href} onClick={activate}>{children}</a>;
+}
+
 export default function DashboardShell({actor,roleName,routes,active,loading=false,onNavigate,onRefresh,onLogout,children}){
  const [menuOpen,setMenuOpen]=useState(false);
  const drawerCloseButton=useRef(null);
@@ -54,22 +70,22 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
   return <nav className="hmrs-console-navigation" aria-label="ড্যাশবোর্ড নেভিগেশন">
    {groups.map(group=><div className="hmrs-navigation-group" key={group.label}>
     <div className="hmrs-navigation-label">{group.label}</div>
-    {group.items.map(([key,label,Icon])=><Link href={"/dashboard/"+key} prefetch key={key}
+    {group.items.map(([key,label,Icon])=><DashboardRouteLink href={"/dashboard/"+key} key={key}
      className={"hmrs-console-link"+(active===key?" is-active":"")}
      aria-current={active===key?"page":undefined}
-     onClick={()=>{setMenuOpen(false);onNavigate?.()}}>
+     onNavigate={()=>{setMenuOpen(false);onNavigate?.()}}>
      <Icon size={18} strokeWidth={active===key?2.3:1.9}/><span>{label}</span>
      {active===key&&<span className="hmrs-nav-selected" aria-hidden="true"/>}
-    </Link>)}
+    </DashboardRouteLink>)}
    </div>)}
   </nav>;
  }
  return <div className="hmrs-console">
   <aside className="hmrs-console-sidebar" aria-label="প্রশাসনিক সাইডবার">
-   <Link href="/dashboard/overview" className="hmrs-console-brand" onClick={onNavigate}>
+   <DashboardRouteLink href="/dashboard/overview" className="hmrs-console-brand" onNavigate={onNavigate}>
     <span className="hmrs-brand-emblem"><GraduationCap size={24}/></span>
     <span><strong>HMRS</strong><small>School Administration</small></span>
-   </Link>
+   </DashboardRouteLink>
    {navigation()}
    <div className="hmrs-sidebar-bottom">
     <div className="hmrs-sidebar-user"><span className="hmrs-user-avatar">{(actor.name||"অ").slice(0,1)}</span>
@@ -109,8 +125,8 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
    </main>
   </div>
   <nav className="hmrs-mobile-dock" aria-label="দ্রুত নেভিগেশন">
-   {dock.map(([key,label,Icon])=><Link key={key} className={"hmrs-dock-item"+(key===active?" is-active":"")} href={"/dashboard/"+key} aria-current={key===active?"page":undefined} onClick={onNavigate}>
-    <Icon size={19}/><span>{label}</span></Link>)}
+   {dock.map(([key,label,Icon])=><DashboardRouteLink key={key} className={"hmrs-dock-item"+(key===active?" is-active":"")} href={"/dashboard/"+key} aria-current={key===active?"page":undefined} onNavigate={onNavigate}>
+    <Icon size={19}/><span>{label}</span></DashboardRouteLink>)}
    <button type="button" className={"hmrs-dock-item"+(!isDockActive?" is-active":"")} aria-expanded={menuOpen} aria-controls="hmrs-mobile-drawer" onClick={()=>setMenuOpen(true)}><Menu size={20}/><span>আরও</span></button>
   </nav>
   {menuOpen&&<><button type="button" className="hmrs-drawer-backdrop" onClick={()=>setMenuOpen(false)} aria-label="মেনু বন্ধ করুন"/>
