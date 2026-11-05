@@ -1,4 +1,9 @@
 import { adminAuth, db } from "../../../lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
+import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
+import { admissionSchema } from "../../../lib/admission-schema";
+import { normalizeStudentEdit } from "../../../lib/student-admin";
+import { getSubjects } from "../../../lib/academic";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
@@ -10,14 +15,16 @@ export const runtime = "nodejs";
 
 const iso = () => new Date().toISOString();
 const allowedStaff = ["teacher", "class_teacher", "principal"];
-const asDocs = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
-const visible = (actor, item) => canAccessClass(actor, item.grade, item.section);
+const asDocs = snap => snap.docs.map(d => { const { section, ...data } = d.data(); return { id: d.id, ...data }; });
+const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
 
 async function studentFor(actor, id) {
   const snap = await db().collection("students").doc(id).get();
   if (!snap.exists) throw Error("শিক্ষার্থী পাওয়া যায়নি");
-  const student = { id: snap.id, ...snap.data() };
+  const { section, ...data } = snap.data();
+  const student = { id: snap.id, ...data };
+  if (student.deleting) throw Object.assign(Error("শিক্ষার্থী মুছে ফেলা হচ্ছে"), { status: 409 });
   if (actor.role === "student" ? actor.studentId !== id : !visible(actor, student))
     throw Object.assign(Error("এই শিক্ষার্থী দেখার অনুমতি নেই"), { status: 403 });
   return student;
@@ -152,8 +159,8 @@ export async function POST(req) {
       if (!["teacher", "class_teacher"].includes(role) || !name || !phone || !pin)
         return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const assignedClasses = Array.isArray(body.assignedClasses)
-        ? body.assignedClasses.map(v => toAsciiDigits(cleanText(v, 20))).filter(v => /^(6|7|8|9|10)-[a-z0-9]+$/.test(v)).slice(0, 15) : [];
-      if (role === "class_teacher" && !assignedClasses.length) return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি/শাখা দিন");
+        ? [...new Set(body.assignedClasses.map(v => toAsciiDigits(cleanText(v, 20)).split("-")[0]).filter(v => /^(6|7|8|9|10)$/.test(v)))].slice(0, 5) : [];
+      if (role === "class_teacher" && !assignedClasses.length) return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি দিন");
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
@@ -173,13 +180,16 @@ export async function POST(req) {
       if (application.status !== "pending") return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে");
       const phone = normalizePhone(body.phone || application.studentPhone || application.fatherPhone);
       if (!/^[1-9][0-9]{0,3}$/.test(roll) || !pin || !phone) return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
-      const idStudent = studentKey(application.grade, application.section, roll);
+      const idStudent = studentKey(application.grade, roll);
+      const duplicateRoll = await store.collection("students").where("grade", "==", Number(application.grade)).limit(950).get();
+      if (duplicateRoll.docs.some(d => Number(d.data().roll) === Number(roll))) return fail("এই শ্রেণিতে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
+      const rollRef = store.collection("studentRolls").doc(idStudent);
       if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
       const user = await adminAuth().createUser({ displayName: application.studentName });
       createdUid = user.uid;
       const student = {
         uid: user.uid, applicationId: id, name: application.studentName, phone, grade: Number(application.grade),
-        section: application.section, roll: Number(roll), group: application.group || "science",
+        roll: Number(roll), group: Number(application.grade) >= 9 ? application.group : "",
         elective: application.group === "science" ? "higher-math" : application.group === "humanities" ? "civics" : "agriculture",
         fourthSubject: "agriculture", optionalId: application.group === "science" ? "biology" : "agriculture", dob: application.dob, gender: application.gender,
         fatherName: application.fatherName, fatherPhone: application.fatherPhone,
@@ -191,12 +201,13 @@ export async function POST(req) {
       const credentialRef = store.collection("loginCredentials").doc(user.uid);
       const pinCredential = makePinCredential(pin);
       await store.runTransaction(async t => {
-        const [currentApp, existing, existingPhone] = await Promise.all([
-          t.get(ref), t.get(store.collection("students").doc(idStudent)), t.get(phoneRef)
+        const [currentApp, existing, existingPhone, existingRoll] = await Promise.all([
+          t.get(ref), t.get(store.collection("students").doc(idStudent)), t.get(phoneRef), t.get(rollRef)
         ]);
-        if (existing.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
+        if (existing.exists || existingRoll.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
         if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
         t.set(store.collection("students").doc(idStudent), student);
+        t.create(rollRef, { studentId: idStudent, grade: student.grade, roll: student.roll });
         t.create(phoneRef, { uid: user.uid, createdAt: iso() });
         t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
         t.set(store.collection("users").doc(user.uid), { role: "student", name: student.name, active: true,
@@ -223,7 +234,7 @@ export async function POST(req) {
       const key = date + "_" + student.id;
       await store.collection("attendance").doc(key).set({
         studentId: student.id, studentName: student.name, grade: student.grade,
-        section: student.section, date, status, note: cleanText(body.note, 250),
+        date, status, note: cleanText(body.note, 250),
         updatedBy: actor.uid, updatedAt: iso()
       });
       await audit(actor, action, key); return json({ ok: true });
@@ -255,19 +266,19 @@ export async function POST(req) {
       const key = examId + "_" + student.id + "_" + subjectId;
       await store.collection("marks").doc(key).set({
         examId, studentId: student.id, subjectId, scores, grade: student.grade,
-        section: student.section, updatedBy: actor.uid, updatedAt: iso()
+        updatedBy: actor.uid, updatedAt: iso()
       });
       await audit(actor, action, key); return json({ ok: true });
     }
     if (action === "ledger.add") {
       needRole(actor, ["principal", "class_teacher"]);
       const type = body.type, amount = parseBanglaNumber(body.amount), grade = parseBanglaNumber(body.grade),
-        section = cleanText(body.section, 10), description = cleanText(body.description, 250);
+        description = cleanText(body.description, 250);
       if (!["income", "expense"].includes(type) || !Number.isFinite(amount) || amount <= 0 || amount > 10000000 ||
-          !validGrade(grade) || !/^[a-z0-9]{1,10}$/i.test(section) || !description) return fail("হিসাবের তথ্য যাচাই করুন");
-      if (!visible(actor, { grade, section })) return fail("নিজের শ্রেণির হিসাবেই পরিবর্তন করতে পারবেন", 403);
+          !validGrade(grade) || !description) return fail("হিসাবের তথ্য যাচাই করুন");
+      if (!visible(actor, { grade })) return fail("নিজের শ্রেণির হিসাবেই পরিবর্তন করতে পারবেন", 403);
       const ref = await store.collection("ledger").add({
-        type, amount, grade, section, description, createdBy: actor.uid, createdAt: iso()
+        type, amount, grade, description, createdBy: actor.uid, createdAt: iso()
       });
       await audit(actor, action, ref.id); return json({ ok: true });
     }
