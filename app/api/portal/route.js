@@ -257,8 +257,9 @@ export async function POST(req) {
         store.collection("attendance").where("studentId","==",id).get(),
         student.uid?store.collection("deviceRecognitions").where("uid","==",student.uid).get():Promise.resolve({docs:[]})
       ]);
+      // Delete linked records first; keep the disabled student record until cleanup finishes,
+      // so an interrupted deletion can be retried by the principal.
       const refs=[...marks.docs,...attendance.docs,...recognitions.docs].map(d=>d.ref);
-      refs.push(studentRef);
       if(student.uid){
         refs.push(store.collection("users").doc(student.uid),
           store.collection("loginCredentials").doc(student.uid),
@@ -282,6 +283,7 @@ export async function POST(req) {
         const linked=store.collection("admissions").doc(student.applicationId);
         if((await linked.get()).exists)await linked.update({status:"student_deleted",studentId:FieldValue.delete(),deletedAt:iso(),deletedBy:actor.uid});
       }
+      await studentRef.delete();
       await audit(actor,action,id);return json({ok:true});
     }
     if (action === "notice.save") {
