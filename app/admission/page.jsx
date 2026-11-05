@@ -58,25 +58,31 @@ export default function Admission(){
   ? window.location.origin+"/admission#edit="+encodeURIComponent(applicationId||editId)+"&token="+encodeURIComponent(editToken)
   : "";
  useEffect(()=>{
-  const fragment=new URLSearchParams(window.location.hash.replace(/^#/,""));
-  const id=fragment.get("edit"),token=fragment.get("token");
-  if(!id && !token)return;
-  if(!id || !token){setEditLoadError("এডিট লিংক অসম্পূর্ণ। বিদ্যালয়ে যোগাযোগ করুন।");return;}
-  let active=true;
-  setLoadingEdit(true);
-  fetch("/api/admissions",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action:"load",applicationId:id,editToken:token})
-  }).then(async response=>{
-    const result=await response.json().catch(()=>({}));
-    if(!response.ok)throw Error(result.error||"আবেদনটি খোলা যায়নি।");
-    return result;
-  }).then(result=>{
-    if(!active)return;
-    setForm({...initial,...result.values,grade:String(result.values.grade),website:""});
-    setEditId(id);setEditToken(token);setEditMode(true);setStep(0);
-  }).catch(error=>{if(active)setEditLoadError(error.message)}).finally(()=>{if(active)setLoadingEdit(false)});
-  return ()=>{active=false};
+  let active=true,requestSeq=0;
+  const loadFromLink=()=>{
+   const fragment=new URLSearchParams(window.location.hash.replace(/^#/,""));
+   const id=fragment.get("edit"),token=fragment.get("token");
+   if(!id&&!token)return;
+   const seq=++requestSeq;
+   if(!id||!token){setEditLoadError("এডিট লিংক অসম্পূর্ণ। বিদ্যালয়ে যোগাযোগ করুন।");return;}
+   setApplicationId("");setEditLoadError("");setLoadingEdit(true);
+   fetch("/api/admissions",{
+     method:"POST",headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({action:"load",applicationId:id,editToken:token})
+   }).then(async response=>{
+     const result=await response.json().catch(()=>({}));
+     if(!response.ok)throw Error(result.error||"আবেদনটি খোলা যায়নি।");
+     return result;
+   }).then(result=>{
+     if(!active||seq!==requestSeq)return;
+     setForm({...initial,...result.values,grade:String(result.values.grade),website:""});
+     setEditId(id);setEditToken(token);setEditMode(true);setStep(0);
+   }).catch(error=>{if(active&&seq===requestSeq)setEditLoadError(error.message)})
+    .finally(()=>{if(active&&seq===requestSeq)setLoadingEdit(false)});
+  };
+  loadFromLink();
+  window.addEventListener("hashchange",loadFromLink);
+  return ()=>{active=false;window.removeEventListener("hashchange",loadFromLink)};
  },[]);
  useEffect(()=>{
   if(!toast)return;
