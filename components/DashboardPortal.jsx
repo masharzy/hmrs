@@ -38,7 +38,7 @@ export default function DashboardPortal() {
  const tab=pathname?.split("/")[2]||"overview";
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
- const loadedRoutes=useRef(new Set()),loadSequence=useRef(0);
+ const loadedRoutes=useRef(new Set()),routeCache=useRef(new Map()),loadSequence=useRef(0);
  const [mobileNavOpen,setMobileNavOpen]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
@@ -62,7 +62,16 @@ export default function DashboardPortal() {
   const d=await r.json();if(!r.ok)throw Error(d.error||"সার্ভারে সমস্যা হয়েছে");return d;
  }
  async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab,force=false){
-  if(!who || (!force && loadedRoutes.current.has(section)))return;
+  if(!who)return;
+  if(!force && routeCache.current.has(section)){
+   const cached=routeCache.current.get(section);
+   if(cached.profile)setProfile(cached.profile);
+   if(cached.data){
+    setData(old=>({...old,...cached.data}));
+    if(cached.data.settings){setPhoto(cached.data.settings.photoUrl||"");setSubtitle(cached.data.settings.subtitle||"")}
+   }
+   return;
+  }
   const seq=++loadSequence.current;
   setLoadingSection(true);
   try{
@@ -72,6 +81,7 @@ export default function DashboardPortal() {
     setData(old=>({...old,...r.data}));
     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
    }
+   routeCache.current.set(section,{profile:r.profile,data:r.data});
    loadedRoutes.current.add(section);
   }finally{if(loadSequence.current===seq)setLoadingSection(false)}
  }
@@ -87,6 +97,7 @@ export default function DashboardPortal() {
      setData(old=>({...old,...p.data}));
      if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setSubtitle(p.data.settings.subtitle||"")}
     }
+    routeCache.current.set(tab,{profile:p.profile,data:p.data});
     loadedRoutes.current.add(tab);
     setActor(p.actor);setBusy(false);
    }catch(e){if(alive){setError(e.message);setBusy(false)}}
@@ -107,7 +118,7 @@ export default function DashboardPortal() {
   try{
    const r=await request("",{body:{action,...params}});
    setSuccess("তথ্য সফলভাবে সংরক্ষিত হয়েছে");
-   loadedRoutes.current.clear();
+   loadedRoutes.current.clear();routeCache.current.clear();
    if(action==="attendance.set"){
     setData(o=>({...o,attendance:[...(o.attendance||[]).filter(v=>v.studentId!==params.studentId),{
      studentId:params.studentId,date:params.date,status:params.status
@@ -134,8 +145,8 @@ export default function DashboardPortal() {
  const subject=subjects.find(s=>s.id===markSubject);
  const resultMap=useMemo(()=>Object.fromEntries((data.marks||[]).filter(m=>m.studentId===selectedStudent).map(m=>[m.subjectId,m.scores])),[data.marks,selectedStudent]);
  const summary=data.overview||{students:0,applications:0,present:0,absent:0};
- async function changeDate(v){setDate(v);try{const att=await request("attendance",{params:"date="+encodeURIComponent(v)});setData(o=>({...o,attendance:att.items}))}catch(e){setError(e.message)}}
- async function changeExam(v){setExamId(v);try{const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};setData(o=>({...o,marks:m.items}))}catch(e){setError(e.message)}}
+ async function changeDate(v){setDate(v);routeCache.current.delete("attendance");loadedRoutes.current.delete("attendance");try{const att=await request("attendance",{params:"date="+encodeURIComponent(v)});setData(o=>({...o,attendance:att.items}))}catch(e){setError(e.message)}}
+ async function changeExam(v){setExamId(v);routeCache.current.delete("marks");loadedRoutes.current.delete("marks");try{const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};setData(o=>({...o,marks:m.items}))}catch(e){setError(e.message)}}
  function chooseStudent(id){
   setSelectedStudent(id);setMarkSubject("");setMarkScores({});
   const s=students.find(t=>t.id===id);
