@@ -191,7 +191,7 @@ export default function DashboardPortal() {
      {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
      {actor.role==="student"?<>
        {tab==="overview"&&<><div className="panel p-6"><span className="kicker">STUDENT PROFILE</span><h2 className="section-title mt-2">{profile?.student?.name}</h2><div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mt-5">{[
-        ["শ্রেণি",gradeLabel(profile?.student?.grade)],["শাখা",sectionName(profile?.student?.section)],["রোল",toBanglaDigits(profile?.student?.roll)],
+        ["শ্রেণি",gradeLabel(profile?.student?.grade)],...(Number(profile?.student?.grade)>=9?[["বিভাগ",groupNames[profile?.student?.group]||"—"]]:[]),["রোল",toBanglaDigits(profile?.student?.roll)],
         ["পিতার নাম",profile?.student?.fatherName],["মাতার নাম",profile?.student?.motherName],["পূর্ববর্তী বিদ্যালয়",profile?.student?.previousSchool]
        ].map(([l,v])=><div key={l}><div className="muted text-xs mb-1">{l}</div><b>{v||"—"}</b></div>)}</div></div>
        <div className="grid grid-cols-2 gap-4"><div className="panel stat"><div className="muted text-xs">বকেয়া/পাওনা</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong></div><div className="panel stat"><div className="muted text-xs">প্রকাশিত পরীক্ষা</div><strong>{toBanglaDigits(profile?.results?.length||0)}</strong></div></div></>}
@@ -251,12 +251,11 @@ export default function DashboardPortal() {
          <Field label="ধরন"><Select value={ledgerForm.type} onChange={v=>setLedgerForm(o=>({...o,type:v}))} choices={[["income","আয়"],["expense","ব্যয়"]]}/></Field>
          <Field label="টাকার পরিমাণ"><Input type="number" min="1" value={ledgerForm.amount} onChange={v=>setLedgerForm(o=>({...o,amount:v}))}/></Field>
          <Field label="শ্রেণি"><Select value={ledgerForm.grade} onChange={v=>setLedgerForm(o=>({...o,grade:v}))} choices={gradeChoices}/></Field>
-         <Field label="শাখা"><Select value={ledgerForm.section} onChange={v=>setLedgerForm(o=>({...o,section:v}))} choices={secChoices}/></Field>
          <Field label="বিবরণ"><Input value={ledgerForm.description} onChange={v=>setLedgerForm(o=>({...o,description:v}))}/></Field>
         </div><button disabled={working} className="btn primary mt-4" onClick={async()=>{const r=await mutate("ledger.add",ledgerForm);if(r)setLedgerForm(o=>({...o,amount:"",description:""}))}}>হিসাব সংরক্ষণ</button>
         </div>
         <div className="panel p-5"><h3 className="font-bold mb-3">শিক্ষার্থীর বকেয়া হালনাগাদ</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
-        <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}-{sectionName(l.section)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
+        <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&<><h2 className="section-title">নোটিশ ব্যবস্থাপনা</h2><div className="panel p-5 grid gap-3">
         <Field label="নোটিশ শিরোনাম"><Input value={notice.title} onChange={v=>setNotice(o=>({...o,title:v}))}/></Field>
         <Field label="নোটিশের বিবরণ"><textarea value={notice.message} onChange={e=>setNotice(o=>({...o,message:e.target.value}))}/></Field>
@@ -268,10 +267,10 @@ export default function DashboardPortal() {
         <Field label="মোবাইল নম্বর"><Input type="tel" value={login.phone} onChange={v=>setLogin(o=>({...o,phone:v}))} placeholder="01712345678 / +8801712345678"/></Field>
         <PinInput label="লগইন PIN" value={login.pin} onChange={v=>setLogin(o=>({...o,pin:v}))}/>
         <Field label="ভূমিকা"><Select value={login.role} onChange={v=>setLogin(o=>({...o,role:v}))} choices={[["teacher","শিক্ষক"],["class_teacher","শ্রেণি শিক্ষক"]]}/></Field>
-        {login.role==="class_teacher"&&<Field label="নিজ শ্রেণি/শাখা (যেমন 6-a,7-b)"><Input value={login.assignedClasses} onChange={v=>setLogin(o=>({...o,assignedClasses:v}))}/></Field>}
+        {login.role==="class_teacher"&&<Field label="নির্ধারিত শ্রেণি (যেমন 6,7,9)"><Input value={login.assignedClasses} onChange={v=>setLogin(o=>({...o,assignedClasses:v}))}/></Field>}
        </div><p className="muted text-xs mt-4">শিক্ষকের PIN নিরাপদভাবে প্রদান করুন। PIN সরাসরি সংরক্ষিত হয় না; ভুল PIN বারবার দিলে লগইন সাময়িক বন্ধ থাকে।</p>
        <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",phone:"",pin:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
-       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{(u.assignedClasses||[]).join(", ")}</td></tr>)}</tbody></table></div></>}
+       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{[...new Set((u.assignedClasses||[]).map(v=>String(v).split("-")[0]))].join(", ")}</td></tr>)}</tbody></table></div></>}
        {tab==="settings"&&<><h2 className="section-title">বিদ্যালয়ের ওয়েবসাইট সেটিংস</h2><div className="panel p-6 grid gap-4">
         <div className="alert">ছবি আপলোড করলে ImgBB-তে সংরক্ষিত হবে এবং হোমপেজের হিরো সেকশনে স্বয়ংক্রিয়ভাবে দেখাবে। আলাদা করে সেটিংস সংরক্ষণ করতে হবে না। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
         <Field label="হোমপেজের ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
