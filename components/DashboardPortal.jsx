@@ -66,29 +66,12 @@ export default function DashboardPortal() {
   const seq=++loadSequence.current;
   setLoadingSection(true);
   try{
-   if(who.role==="student"){
-    const resource=section==="results"?"student.results":section==="records"?"student.records":"student.profile";
-    setProfile(await request(resource));
-    loadedRoutes.current.add(section);
-    return;
+   const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam)});
+   if(r.profile)setProfile(r.profile);
+   if(r.data){
+    setData(old=>({...old,...r.data}));
+    if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
    }
-   if(section==="security"){loadedRoutes.current.add(section);return;}
-   const needed=new Set();
-   if(["students","attendance","marks","finance"].includes(section))needed.add("students");
-   if(section==="marks")needed.add("exams");
-   if(section==="admissions")needed.add("admissions");
-   if(section==="finance")needed.add("ledger");
-   if(section==="notices")needed.add("notices");
-   if(section==="accounts")needed.add("users");
-   if(section==="settings")needed.add("settings");
-   const calls=[...needed].map(async key=>[key,await request(key)]);
-   if(section==="overview")calls.push(request("overview.summary").then(r=>["overview",r.summary]));
-   if(section==="attendance")calls.push(request("attendance",{params:"date="+encodeURIComponent(chosenDate)}).then(r=>["attendance",r.items]));
-   if(section==="marks"&&chosenExam)calls.push(request("marks",{params:"examId="+encodeURIComponent(chosenExam)}).then(r=>["marks",r.items]));
-   const entries=await Promise.all(calls);
-   const next={};entries.forEach(([key,value])=>next[key]=key==="settings"?value.settings:value.items??value);
-   setData(old=>({...old,...next}));
-   if(next.settings){setPhoto(next.settings.photoUrl||"");setSubtitle(next.settings.subtitle||"")}
    loadedRoutes.current.add(section);
   }finally{if(loadSequence.current===seq)setLoadingSection(false)}
  }
@@ -97,8 +80,14 @@ export default function DashboardPortal() {
   try{unsubscribe=onAuthStateChanged(firebaseAuth(),async user=>{
    if(!user){router.replace("/login/student");return;}
    try{
-    const p=await request("identity");
+    const p=await request("dashboard.data",{params:"section="+encodeURIComponent(tab)+"&date="+encodeURIComponent(date)+"&examId="+encodeURIComponent(examId)});
     if(!alive)return;
+    if(p.profile)setProfile(p.profile);
+    if(p.data){
+     setData(old=>({...old,...p.data}));
+     if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setSubtitle(p.data.settings.subtitle||"")}
+    }
+    loadedRoutes.current.add(tab);
     setActor(p.actor);setBusy(false);
    }catch(e){if(alive){setError(e.message);setBusy(false)}}
   })}catch(e){setError(e.message);setBusy(false)}
