@@ -4,13 +4,14 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole } from "lucide-react";
+import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 import { evaluateTranscript, getSubjects } from "../lib/academic";
 import Marksheet from "./Marksheet";
 import PinInput from "./PinInput";
 import SecurityCenter from "./SecurityCenter";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
+import { formatClass, groupNames } from "../lib/student-admin";
 
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const roleNames={principal:"প্রতিষ্ঠান প্রধান",class_teacher:"শ্রেণি শিক্ষক",teacher:"শিক্ষক",student:"শিক্ষার্থী"};
@@ -25,8 +26,6 @@ const Field=({label,children})=><label className="field">{label}{children}</labe
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
 const Select=({value,onChange,choices})=><select value={value} onChange={e=>onChange(e.target.value)}>{choices.map(([v,label])=><option key={v} value={v}>{label}</option>)}</select>;
 const gradeChoices=[6,7,8,9,10].map(g=>[String(g),gradeLabel(g)]);
-const secChoices=[["a","ক / A"],["b","খ / B"],["c","গ / C"]];
-const sectionName=x=>({a:"ক",b:"খ",c:"গ"}[x]||x?.toUpperCase());
 const phoneLink=(student,status)=>{
  const phone=toAsciiDigits(student.fatherPhone||student.motherPhone||"").replace(/[^0-9]/g,"");
  const intl=phone.startsWith("0")?"88"+phone:phone;
@@ -38,12 +37,16 @@ export default function DashboardPortal() {
  const tab=pathname?.split("/")[2]||"overview";
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
+ const loadedRoutes=useRef(new Set()),loadSequence=useRef(0);
+ const [mobileNavOpen,setMobileNavOpen]=useState(false);
+ const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
+ const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],users:[],settings:{}});
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
- const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6-a"});
- const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",section:"a",description:""});
+ const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6"});
+ const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const photoUploadInput=useRef(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
@@ -57,36 +60,36 @@ export default function DashboardPortal() {
   });
   const d=await r.json();if(!r.ok)throw Error(d.error||"সার্ভারে সমস্যা হয়েছে");return d;
  }
- async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab){
-  if(!who)return;
+ async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab,force=false){
+  if(!who || (!force && loadedRoutes.current.has(section)))return;
+  const seq=++loadSequence.current;
   setLoadingSection(true);
   try{
    if(who.role==="student"){
     const resource=section==="results"?"student.results":section==="records"?"student.records":"student.profile";
     setProfile(await request(resource));
+    loadedRoutes.current.add(section);
     return;
    }
+   if(section==="security"){loadedRoutes.current.add(section);return;}
    const needed=new Set();
-   if(["overview","students","attendance","marks","finance"].includes(section))needed.add("students");
+   if(["students","attendance","marks","finance"].includes(section))needed.add("students");
    if(section==="marks")needed.add("exams");
-   if(section==="admissions"||(section==="overview"&&who.role!=="teacher"))needed.add("admissions");
+   if(section==="admissions")needed.add("admissions");
    if(section==="finance")needed.add("ledger");
    if(section==="notices")needed.add("notices");
    if(section==="accounts")needed.add("users");
    if(section==="settings")needed.add("settings");
-   const entries=await Promise.all([...needed].map(async key=>[key,await request(key)]));
-   const next={};entries.forEach(([key,value])=>next[key]=key==="settings"?value.settings:value.items);
-   if(section==="overview"||section==="attendance"){
-    const response=await request("attendance",{params:"date="+encodeURIComponent(chosenDate)});
-    next.attendance=response.items;
-   }
-   if(section==="marks"&&chosenExam){
-    const response=await request("marks",{params:"examId="+encodeURIComponent(chosenExam)});
-    next.marks=response.items;
-   }
+   const calls=[...needed].map(async key=>[key,await request(key)]);
+   if(section==="overview")calls.push(request("overview.summary").then(r=>["overview",r.summary]));
+   if(section==="attendance")calls.push(request("attendance",{params:"date="+encodeURIComponent(chosenDate)}).then(r=>["attendance",r.items]));
+   if(section==="marks"&&chosenExam)calls.push(request("marks",{params:"examId="+encodeURIComponent(chosenExam)}).then(r=>["marks",r.items]));
+   const entries=await Promise.all(calls);
+   const next={};entries.forEach(([key,value])=>next[key]=key==="settings"?value.settings:value.items??value);
    setData(old=>({...old,...next}));
    if(next.settings){setPhoto(next.settings.photoUrl||"");setSubtitle(next.settings.subtitle||"")}
-  }finally{setLoadingSection(false)}
+   loadedRoutes.current.add(section);
+  }finally{if(loadSequence.current===seq)setLoadingSection(false)}
  }
  useEffect(()=>{
   let alive=true,unsubscribe=()=>{};
@@ -111,18 +114,36 @@ export default function DashboardPortal() {
  },[actor?.uid,tab]);
  async function mutate(action,params={}){
   setWorking(true);setError("");setSuccess("");
-  try{const r=await request("",{body:{action,...params}});setSuccess("তথ্য সফলভাবে সংরক্ষিত হয়েছে");await refresh();
+  try{
+   const r=await request("",{body:{action,...params}});
+   setSuccess("তথ্য সফলভাবে সংরক্ষিত হয়েছে");
+   loadedRoutes.current.clear();
+   if(action==="attendance.set"){
+    setData(o=>({...o,attendance:[...(o.attendance||[]).filter(v=>v.studentId!==params.studentId),{
+     studentId:params.studentId,date:params.date,status:params.status
+    }]}));
+    loadedRoutes.current.add("attendance");
+   }else if(action==="marks.set"){
+    setData(o=>({...o,marks:[...(o.marks||[]).filter(v=>!(v.studentId===params.studentId&&v.subjectId===params.subjectId)),{
+     studentId:params.studentId,subjectId:params.subjectId,examId:params.examId,scores:params.scores
+    }]}));
+    loadedRoutes.current.add("marks");
+   }else await refresh(actor,date,examId,tab,true);
    return r;
   }catch(e){setError(e.message);return null}finally{setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
- const filtered=students.filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+s.section+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase()));
+ const filtered=useMemo(()=>students.filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())),[students,query]);
+ const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
+ const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
+ const admissions=data.admissions||[];
+ const admissionsCurrentPage=Math.min(admissionsPage,Math.max(1,Math.ceil(admissions.length/20)));
  const chosen=students.find(s=>s.id===selectedStudent);
  const exam=exams.find(e=>e.id===examId);
  const subjects=chosen?getSubjects(chosen.grade,chosen.group,chosen.elective,chosen.fourthSubject):[];
  const subject=subjects.find(s=>s.id===markSubject);
  const resultMap=useMemo(()=>Object.fromEntries((data.marks||[]).filter(m=>m.studentId===selectedStudent).map(m=>[m.subjectId,m.scores])),[data.marks,selectedStudent]);
- const summary=useMemo(()=>({students:students.length,applications:(data.admissions||[]).filter(a=>a.status==="pending").length,present:(data.attendance||[]).filter(a=>a.status==="present").length,absent:(data.attendance||[]).filter(a=>a.status!=="present").length}),[data,students]);
+ const summary=data.overview||{students:0,applications:0,present:0,absent:0};
  async function changeDate(v){setDate(v);try{const att=await request("attendance",{params:"date="+encodeURIComponent(v)});setData(o=>({...o,attendance:att.items}))}catch(e){setError(e.message)}}
  async function changeExam(v){setExamId(v);try{const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};setData(o=>({...o,marks:m.items}))}catch(e){setError(e.message)}}
  function chooseStudent(id){
@@ -159,7 +180,7 @@ export default function DashboardPortal() {
    </div>
   </div>
   <main className="container py-7">
-   <div className="dashboard-section-head"><div><span className="kicker">HMRS · {roleNames[actor.role]}</span><h1 className="section-title mt-1 mb-1">{(roles[actor.role]||[]).find(([key])=>key===tab)?.[1]||"ড্যাশবোর্ড"}</h1><p className="muted text-xs mb-0">বিদ্যালয়ের ডিজিটাল ব্যবস্থাপনা কেন্দ্র</p></div><button className="btn sm" disabled={working||loadingSection} onClick={()=>refresh().catch(e=>setError(e.message))}><RefreshCw size={14}/> রিফ্রেশ</button></div>
+   <div className="dashboard-section-head"><div><span className="kicker">HMRS · {roleNames[actor.role]}</span><h1 className="section-title mt-1 mb-1">{(roles[actor.role]||[]).find(([key])=>key===tab)?.[1]||"ড্যাশবোর্ড"}</h1><p className="muted text-xs mb-0">বিদ্যালয়ের ডিজিটাল ব্যবস্থাপনা কেন্দ্র</p></div><button className="btn sm" disabled={working||loadingSection} onClick={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}><RefreshCw size={14}/> রিফ্রেশ</button></div>
    {actor && !actor.pinEnabled && <div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
    {error&&<div role="alert" className="alert error mb-4">{error} <button type="button" onClick={()=>setError("")} className="float-right">×</button></div>}
    {success&&<div role="status" className="alert mb-4">{success}</div>}
