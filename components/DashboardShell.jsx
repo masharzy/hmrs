@@ -25,7 +25,7 @@ const navGroups=(items)=>[
 ].filter(group=>group.items.length);
 const mainDockKeys=["overview","students","admissions","attendance","records","results"];
 
-const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","accounts","security","settings","records","results"]);
+const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","routines","accounts","security","settings","records","results"]);
 
 // Use Next.js-integrated native history to avoid an extra RSC route request.
 // Regular href remains usable for accessibility, refresh, and modified clicks.
