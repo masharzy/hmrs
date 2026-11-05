@@ -10,6 +10,7 @@ import { evaluateTranscript, getSubjects } from "../lib/academic";
 import Marksheet from "./Marksheet";
 import PinInput from "./PinInput";
 import SecurityCenter from "./SecurityCenter";
+import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
 
@@ -184,8 +185,10 @@ export default function DashboardPortal() {
    {actor && !actor.pinEnabled && <div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
    {error&&<div role="alert" className="alert error mb-4">{error} <button type="button" onClick={()=>setError("")} className="float-right">×</button></div>}
    {success&&<div role="status" className="alert mb-4">{success}</div>}
+   <button className="dashboard-mobile-menu btn primary" type="button" aria-expanded={mobileNavOpen} aria-controls="dashboard-navigation" onClick={()=>setMobileNavOpen(v=>!v)}><Menu size={17}/> মেনু</button>
+   {mobileNavOpen&&<button className="dashboard-nav-backdrop" type="button" aria-label="মেনু বন্ধ করুন" onClick={()=>setMobileNavOpen(false)}/>}
    <div className="dashboard-layout">
-    <aside className="panel sidebar dashboard-nav" aria-label="ড্যাশবোর্ড মেনু">{(roles[actor.role]||[]).map(([key,label,Icon])=><Link key={key} href={"/dashboard/"+key} aria-current={tab===key?"page":undefined} className={tab===key?"active":""} onClick={()=>{setError("");setSuccess("")}}><Icon size={18}/><span>{label}</span></Link>)}</aside>
+    <aside id="dashboard-navigation" className={"panel sidebar dashboard-nav"+(mobileNavOpen?" is-open":"")} aria-label="ড্যাশবোর্ড মেনু">{(roles[actor.role]||[]).map(([key,label,Icon])=><Link key={key} href={"/dashboard/"+key} aria-current={tab===key?"page":undefined} className={tab===key?"active":""} onClick={()=>{setMobileNavOpen(false);setError("");setSuccess("")}}><Icon size={18}/><span>{label}</span></Link>)}</aside>
     <section className="min-w-0 grid gap-5 dashboard-section-content">
      {loadingSection&&<div className="dashboard-fetching"><div className="dashboard-loading-ring"/> তথ্য হালনাগাদ হচ্ছে...</div>}
      {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
@@ -319,6 +322,17 @@ export default function DashboardPortal() {
     </section>
    </div>
   </main>
+  {actor.role==="principal"&&editing&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={async values=>{
+   const action=editing.type==="student"?"student.update":"application.update";
+   const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
+   if(await mutate(action,payload))setEditing(null);
+  }}/>}
+  {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async confirmName=>{
+   if(await mutate("student.delete",{studentId:deleting.id,confirmName})){
+    if(selectedStudent===deleting.id)chooseStudent("");
+    setDeleting(null);
+   }
+  }}/>}
  </>;
 }
 
