@@ -39,7 +39,7 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
   </section>
 
   <div className="hmrs-overview-stats">
-   {metrics.map(({key,label,Icon,meta})=><div className="hmrs-overview-stat" key={key}>
+   {metrics.filter(item=>item.key!=="applications"||keys.has("admissions")).map(({key,label,Icon,meta})=><div className="hmrs-overview-stat" key={key}>
     <div className="hmrs-stat-icon"><Icon size={20}/></div>
     <span className="hmrs-stat-label">{label}</span>
     <strong>{toBanglaDigits(summary[key]??0)}</strong>
