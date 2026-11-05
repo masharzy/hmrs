@@ -12,6 +12,7 @@ import PinInput from "./PinInput";
 import SecurityCenter from "./SecurityCenter";
 import DashboardShell, { DashboardSkeleton } from "./DashboardShell";
 import DashboardOverview from "./DashboardOverview";
+import DashboardStudentHome from "./DashboardStudentHome";
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
@@ -242,18 +243,14 @@ export default function DashboardPortal() {
     {showPlaceholder?<DashboardSkeleton kind={tab}/>:<>
      {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
      {actor.role==="student"?<>
-       {tab==="overview"&&<><div className="panel p-6"><span className="kicker">STUDENT PROFILE</span><h2 className="section-title mt-2">{profile?.student?.name}</h2><div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mt-5">{[
-        ["শ্রেণি",gradeLabel(profile?.student?.grade)],...(Number(profile?.student?.grade)>=9?[["বিভাগ",groupNames[profile?.student?.group]||"—"]]:[]),["রোল",toBanglaDigits(profile?.student?.roll)],
-        ["পিতার নাম",profile?.student?.fatherName],["মাতার নাম",profile?.student?.motherName],["পূর্ববর্তী বিদ্যালয়",profile?.student?.previousSchool]
-       ].map(([l,v])=><div key={l}><div className="muted text-xs mb-1">{l}</div><b>{v||"—"}</b></div>)}</div></div>
-       <div className="grid grid-cols-2 gap-4"><div className="panel stat"><div className="muted text-xs">বকেয়া/পাওনা</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong></div><div className="panel stat"><div className="muted text-xs">প্রকাশিত পরীক্ষা</div><strong>{toBanglaDigits(profile?.publishedExams??profile?.results?.length??0)}</strong></div></div></>}
+       {tab==="overview"&&<DashboardStudentHome profile={profile}/>}
        {tab==="records"&&<><h2 className="section-title">হাজিরা ও প্রাতিষ্ঠানিক পাওনা</h2><div className="panel stat"><div className="muted">বর্তমান বকেয়া</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">কোনো অসঙ্গতি থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।</p></div>
         <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>উপস্থিতি</th><th>মন্তব্য</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toBanglaDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">হাজিরার তথ্য নেই।</p>}</div></>}
        {tab==="results"&&<><h2 className="section-title">ফলাফল ও নম্বরপত্র</h2>{!profile?.results?.length?<div className="panel empty">এখনো কোনো ফলাফল প্রকাশিত হয়নি।</div>:profile.results.map(({exam:ex,result})=><div className="panel p-6" key={ex.id}>
         <div className="flex justify-between items-center gap-3 flex-wrap"><div><b>{ex.name}</b><div className="muted text-xs mt-1">ফলাফল: {result.letter} · GPA: {toBanglaDigits(result.gpa??"অসম্পূর্ণ")}</div></div><button className="btn sm" onClick={()=>{setExamId(ex.id);print()}}><Printer size={15}/> নম্বরপত্র প্রিন্ট</button></div>
         <div className="table-wrap mt-4"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত</th><th>গ্রেড</th></tr></thead><tbody>{result.rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}</td><td>{toBanglaDigits(r.status==="complete"?r.received:"—")} / {toBanglaDigits(r.subject.max)}</td><td>{r.letter||"—"}</td></tr>)}</tbody></table></div>
        </div>)}</>}
-       {profile?.student&&<Marksheet student={profile.student} exam={profile.results?.find(x=>x.exam.id===examId)?.exam} report={profile.results?.find(x=>x.exam.id===examId)?.result}/>}
+       {tab==="results"&&profile?.student&&<Marksheet student={profile.student} exam={profile.results?.find(x=>x.exam.id===examId)?.exam} report={profile.results?.find(x=>x.exam.id===examId)?.result}/>}
        {/* Student printing uses the precomputed report below; no private API bypass. */}
        {profile?.student&&profile.results?.filter(x=>x.exam.id===examId).map(({exam:ex,result})=><div key={ex.id} id="student-report-print" style={{display:"none"}}>
         <h2>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</h2><p>{ex.name} — {profile.student.name} · শ্রেণি {toBanglaDigits(profile.student.grade)} · রোল {toBanglaDigits(profile.student.roll)}</p>
@@ -264,7 +261,7 @@ export default function DashboardPortal() {
       <>
         {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
        {tab==="students"&&<>
-        <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থী তালিকা</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
+        <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থীর রেকর্ড</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
          <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label></div>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map(s=><tr key={s.id}>
          <td className="font-bold">{s.name}</td><td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
@@ -281,7 +278,7 @@ export default function DashboardPortal() {
         </div>)}{!filtered.length&&<div className="panel empty">শিক্ষার্থী পাওয়া যায়নি</div>}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="admissions"&&<><div className="dashboard-toolbar"><div><h2 className="section-title">ভর্তি আবেদন ও অনুমোদন</h2><p className="muted text-xs">{toBanglaDigits(admissions.length)}টি আবেদন</p></div></div>
+       {tab==="admissions"&&<><div className="dashboard-toolbar"><div><h2 className="section-title">আবেদনের তালিকা</h2><p className="muted text-xs">{toBanglaDigits(admissions.length)}টি আবেদন</p></div></div>
         <div className="grid gap-3">{admissions.slice((admissionsCurrentPage-1)*20,admissionsCurrentPage*20).map(a=><div key={a.id} className="panel p-5 dashboard-application">
          <div className="flex flex-wrap justify-between items-start gap-2"><div><b className="text-base">{a.studentName}</b><p className="muted text-xs mt-1 mb-0">শ্রেণি {formatClass(toBanglaDigits(a.grade),a.group)} · পিতা: {a.fatherName} · {toBanglaDigits(a.fatherPhone)}</p><p className="muted text-xs mt-1 mb-0">পূর্ববর্তী বিদ্যালয়: {a.previousSchool} · পেমেন্ট: {a.paymentMethod} / {a.paymentStatus}</p></div><span className={"chip "+(a.status==="pending"?"":"gray")}>{a.status}</span></div>
          {actor.role==="principal"&&a.status!=="approved"&&<div className="inline-actions mt-3"><button className="btn sm" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> আবেদন এডিট</button></div>}
@@ -291,7 +288,7 @@ export default function DashboardPortal() {
         <Pager total={admissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
        </>}
        {tab==="attendance"&&<>
-        <div className="dashboard-toolbar"><h2 className="section-title">দৈনিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
+        <div className="dashboard-toolbar"><h2 className="section-title">হাজিরার তালিকা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
         <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map(s=>{
          const record=data.attendance?.find(a=>a.studentId===s.id);
@@ -311,7 +308,7 @@ export default function DashboardPortal() {
         })}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="marks"&&<><h2 className="section-title">পরীক্ষা ও নম্বর ব্যবস্থাপনা</h2>
+       {tab==="marks"&&<><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
          <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
@@ -332,7 +329,7 @@ export default function DashboardPortal() {
          <div className="table-wrap mt-5"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত নম্বর</th><th>গ্রেড</th><th>অবস্থা</th></tr></thead><tbody>{evaluateTranscript(chosen,resultMap).rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}{r.subjectId===chosen.optionalId?" (৪র্থ)":""}</td><td>{toBanglaDigits(r.received??"—")} / {toBanglaDigits(r.subject.max)}</td><td>{r.letter||"—"}</td><td>{r.status==="complete"?(r.passed?"পাস":"ফেল"):"অসম্পূর্ণ"}</td></tr>)}</tbody></table></div>
         </div><Marksheet student={chosen} marks={resultMap} exam={exam}/></>}
        </>}
-       {tab==="finance"&&<><h2 className="section-title">{actor.role==="principal"?"বিদ্যালয়ের আয়-ব্যয়":"নিজ শ্রেণির আয়-ব্যয়"}</h2><div className="grid grid-cols-2 gap-4">{[["income","আয়"],["expense","ব্যয়"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>৳ {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("bn-BD")}</strong></div>)}</div>
+       {tab==="finance"&&<><h2 className="section-title">আর্থিক সারসংক্ষেপ</h2><div className="grid grid-cols-2 gap-4">{[["income","আয়"],["expense","ব্যয়"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>৳ {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("bn-BD")}</strong></div>)}</div>
         <div className="panel p-5"><h3 className="font-bold mb-4">নতুন হিসাব যুক্ত করুন</h3><div className="form-grid">
          <Field label="ধরন"><Select value={ledgerForm.type} onChange={v=>setLedgerForm(o=>({...o,type:v}))} choices={[["income","আয়"],["expense","ব্যয়"]]}/></Field>
          <Field label="টাকার পরিমাণ"><Input type="number" min="1" value={ledgerForm.amount} onChange={v=>setLedgerForm(o=>({...o,amount:v}))}/></Field>
@@ -342,7 +339,7 @@ export default function DashboardPortal() {
         </div>
         <div className="panel p-5"><h3 className="font-bold mb-3">শিক্ষার্থীর বকেয়া হালনাগাদ</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
         <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
-       {tab==="notices"&&<><h2 className="section-title">নোটিশ ব্যবস্থাপনা</h2><div className="panel p-5 grid gap-3">
+       {tab==="notices"&&<><h2 className="section-title">নতুন নোটিশ</h2><div className="panel p-5 grid gap-3">
         <Field label="নোটিশ শিরোনাম"><Input value={notice.title} onChange={v=>setNotice(o=>({...o,title:v}))}/></Field>
         <Field label="নোটিশের বিবরণ"><textarea value={notice.message} onChange={e=>setNotice(o=>({...o,message:e.target.value}))}/></Field>
         <label className="flex gap-2 items-center text-xs"><input type="checkbox" checked={notice.published} onChange={e=>setNotice(o=>({...o,published:e.target.checked}))}/> প্রকাশ করুন</label>
@@ -357,7 +354,7 @@ export default function DashboardPortal() {
        </div><p className="muted text-xs mt-4">শিক্ষকের PIN নিরাপদভাবে প্রদান করুন। PIN সরাসরি সংরক্ষিত হয় না; ভুল PIN বারবার দিলে লগইন সাময়িক বন্ধ থাকে।</p>
        <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",phone:"",pin:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
        <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{[...new Set((u.assignedClasses||[]).map(v=>String(v).split("-")[0]))].join(", ")}</td></tr>)}</tbody></table></div></>}
-       {tab==="settings"&&<><h2 className="section-title">বিদ্যালয়ের ওয়েবসাইট সেটিংস</h2><div className="panel p-6 grid gap-4">
+       {tab==="settings"&&<><h2 className="section-title">হোমপেজের তথ্য ও ছবি</h2><div className="panel p-6 grid gap-4">
         <div className="alert">ছবি আপলোড করলে ImgBB-তে সংরক্ষিত হবে এবং হোমপেজের হিরো সেকশনে স্বয়ংক্রিয়ভাবে দেখাবে। আলাদা করে সেটিংস সংরক্ষণ করতে হবে না। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
         <Field label="হোমপেজের ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
         <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> ছবি আপলোড করুন</button>
