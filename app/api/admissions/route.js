@@ -1,25 +1,9 @@
-import { z } from "zod";
+import { admissionSchema } from "../../../lib/admission-schema.js";
 import { db } from "../../../lib/firebase-admin";
 import { fail, handleError, json, verifyOrigin } from "../../../lib/server-auth";
 import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
 
 export const runtime = "nodejs";
-const field=(limit=100)=>z.string().trim().min(1).max(limit);
-const optional=(limit=100)=>z.string().trim().max(limit).optional().default("");
-const schema=z.object({
- studentName:field(100),dob:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
- birthRegistration:z.string().regex(/^\d{17}$/),gender:z.enum(["male","female","other"]),
- grade:z.coerce.number().int().min(6).max(10),
- group:z.enum(["science","business","humanities",""]),
- fatherName:field(100),fatherPhone:z.string().regex(/^01[3-9]\d{8}$/),
- motherName:field(100),motherPhone:z.string().regex(/^01[3-9]\d{8}$/),
- studentPhone:z.string().regex(/^01[3-9]\d{8}$/),
- guardianAddress:field(350),previousSchool:field(150),
- previousClass:optional(30),previousResult:optional(80),
- paymentMethod:z.enum(["mobile_banking","online_banking","later"]),
- paymentReference:optional(70),website:optional(120)
-}).strict();
-
 export async function POST(req){
  try{
   verifyOrigin(req);
@@ -31,7 +15,7 @@ export async function POST(req){
   if(Object.keys(errors).length){
    return json({error:"চিহ্নিত তথ্যগুলো সঠিকভাবে পূরণ করুন।",fieldErrors:errors,step:firstInvalidStep(errors)},422);
   }
-  const parsed=schema.safeParse(values);
+  const parsed=admissionSchema.safeParse(values);
   if(!parsed.success){
    const fieldErrors={};
    for(const issue of parsed.error.issues){
