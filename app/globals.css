@@ -376,3 +376,8 @@ tr:last-child td{border-bottom:none}
  .routine-public-dialog footer .btn{flex:1;font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.home-routine-skeleton{animation:none}.home-routine-thumb img{transition:none}}
+
+.home-routine-empty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:11px;min-height:120px;padding:20px;color:#81918b}
+.home-routine-empty svg{color:#137668;flex:none}
+.home-routine-empty p{margin:0;font-size:12px}
+@media(max-width:600px){.home-routine-empty{padding:23px 15px;text-align:center;flex-direction:column}}
