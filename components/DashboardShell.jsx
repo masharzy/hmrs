@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, ChevronRight, GraduationCap, LayoutDashboard, LogOut, Menu, RefreshCw, School, X } from "lucide-react";
 
@@ -26,6 +26,7 @@ const mainDockKeys=["overview","students","admissions","attendance","records","r
 
 export default function DashboardShell({actor,roleName,routes,active,loading=false,onNavigate,onRefresh,onLogout,children}){
  const [menuOpen,setMenuOpen]=useState(false);
+ const drawerCloseButton=useRef(null);
  const activeItem=routes.find(([key])=>key===active);
  const heading=activeItem?.[1]||"ড্যাশবোর্ড";
  const groups=useMemo(()=>navGroups(routes),[routes]);
@@ -33,6 +34,22 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
  const isDockActive=dock.some(([key])=>key===active);
  const today=new Date().toLocaleDateString("bn-BD",{timeZone:"Asia/Dhaka",day:"numeric",month:"long",year:"numeric"});
  useEffect(()=>{setMenuOpen(false)},[active]);
+ useEffect(()=>{
+  if(!menuOpen)return;
+  const previous=document.activeElement;
+  const oldOverflow=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  drawerCloseButton.current?.focus();
+  const onKeyDown=(event)=>{
+   if(event.key==="Escape"){event.preventDefault();setMenuOpen(false)}
+  };
+  document.addEventListener("keydown",onKeyDown);
+  return ()=>{
+   document.body.style.overflow=oldOverflow;
+   document.removeEventListener("keydown",onKeyDown);
+   if(previous && typeof previous.focus==="function")previous.focus();
+  };
+ },[menuOpen]);
  function navigation(){
   return <nav className="hmrs-console-navigation" aria-label="ড্যাশবোর্ড নেভিগেশন">
    {groups.map(group=><div className="hmrs-navigation-group" key={group.label}>
@@ -99,7 +116,7 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
   {menuOpen&&<><button type="button" className="hmrs-drawer-backdrop" onClick={()=>setMenuOpen(false)} aria-label="মেনু বন্ধ করুন"/>
    <div className="hmrs-mobile-drawer" id="hmrs-mobile-drawer" role="dialog" aria-modal="true" aria-label="ড্যাশবোর্ড মেনু">
     <div className="hmrs-drawer-head"><div><b>নেভিগেশন</b><small>{actor.name||roleName}</small></div>
-     <button type="button" onClick={()=>setMenuOpen(false)} aria-label="বন্ধ করুন"><X size={21}/></button>
+     <button ref={drawerCloseButton} type="button" onClick={()=>setMenuOpen(false)} aria-label="বন্ধ করুন"><X size={21}/></button>
     </div>
     {navigation()}
     <div className="hmrs-drawer-footer"><Link href="/" onClick={()=>setMenuOpen(false)}><ArrowLeft size={16}/> ওয়েবসাইটে ফিরুন</Link>
