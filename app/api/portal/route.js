@@ -184,9 +184,12 @@ export async function POST(req) {
         if (!subjects.some(x => x.id === next.optionalId) || !allowedOptional.includes(next.optionalId))
           next.optionalId = allowedOptional[0];
       }
-      const sameGrade = await store.collection("students").where("grade", "==", next.grade).limit(950).get();
-      if (sameGrade.docs.some(d => d.id !== id && Number(d.data().roll) === next.roll))
-        return fail("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর", 409);
+      const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll;
+      if (isNewRoll) {
+        const sameGrade = await store.collection("students").where("grade", "==", next.grade).limit(950).get();
+        if (sameGrade.docs.some(d => d.id !== id && Number(d.data().roll) === next.roll))
+          return fail("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর", 409);
+      }
       const studentRef=store.collection("students").doc(id);
       const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll));
       const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll));
@@ -206,10 +209,10 @@ export async function POST(req) {
           applicationRef ? tx.get(applicationRef):null
         ]);
         if(!current.exists||current.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
-        if(newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
+        if(isNewRoll && newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
         if(newPhone?.exists && newPhone.data()?.uid!==old.uid)throw Object.assign(Error("লগইন মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
         tx.update(studentRef,{...next,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
-        tx.set(newRollRef,{studentId:id,grade:next.grade,roll:next.roll},{merge:true});
+        if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,roll:next.roll},{merge:true});
         if(rollChanged&&oldRoll?.exists&&oldRoll.data()?.studentId===id)tx.delete(oldRollRef);
         if(userRef)tx.set(userRef,{name:next.name,phone:next.phone},{merge:true});
         if(phoneChanged&&old.uid) {
