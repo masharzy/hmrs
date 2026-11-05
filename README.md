@@ -75,3 +75,12 @@ GitHub Actions runs tests and a production build for pushes and pull requests.
 - The confirmation screen offers a copyable link whose secret is carried in the URL fragment, never the query string. Applicants may reopen their pending application from that link and save changes in the same three-step form. Once approved/rejected, the link stops allowing edits.
 - The API checks the secret with constant-time comparison and checks pending status again in a Firestore transaction to prevent approval/edit races.
 - **Existing applications created before edit tokens were added** cannot self-edit with an application ID alone; the principal can edit pending/rejected applications securely. Do not implement access using public application IDs or guessable phone/birth-registration combinations.
+
+
+### Routine, notices, account-aware header
+- **Principal dashboard → Routines:** add, edit, publish/unpublish or delete a class/exam routine, choosing all classes or class 6–10; groups (Science/Business/Humanities) are available only for classes 9–10. No sections are used.
+- Upload JPG/PNG/WebP images (max 5 MB) via the server-side `/api/routine-image` endpoint and `IMGBB_API_KEY`. The editor includes drag-and-drop, image preview, and a separate save/publish action. Image URLs are validated as ImgBB HTTPS links before saving. Uploaded images live at ImgBB; deleting an HMRS routine removes its Firestore entry, not the remote ImgBB file.
+- **Home → Routines:** only published routines appear; selecting a routine opens its full image.
+- **Home → Notices:** rows show the title only, and full notice content opens on selection.
+- **Site header:** on Firebase authentication confirmation, a signed-in visitor sees the Dashboard link instead of Portal Login. While checking session state, a neutral placeholder prevents flashing the wrong button.
+- **Student removal:** the principal uses a clear confirm/cancel modal; the API requires `confirmed: true` rather than retyping the student name. Existing permission and record-deletion safeguards remain in place.
