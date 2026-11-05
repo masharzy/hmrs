@@ -4,7 +4,7 @@ import { toAsciiDigits, toBanglaDigits, parseBanglaNumber, gradeLabel } from "..
 import { normalizeAdmissionData, validateAdmission, validateAdmissionStep, firstInvalidStep } from "../lib/admission-validation.js";
 const valid = {
  studentName:"সুমাইয়া আক্তার", dob:"২০১৪-০৫-১৪", birthRegistration:"২০১৪১২৩৪৫৬৭৮৯০১২৩",
- gender:"female", grade:"৬", section:"a", group:"science",
+ gender:"female", grade:"৬", group:"",
  fatherName:"মোঃ রহমান", fatherPhone:"+৮৮০১৭১২৩৪৫৬৭৮",
  motherName:"মোছাঃ রহিমা", motherPhone:"০১৮১২৩৪৫৬৭৮",
  studentPhone:"৮৮০১৯১২৩৪৫৬৭৮", guardianAddress:"সোনারগাঁ, নারায়ণগঞ্জ, ঢাকা",
@@ -40,4 +40,16 @@ test("future DOB and malformed phones rejected", () => {
  const e=validateAdmission({...valid,dob:"৩২০০-০১-০১",studentPhone:"+৯১১৭১২৩৪৫৬৭৮"});
  assert.ok(e.dob);
  assert.ok(e.studentPhone);
+});
+
+test("no sections are required; groups are required only for grades 9 and 10", () => {
+ const lower={...valid,section:undefined,group:""};
+ assert.deepEqual(validateAdmission(lower),{});
+ assert.equal(normalizeAdmissionData(lower).section,undefined);
+ assert.equal(normalizeAdmissionData({...lower,group:"science"}).group,"");
+ for (const grade of ["৯","১০"]) {
+  const errors=validateAdmission({...lower,grade});
+  assert.ok(errors.group);
+  assert.deepEqual(validateAdmission({...lower,grade,group:"science"}),{});
+ }
 });
