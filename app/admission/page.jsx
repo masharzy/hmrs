@@ -49,6 +49,41 @@ export default function Admission(){
  const [toast,setToast]=useState("");
  const [saving,setSaving]=useState(false);
  const [applicationId,setApplicationId]=useState("");
+ const [editId,setEditId]=useState("");
+ const [editToken,setEditToken]=useState("");
+ const [editMode,setEditMode]=useState(false);
+ const [loadingEdit,setLoadingEdit]=useState(false);
+ const [editLoadError,setEditLoadError]=useState("");
+ const editUrl=editToken && (applicationId||editId) && typeof window!=="undefined"
+  ? window.location.origin+"/admission#edit="+encodeURIComponent(applicationId||editId)+"&token="+encodeURIComponent(editToken)
+  : "";
+ useEffect(()=>{
+  let active=true,requestSeq=0;
+  const loadFromLink=()=>{
+   const fragment=new URLSearchParams(window.location.hash.replace(/^#/,""));
+   const id=fragment.get("edit"),token=fragment.get("token");
+   if(!id&&!token)return;
+   const seq=++requestSeq;
+   if(!id||!token){setEditLoadError("এডিট লিংক অসম্পূর্ণ। বিদ্যালয়ে যোগাযোগ করুন।");return;}
+   setApplicationId("");setEditLoadError("");setLoadingEdit(true);
+   fetch("/api/admissions",{
+     method:"POST",headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({action:"load",applicationId:id,editToken:token})
+   }).then(async response=>{
+     const result=await response.json().catch(()=>({}));
+     if(!response.ok)throw Error(result.error||"আবেদনটি খোলা যায়নি।");
+     return result;
+   }).then(result=>{
+     if(!active||seq!==requestSeq)return;
+     setForm({...initial,...result.values,grade:String(result.values.grade),website:""});
+     setEditId(id);setEditToken(token);setEditMode(true);setStep(0);
+   }).catch(error=>{if(active&&seq===requestSeq)setEditLoadError(error.message)})
+    .finally(()=>{if(active&&seq===requestSeq)setLoadingEdit(false)});
+  };
+  loadFromLink();
+  window.addEventListener("hashchange",loadFromLink);
+  return ()=>{active=false;window.removeEventListener("hashchange",loadFromLink)};
+ },[]);
  useEffect(()=>{
   if(!toast)return;
   const timer=setTimeout(()=>setToast(""),5000);
@@ -99,8 +134,9 @@ export default function Admission(){
   }
   setSaving(true);setToast("");setErrors({});
   try{
+   const payload=editMode?{action:"update",applicationId:editId,editToken,values:form}:form;
    const response=await fetch("/api/admissions",{
-    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(form)
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)
    });
    const result=await response.json().catch(()=>({}));
    if(!response.ok){
@@ -114,6 +150,10 @@ export default function Admission(){
      throw Error(result.error||"আবেদন জমা দেওয়া যায়নি।");
    }
    if(!result.applicationId)throw Error("আবেদন নম্বর পাওয়া যায়নি। অনুগ্রহ করে বিদ্যালয়ে যোগাযোগ করুন।");
+   if(!editMode){
+     if(!result.editToken)throw Error("আবেদন সংশোধনের লিংক তৈরি হয়নি। বিদ্যালয়ে যোগাযোগ করুন।");
+     setEditToken(result.editToken);
+   }
    setApplicationId(result.applicationId);
    window.scrollTo({top:0,behavior:"smooth"});
   }catch(error){
@@ -127,20 +167,32 @@ export default function Admission(){
    <div className="admission-intro">
     <div className="admission-emblem"><GraduationCap size={26}/></div>
     <div><div className="kicker">HMRS SCHOOL · ADMISSION</div>
-      <h1 className="admission-title">অনলাইন ভর্তি আবেদন</h1>
-      <p className="muted text-sm mb-0">সঠিক তথ্য দিয়ে সহজে ভর্তি আবেদন সম্পন্ন করুন।</p>
+      <h1 className="admission-title">{editMode?"ভর্তি আবেদন সংশোধন":"অনলাইন ভর্তি আবেদন"}</h1>
+      <p className="muted text-sm mb-0">{editMode?"ভর্তি অনুমোদনের আগে আপনার জমা দেওয়া তথ্য পরিবর্তন করুন।":"সঠিক তথ্য দিয়ে সহজে ভর্তি আবেদন সম্পন্ন করুন।"}</p>
     </div>
    </div>
-   {applicationId?
+   {loadingEdit?<div className="admission-success" role="status"><span className="dashboard-loading-ring"/> আবেদন যাচাই করে খোলা হচ্ছে...</div>:
+    editLoadError?<div className="admission-success"><h2 className="section-title">এডিট লিংক খোলা যায়নি</h2><p className="alert error mt-3">{editLoadError}</p><p className="muted text-sm">পুরোনো আবেদন বা ভুল লিংকের জন্য বিদ্যালয়ের প্রধান শিক্ষকের সঙ্গে যোগাযোগ করুন।</p><Link href="/" className="btn">হোমে ফিরুন</Link></div>:
+    applicationId?
     <div className="admission-success">
      <div className="admission-success-icon"><CheckCircle2 size={42}/></div>
-     <h2 className="section-title">আবেদন জমা হয়েছে!</h2>
-     <p className="muted">আপনার আবেদন নম্বরটি সংরক্ষণ করুন। বিদ্যালয় যাচাই করার পর ভর্তি অনুমোদনের সিদ্ধান্ত জানাবে।</p>
+     <h2 className="section-title">{editMode?"আবেদন সংশোধন হয়েছে!":"আবেদন জমা হয়েছে!"}</h2>
+     <p className="muted">{editMode?"আপনার পরিবর্তিত তথ্য সংরক্ষিত হয়েছে। ভর্তি অনুমোদনের আগ পর্যন্ত পুনরায় সংশোধন করা যাবে।":"আপনার আবেদন নম্বরটি সংরক্ষণ করুন। বিদ্যালয় যাচাই করার পর ভর্তি অনুমোদনের সিদ্ধান্ত জানাবে।"}</p>
      <div className="admission-id">{applicationId}</div>
+     {editUrl&&<div className="admission-edit-link">
+       <p className="font-bold mb-2">নিজের আবেদন এডিট করার গোপন লিংক</p>
+       <p className="muted text-xs mb-3">এই লিংকটি নিজের কাছে সংরক্ষণ করুন। লিংক যাকে দেবেন, সে অনুমোদনের আগে আবেদন পরিবর্তন করতে পারবে।</p>
+       <input type="text" value={editUrl} readOnly aria-label="আবেদন এডিট লিংক"/>
+       <div className="inline-actions justify-center mt-3">
+         <button className="btn primary" type="button" onClick={async()=>{try{await navigator.clipboard.writeText(editUrl);setToast("এডিট লিংক কপি হয়েছে");}catch{setToast("লিংকটি নির্বাচন করে কপি করুন");}}}>এডিট লিংক কপি</button>
+         <a className="btn" href={editUrl}>আবেদন এডিট করুন</a>
+       </div>
+     </div>}
      <p className="muted text-sm">অনুমোদনের পর মোবাইল নম্বর ও ৫ সংখ্যার PIN দিয়ে শিক্ষার্থী পোর্টালে লগইন করতে পারবেন।</p>
      <Link className="btn primary" href="/"><ArrowLeft size={16}/> হোম পেজ</Link>
     </div>:
     <>
+     {editMode&&<div className="admission-helper mb-4"><ShieldCheck size={17}/> আপনার আগের আবেদনের তথ্য দেখানো হচ্ছে। পরিবর্তন শেষে শেষ ধাপে গিয়ে সংরক্ষণ করুন।</div>}
      <div className="admission-steps" aria-label="আবেদনের ধাপ">
       {steps.map((item,i)=><div key={item.title} className={"admission-step "+(i===step?"current":i<step?"completed":"")}>
        <div className="admission-step-index">{i<step?<Check size={17}/>:toBanglaDigits(i+1)}</div>
@@ -198,7 +250,7 @@ export default function Admission(){
          <ArrowLeft size={16}/> আগের ধাপ
         </button>
         <button type="submit" className="btn primary admission-next" disabled={saving}>
-         {saving?"আবেদন জমা হচ্ছে...":step===2?"আবেদন জমা দিন":"পরবর্তী ধাপ"}
+         {saving?"সংরক্ষণ হচ্ছে...":step===2?(editMode?"পরিবর্তন সংরক্ষণ":"আবেদন জমা দিন"):"পরবর্তী ধাপ"}
          {step===2?<Check size={17}/>:<ArrowRight size={17}/>}
         </button>
        </div>
