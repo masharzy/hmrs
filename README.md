@@ -68,3 +68,10 @@ GitHub Actions runs tests and a production build for pushes and pull requests.
 - Changing a student's class or roll preserves the existing internal student ID, which keeps historical marks and attendance associated with the correct student. New enrollments use stable random IDs and grade/roll reservations.
 - `/api/portal?resource=dashboard.data` returns authorized, route-specific payloads and actor information with one session check. Overview uses Firestore aggregate counts; the client caches visited sections, updates marks/attendance without full refreshes, and limits student/admission rendering to 25/20 records per page.
 - Legacy section fields may still exist in historical Firestore documents. They are not exposed by the dashboard and are removed from updated records; no destructive data migration is performed automatically.
+
+
+### Applicant self-service edits
+- A newly submitted admission returns a private 256-bit edit token once; the database saves only its SHA-256 hash.
+- The confirmation screen offers a copyable link whose secret is carried in the URL fragment, never the query string. Applicants may reopen their pending application from that link and save changes in the same three-step form. Once approved/rejected, the link stops allowing edits.
+- The API checks the secret with constant-time comparison and checks pending status again in a Firestore transaction to prevent approval/edit races.
+- **Existing applications created before edit tokens were added** cannot self-edit with an application ID alone; the principal can edit pending/rejected applications securely. Do not implement access using public application IDs or guessable phone/birth-registration combinations.
