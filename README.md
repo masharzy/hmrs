@@ -22,7 +22,7 @@ Next.js App Router, JavaScript, React, Tailwind CSS, Firebase Authentication, Fi
 - Every portal uses a Bangladesh mobile number (`01...`, `8801...`, `+8801...`) and 5-digit PIN, preserving leading zeros.
 - Staff accounts are created by principal with mobile+PIN; students receive unique mobile+PIN on approval.
 - Legacy accounts migrate once at `/migrate`; afterward the old password is randomized and not used again.
-- Section identifiers: a (ক), b (খ), c (গ). Additional identifiers are supported in the backend.
+- **No school sections:** Grades 6–8 use class only; grades 9–10 select Science, Business Studies or Humanities. The admission form and dashboard no longer ask for sections. Existing legacy student document IDs and linked records remain intact; class teacher permissions accept grade assignments as well as older `6-a`-style assignments.
 
 ### Modules
 Public site: home, announcements, admission form, role logins.
@@ -60,3 +60,11 @@ GitHub Actions runs tests and a production build for pushes and pull requests.
 - Five failures per 15 minutes lock phone/PIN login temporarily. Phone-number entry is NOT SMS verification or proof of SIM ownership; OTP, recovery and anti-abuse improvements are still required.
 - One phone per account, including students; siblings sharing a guardian phone need a future profile selection design or different numbers.
 - App manifest gives installable app feel; no offline cache or push notifications implemented yet.
+
+
+### Principal record management & dashboard performance
+- The principal can edit enrolled students (class, roll, demographics, login phone and elective subjects) and pending/rejected applications.
+- Deleting a student requires entering their exact full name. The server deactivates login access before deleting the Firebase account, Firestore student, marks, attendance, PIN credentials, phone mappings, account-security record and device-recognition entries. The admission entry is retained with a `student_deleted` status for audit rather than silently erased.
+- Changing a student's class or roll preserves the existing internal student ID, which keeps historical marks and attendance associated with the correct student. New enrollments use stable random IDs and grade/roll reservations.
+- `/api/portal?resource=dashboard.data` returns authorized, route-specific payloads and actor information with one session check. Overview uses Firestore aggregate counts; the client caches visited sections, updates marks/attendance without full refreshes, and limits student/admission rendering to 25/20 records per page.
+- Legacy section fields may still exist in historical Firestore documents. They are not exposed by the dashboard and are removed from updated records; no destructive data migration is performed automatically.
