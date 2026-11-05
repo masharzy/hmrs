@@ -9,8 +9,8 @@ const optional=(limit=100)=>z.string().trim().max(limit).optional().default("");
 const schema=z.object({
  studentName:field(100),dob:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
  birthRegistration:z.string().regex(/^\d{17}$/),gender:z.enum(["male","female","other"]),
- grade:z.coerce.number().int().min(6).max(10),section:z.enum(["a","b","c"]),
- group:z.enum(["science","business","humanities"]),
+ grade:z.coerce.number().int().min(6).max(10),
+ group:z.enum(["science","business","humanities",""]),
  fatherName:field(100),fatherPhone:z.string().regex(/^01[3-9]\d{8}$/),
  motherName:field(100),motherPhone:z.string().regex(/^01[3-9]\d{8}$/),
  studentPhone:z.string().regex(/^01[3-9]\d{8}$/),
