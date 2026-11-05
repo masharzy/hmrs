@@ -1,4 +1,10 @@
 import { adminAuth, db } from "../../../lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
+import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
+import { admissionSchema } from "../../../lib/admission-schema";
+import { normalizeStudentEdit } from "../../../lib/student-admin";
+import { getSubjects } from "../../../lib/academic";
+import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
@@ -10,14 +16,16 @@ export const runtime = "nodejs";
 
 const iso = () => new Date().toISOString();
 const allowedStaff = ["teacher", "class_teacher", "principal"];
-const asDocs = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
-const visible = (actor, item) => canAccessClass(actor, item.grade, item.section);
+const asDocs = snap => snap.docs.map(d => { const { section, ...data } = d.data(); return { id: d.id, ...data }; });
+const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
 
 async function studentFor(actor, id) {
   const snap = await db().collection("students").doc(id).get();
   if (!snap.exists) throw Error("শিক্ষার্থী পাওয়া যায়নি");
-  const student = { id: snap.id, ...snap.data() };
+  const { section, ...data } = snap.data();
+  const student = { id: snap.id, ...data };
+  if (student.deleting && actor.role !== "principal") throw Object.assign(Error("শিক্ষার্থী মুছে ফেলা হচ্ছে"), { status: 409 });
   if (actor.role === "student" ? actor.studentId !== id : !visible(actor, student))
     throw Object.assign(Error("এই শিক্ষার্থী দেখার অনুমতি নেই"), { status: 403 });
   return student;
@@ -68,6 +76,18 @@ export async function GET(req) {
       return json({ actor, student, dues, attendance: asDocs(attendance), results });
     }
     needRole(actor, allowedStaff);
+    if (resource === "dashboard.data") {
+      const result = await getDashboardData(actor,{
+        section:u.searchParams.get("section")||"overview",
+        date:u.searchParams.get("date")||undefined,
+        examId:u.searchParams.get("examId")||""
+      });
+      return json({actor,...result});
+    }
+    if (resource === "overview.summary") {
+      needRole(actor, allowedStaff);
+      return json({summary:await getDashboardSummary(actor,store)});
+    }
     if (resource === "students") {
       const snap = await store.collection("students").limit(900).get();
       return json({ items: asDocs(snap).filter(s => visible(actor, s)) });
@@ -124,6 +144,148 @@ export async function POST(req) {
     const body = await req.json();
     const action = cleanText(body.action, 60);
     const store = db();
+    if (action === "application.update") {
+      needRole(actor, ["principal"]);
+      const id = cleanText(body.id, 150), ref = store.collection("admissions").doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) return fail("আবেদন পাওয়া যায়নি", 404);
+      if (!["pending","rejected"].includes(snap.data().status)) return fail("শুধু অনিষ্পন্ন/বাতিল আবেদন সম্পাদনা করা যাবে", 409);
+      const values = normalizeAdmissionData({ ...snap.data(), ...(body.values || {}) });
+      const errors = validateAdmission(values);
+      if (Object.keys(errors).length) return json({ error:"আবেদনের তথ্য সঠিক নয়", fieldErrors: errors, step:firstInvalidStep(errors) }, 422);
+      const parsed = admissionSchema.safeParse(values);
+      if (!parsed.success) return fail("আবেদনের তথ্য যাচাই করুন");
+      const { website, ...record } = parsed.data;
+      await ref.update({ ...record, section:FieldValue.delete(), updatedAt:iso(), editedBy:actor.uid });
+      await audit(actor, action, id); return json({ok:true});
+    }
+    if (action === "student.update") {
+      needRole(actor, ["principal"]);
+      const id = cleanText(body.studentId, 120);
+      const old = await studentFor(actor, id);
+      if (old.deleting) return fail("শিক্ষার্থী মুছে ফেলা হচ্ছে",409);
+      const next = normalizeStudentEdit({ ...old, ...(body.values || {}) });
+      if (next.grade >= 9) {
+        const initial = { science:"higher-math", business:"agriculture", humanities:"civics" };
+        try { getSubjects(next.grade, next.group, next.elective, next.fourthSubject); }
+        catch { next.elective = initial[next.group]; }
+        if (next.group === "humanities" && !["agriculture","home-science"].includes(next.fourthSubject))
+          next.fourthSubject = "agriculture";
+        const subjects = getSubjects(next.grade, next.group, next.elective, next.fourthSubject);
+        const allowedOptional = next.group === "science" ? ["biology",next.elective]
+          : next.group === "business" ? [next.elective] : [next.fourthSubject];
+        if (!subjects.some(x => x.id === next.optionalId) || !allowedOptional.includes(next.optionalId))
+          next.optionalId = allowedOptional[0];
+      }
+      const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll;
+      if (isNewRoll) {
+        const sameGrade = await store.collection("students").where("grade", "==", next.grade).limit(950).get();
+        if (sameGrade.docs.some(d => d.id !== id && Number(d.data().roll) === next.roll))
+          return fail("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর", 409);
+      }
+      const studentRef=store.collection("students").doc(id);
+      const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll));
+      const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll));
+      const newPhoneRef=store.collection("loginPhones").doc(next.phone);
+      const prevPhone=normalizePhone(old.phone || "");
+      const oldPhoneRef=prevPhone ? store.collection("loginPhones").doc(prevPhone) : null;
+      const phoneChanged=next.phone!==prevPhone, rollChanged=newRollRef.id!==oldRollRef.id;
+      const userRef=old.uid ? store.collection("users").doc(old.uid) : null;
+      const credRef=old.uid ? store.collection("loginCredentials").doc(old.uid) : null;
+      const applicationRef=old.applicationId ? store.collection("admissions").doc(old.applicationId) : null;
+      // Keep cached grade and student name on existing attendance/marks in sync with edits.
+      const historyChanged=Number(old.grade)!==next.grade || old.name!==next.name;
+      const [historicMarks,historicAttendance]=historyChanged?await Promise.all([
+        store.collection("marks").where("studentId","==",id).get(),
+        store.collection("attendance").where("studentId","==",id).get()
+      ]):[{docs:[]},{docs:[]}];
+      if(historicMarks.size+historicAttendance.size>380)return fail("অনেক পুরোনো রেকর্ড আছে; নিরাপদভাবে পরিবর্তনের জন্য প্রশাসকের সহায়তা প্রয়োজন",409);
+      await store.runTransaction(async tx=>{
+        const [current,newRoll,oldRoll,newPhone,oldPhone,credential,application]=await Promise.all([
+          tx.get(studentRef),tx.get(newRollRef),rollChanged?tx.get(oldRollRef):null,
+          phoneChanged && old.uid ? tx.get(newPhoneRef):null,
+          phoneChanged && oldPhoneRef ? tx.get(oldPhoneRef):null,
+          phoneChanged && credRef ? tx.get(credRef):null,
+          applicationRef ? tx.get(applicationRef):null
+        ]);
+        if(!current.exists||current.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+        if(isNewRoll && newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
+        if(newPhone?.exists && newPhone.data()?.uid!==old.uid)throw Object.assign(Error("লগইন মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
+        tx.update(studentRef,{...next,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
+        if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,roll:next.roll},{merge:true});
+        if(rollChanged&&oldRoll?.exists&&oldRoll.data()?.studentId===id)tx.delete(oldRollRef);
+        if(userRef)tx.set(userRef,{name:next.name,phone:next.phone},{merge:true});
+        if(phoneChanged&&old.uid) {
+          tx.set(newPhoneRef,{uid:old.uid,createdAt:iso()});
+          if(oldPhone?.exists&&oldPhone.data()?.uid===old.uid)tx.delete(oldPhoneRef);
+          if(credential?.exists)tx.update(credRef,{phone:next.phone});
+        }
+        for(const record of historicMarks.docs)tx.update(record.ref,{grade:next.grade,section:FieldValue.delete()});
+        for(const record of historicAttendance.docs)tx.update(record.ref,{
+          grade:next.grade,studentName:next.name,section:FieldValue.delete()
+        });
+        if(application?.exists)tx.update(applicationRef,{
+          studentName:next.name,grade:next.grade,group:next.group,
+          dob:next.dob,gender:next.gender,birthRegistration:next.birthRegistration,
+          fatherName:next.fatherName,fatherPhone:next.fatherPhone,
+          motherName:next.motherName,motherPhone:next.motherPhone,
+          guardianAddress:next.guardianAddress,previousSchool:next.previousSchool,
+          studentPhone:next.phone,section:FieldValue.delete(),updatedAt:iso()
+        });
+      });
+      await audit(actor, action, id); return json({ok:true});
+    }
+    if (action === "student.delete") {
+      needRole(actor, ["principal"]);
+      const id=cleanText(body.studentId,120),student=await studentFor(actor,id);
+      if(cleanText(body.confirmName,100)!==student.name) return fail("নিশ্চিত করতে শিক্ষার্থীর সম্পূর্ণ নাম লিখুন");
+      const studentRef=store.collection("students").doc(id);
+      // Revoking access before deleting school records prevents further account sign-in.
+      await store.runTransaction(async tx=>{
+        const userRef=student.uid?store.collection("users").doc(student.uid):null;
+        const [current,account]=await Promise.all([tx.get(studentRef),userRef?tx.get(userRef):null]);
+        if(!current.exists)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+        tx.update(studentRef,{deleting:true});
+        if(account?.exists)tx.update(userRef,{active:false});
+      });
+      if(student.uid) {
+        try {await adminAuth().deleteUser(student.uid);}
+        catch(e){if(e.code!=="auth/user-not-found")throw e;}
+      }
+      const [marks,attendance,recognitions]=await Promise.all([
+        store.collection("marks").where("studentId","==",id).get(),
+        store.collection("attendance").where("studentId","==",id).get(),
+        student.uid?store.collection("deviceRecognitions").where("uid","==",student.uid).get():Promise.resolve({docs:[]})
+      ]);
+      // Delete linked records first; keep the disabled student record until cleanup finishes,
+      // so an interrupted deletion can be retried by the principal.
+      const refs=[...marks.docs,...attendance.docs,...recognitions.docs].map(d=>d.ref);
+      if(student.uid){
+        refs.push(store.collection("users").doc(student.uid),
+          store.collection("loginCredentials").doc(student.uid),
+          store.collection("loginSecurity").doc(student.uid));
+      }
+      const phone=normalizePhone(student.phone||"");
+      if(phone&&student.uid){
+        const mapping=await store.collection("loginPhones").doc(phone).get();
+        if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
+      }
+      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
+      const ownedRoll=await rollRef.get();
+      if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
+      const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
+      for(let i=0;i<unique.length;i+=400){
+        const batch=store.batch();
+        for(const ref of unique.slice(i,i+400))batch.delete(ref);
+        await batch.commit();
+      }
+      if(student.applicationId){
+        const linked=store.collection("admissions").doc(student.applicationId);
+        if((await linked.get()).exists)await linked.update({status:"student_deleted",studentId:FieldValue.delete(),deletedAt:iso(),deletedBy:actor.uid});
+      }
+      await studentRef.delete();
+      await audit(actor,action,id);return json({ok:true});
+    }
     if (action === "notice.save") {
       needRole(actor, ["principal"]);
       const title = cleanText(body.title, 170), message = cleanText(body.message, 3000);
@@ -152,8 +314,8 @@ export async function POST(req) {
       if (!["teacher", "class_teacher"].includes(role) || !name || !phone || !pin)
         return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const assignedClasses = Array.isArray(body.assignedClasses)
-        ? body.assignedClasses.map(v => toAsciiDigits(cleanText(v, 20))).filter(v => /^(6|7|8|9|10)-[a-z0-9]+$/.test(v)).slice(0, 15) : [];
-      if (role === "class_teacher" && !assignedClasses.length) return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি/শাখা দিন");
+        ? [...new Set(body.assignedClasses.map(v => toAsciiDigits(cleanText(v, 20)).split("-")[0]).filter(v => /^(6|7|8|9|10)$/.test(v)))].slice(0, 5) : [];
+      if (role === "class_teacher" && !assignedClasses.length) return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি দিন");
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
@@ -173,13 +335,17 @@ export async function POST(req) {
       if (application.status !== "pending") return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে");
       const phone = normalizePhone(body.phone || application.studentPhone || application.fatherPhone);
       if (!/^[1-9][0-9]{0,3}$/.test(roll) || !pin || !phone) return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
-      const idStudent = studentKey(application.grade, application.section, roll);
+      const studentRef = store.collection("students").doc();
+      const idStudent = studentRef.id;
+      const duplicateRoll = await store.collection("students").where("grade", "==", Number(application.grade)).limit(950).get();
+      if (duplicateRoll.docs.some(d => Number(d.data().roll) === Number(roll))) return fail("এই শ্রেণিতে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
+      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll));
       if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
       const user = await adminAuth().createUser({ displayName: application.studentName });
       createdUid = user.uid;
       const student = {
         uid: user.uid, applicationId: id, name: application.studentName, phone, grade: Number(application.grade),
-        section: application.section, roll: Number(roll), group: application.group || "science",
+        roll: Number(roll), group: Number(application.grade) >= 9 ? application.group : "",
         elective: application.group === "science" ? "higher-math" : application.group === "humanities" ? "civics" : "agriculture",
         fourthSubject: "agriculture", optionalId: application.group === "science" ? "biology" : "agriculture", dob: application.dob, gender: application.gender,
         fatherName: application.fatherName, fatherPhone: application.fatherPhone,
@@ -191,12 +357,13 @@ export async function POST(req) {
       const credentialRef = store.collection("loginCredentials").doc(user.uid);
       const pinCredential = makePinCredential(pin);
       await store.runTransaction(async t => {
-        const [currentApp, existing, existingPhone] = await Promise.all([
-          t.get(ref), t.get(store.collection("students").doc(idStudent)), t.get(phoneRef)
+        const [currentApp, existing, existingPhone, existingRoll] = await Promise.all([
+          t.get(ref), t.get(studentRef), t.get(phoneRef), t.get(rollRef)
         ]);
-        if (existing.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
+        if (existing.exists || existingRoll.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
         if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
-        t.set(store.collection("students").doc(idStudent), student);
+        t.create(studentRef, student);
+        t.create(rollRef, { studentId: idStudent, grade: student.grade, roll: student.roll });
         t.create(phoneRef, { uid: user.uid, createdAt: iso() });
         t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
         t.set(store.collection("users").doc(user.uid), { role: "student", name: student.name, active: true,
@@ -223,7 +390,7 @@ export async function POST(req) {
       const key = date + "_" + student.id;
       await store.collection("attendance").doc(key).set({
         studentId: student.id, studentName: student.name, grade: student.grade,
-        section: student.section, date, status, note: cleanText(body.note, 250),
+        date, status, note: cleanText(body.note, 250),
         updatedBy: actor.uid, updatedAt: iso()
       });
       await audit(actor, action, key); return json({ ok: true });
@@ -255,19 +422,19 @@ export async function POST(req) {
       const key = examId + "_" + student.id + "_" + subjectId;
       await store.collection("marks").doc(key).set({
         examId, studentId: student.id, subjectId, scores, grade: student.grade,
-        section: student.section, updatedBy: actor.uid, updatedAt: iso()
+        updatedBy: actor.uid, updatedAt: iso()
       });
       await audit(actor, action, key); return json({ ok: true });
     }
     if (action === "ledger.add") {
       needRole(actor, ["principal", "class_teacher"]);
       const type = body.type, amount = parseBanglaNumber(body.amount), grade = parseBanglaNumber(body.grade),
-        section = cleanText(body.section, 10), description = cleanText(body.description, 250);
+        description = cleanText(body.description, 250);
       if (!["income", "expense"].includes(type) || !Number.isFinite(amount) || amount <= 0 || amount > 10000000 ||
-          !validGrade(grade) || !/^[a-z0-9]{1,10}$/i.test(section) || !description) return fail("হিসাবের তথ্য যাচাই করুন");
-      if (!visible(actor, { grade, section })) return fail("নিজের শ্রেণির হিসাবেই পরিবর্তন করতে পারবেন", 403);
+          !validGrade(grade) || !description) return fail("হিসাবের তথ্য যাচাই করুন");
+      if (!visible(actor, { grade })) return fail("নিজের শ্রেণির হিসাবেই পরিবর্তন করতে পারবেন", 403);
       const ref = await store.collection("ledger").add({
-        type, amount, grade, section, description, createdBy: actor.uid, createdAt: iso()
+        type, amount, grade, description, createdBy: actor.uid, createdAt: iso()
       });
       await audit(actor, action, ref.id); return json({ ok: true });
     }

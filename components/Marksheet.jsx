@@ -12,7 +12,7 @@ export default function Marksheet({student,marks,exam,printId="mark-print",repor
   </div>
   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,margin:"20px 0",fontSize:12}}>
    <div><b>নাম:</b> {student.name}</div><div><b>রোল:</b> {toBanglaDigits(student.roll)}</div>
-   <div><b>শ্রেণি:</b> {gradeLabel(student.grade)}</div><div><b>শাখা:</b> {student.section?.toUpperCase()}</div>
+   <div><b>শ্রেণি:</b> {gradeLabel(student.grade)}</div>{Number(student.grade)>=9&&<div><b>বিভাগ:</b> {({science:"বিজ্ঞান",business:"ব্যবসায় শিক্ষা",humanities:"মানবিক"})[student.group]||"—"}</div>}
   </div>
   <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th>বিষয়</th><th>পূর্ণ নম্বর</th><th>প্রাপ্ত নম্বর</th><th>গ্রেড</th><th>ফলাফল</th></tr></thead>
    <tbody>{result.rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}{r.subjectId===result.optionalId?" (৪র্থ বিষয়)":""}</td>

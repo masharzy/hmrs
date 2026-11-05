@@ -8,7 +8,7 @@ import { toBanglaDigits, gradeLabel } from "../../lib/bangla-numbers";
 import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep } from "../../lib/admission-validation";
 
 const initial={
- studentName:"",dob:"",gender:"male",grade:"6",section:"a",group:"science",
+ studentName:"",dob:"",gender:"male",grade:"6",group:"",
  birthRegistration:"",fatherName:"",fatherPhone:"",motherName:"",motherPhone:"",
  studentPhone:"",guardianAddress:"",previousSchool:"",previousClass:"",
  previousResult:"",paymentMethod:"later",paymentReference:"",website:""
@@ -19,7 +19,6 @@ const steps=[
  {title:"পূর্ববর্তী বিদ্যালয়",description:"শিক্ষাগত তথ্য ও পেমেন্ট",icon:School}
 ];
 const classOptions=[6,7,8,9,10].map(g=>[String(g),gradeLabel(g)]);
-const sectionOptions=[["a","ক শাখা"],["b","খ শাখা"],["c","গ শাখা"]];
 const groupOptions=[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
 const paymentOptions=[
  {value:"mobile_banking",title:"মোবাইল ব্যাংকিং",icon:Smartphone},
@@ -56,8 +55,12 @@ export default function Admission(){
   return ()=>clearTimeout(timer);
  },[toast]);
  function change(name,value){
-  setForm(f=>({...f,[name]:value}));
-  setErrors(e=>{if(!e[name])return e;const next={...e};delete next[name];return next});
+  setForm(f=>{
+   if(name!=="grade")return {...f,[name]:value};
+   const group=Number(value)>=9?(["science","business","humanities"].includes(f.group)?f.group:"science"):"";
+   return {...f,grade:value,group};
+  });
+  setErrors(e=>{if(!e[name] && !(name==="grade"&&e.group))return e;const next={...e};delete next[name];if(name==="grade")delete next.group;return next});
  }
  function focusError(fields){
   const first=Object.keys(fields)[0];
@@ -161,7 +164,6 @@ export default function Admission(){
         <AdmissionField label="লিঙ্গ" name="gender" value={form.gender} onChange={change} error={errors.gender}
           options={[["male","ছাত্র"],["female","ছাত্রী"],["other","অন্যান্য"]]}/>
         <AdmissionField label="ভর্তিচ্ছু শ্রেণি" name="grade" value={form.grade} onChange={change} error={errors.grade} options={classOptions}/>
-        <AdmissionField label="শাখা" name="section" value={form.section} onChange={change} error={errors.section} options={sectionOptions}/>
         {Number(form.grade)>=9&&<AdmissionField label="বিভাগ" name="group" value={form.group} onChange={change} error={errors.group} options={groupOptions}/>}
        </div>}
        {step===1&&<div className="admission-fields">

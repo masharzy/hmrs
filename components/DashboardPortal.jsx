@@ -4,13 +4,15 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole } from "lucide-react";
+import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 import { evaluateTranscript, getSubjects } from "../lib/academic";
 import Marksheet from "./Marksheet";
 import PinInput from "./PinInput";
 import SecurityCenter from "./SecurityCenter";
+import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
+import { formatClass, groupNames } from "../lib/student-admin";
 
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const roleNames={principal:"প্রতিষ্ঠান প্রধান",class_teacher:"শ্রেণি শিক্ষক",teacher:"শিক্ষক",student:"শিক্ষার্থী"};
@@ -25,8 +27,6 @@ const Field=({label,children})=><label className="field">{label}{children}</labe
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
 const Select=({value,onChange,choices})=><select value={value} onChange={e=>onChange(e.target.value)}>{choices.map(([v,label])=><option key={v} value={v}>{label}</option>)}</select>;
 const gradeChoices=[6,7,8,9,10].map(g=>[String(g),gradeLabel(g)]);
-const secChoices=[["a","ক / A"],["b","খ / B"],["c","গ / C"]];
-const sectionName=x=>({a:"ক",b:"খ",c:"গ"}[x]||x?.toUpperCase());
 const phoneLink=(student,status)=>{
  const phone=toAsciiDigits(student.fatherPhone||student.motherPhone||"").replace(/[^0-9]/g,"");
  const intl=phone.startsWith("0")?"88"+phone:phone;
@@ -38,12 +38,16 @@ export default function DashboardPortal() {
  const tab=pathname?.split("/")[2]||"overview";
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
+ const loadedRoutes=useRef(new Set()),routeCache=useRef(new Map()),loadSequence=useRef(0);
+ const [mobileNavOpen,setMobileNavOpen]=useState(false);
+ const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
+ const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],users:[],settings:{}});
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
- const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6-a"});
- const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",section:"a",description:""});
+ const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6"});
+ const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const photoUploadInput=useRef(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
@@ -57,44 +61,49 @@ export default function DashboardPortal() {
   });
   const d=await r.json();if(!r.ok)throw Error(d.error||"সার্ভারে সমস্যা হয়েছে");return d;
  }
- async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab){
+ async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab,force=false){
   if(!who)return;
+  if(!force && routeCache.current.has(section)){
+   // Invalidate any older in-flight route request before restoring cached data.
+   ++loadSequence.current;
+   setLoadingSection(false);
+   const cached=routeCache.current.get(section);
+   if(cached.profile)setProfile(cached.profile);
+   if(cached.data){
+    setData(old=>({...old,...cached.data}));
+    if(cached.data.settings){setPhoto(cached.data.settings.photoUrl||"");setSubtitle(cached.data.settings.subtitle||"")}
+   }
+   return;
+  }
+  const seq=++loadSequence.current;
   setLoadingSection(true);
   try{
-   if(who.role==="student"){
-    const resource=section==="results"?"student.results":section==="records"?"student.records":"student.profile";
-    setProfile(await request(resource));
-    return;
+   const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam)});
+   routeCache.current.set(section,{profile:r.profile,data:r.data});
+   loadedRoutes.current.add(section);
+   if(loadSequence.current===seq){
+    if(r.profile)setProfile(r.profile);
+    if(r.data){
+     setData(old=>({...old,...r.data}));
+     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
+    }
    }
-   const needed=new Set();
-   if(["overview","students","attendance","marks","finance"].includes(section))needed.add("students");
-   if(section==="marks")needed.add("exams");
-   if(section==="admissions"||(section==="overview"&&who.role!=="teacher"))needed.add("admissions");
-   if(section==="finance")needed.add("ledger");
-   if(section==="notices")needed.add("notices");
-   if(section==="accounts")needed.add("users");
-   if(section==="settings")needed.add("settings");
-   const entries=await Promise.all([...needed].map(async key=>[key,await request(key)]));
-   const next={};entries.forEach(([key,value])=>next[key]=key==="settings"?value.settings:value.items);
-   if(section==="overview"||section==="attendance"){
-    const response=await request("attendance",{params:"date="+encodeURIComponent(chosenDate)});
-    next.attendance=response.items;
-   }
-   if(section==="marks"&&chosenExam){
-    const response=await request("marks",{params:"examId="+encodeURIComponent(chosenExam)});
-    next.marks=response.items;
-   }
-   setData(old=>({...old,...next}));
-   if(next.settings){setPhoto(next.settings.photoUrl||"");setSubtitle(next.settings.subtitle||"")}
-  }finally{setLoadingSection(false)}
+  }finally{if(loadSequence.current===seq)setLoadingSection(false)}
  }
  useEffect(()=>{
   let alive=true,unsubscribe=()=>{};
   try{unsubscribe=onAuthStateChanged(firebaseAuth(),async user=>{
    if(!user){router.replace("/login/student");return;}
    try{
-    const p=await request("identity");
+    const p=await request("dashboard.data",{params:"section="+encodeURIComponent(tab)+"&date="+encodeURIComponent(date)+"&examId="+encodeURIComponent(examId)});
     if(!alive)return;
+    if(p.profile)setProfile(p.profile);
+    if(p.data){
+     setData(old=>({...old,...p.data}));
+     if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setSubtitle(p.data.settings.subtitle||"")}
+    }
+    routeCache.current.set(tab,{profile:p.profile,data:p.data});
+    loadedRoutes.current.add(tab);
     setActor(p.actor);setBusy(false);
    }catch(e){if(alive){setError(e.message);setBusy(false)}}
   })}catch(e){setError(e.message);setBusy(false)}
@@ -111,20 +120,38 @@ export default function DashboardPortal() {
  },[actor?.uid,tab]);
  async function mutate(action,params={}){
   setWorking(true);setError("");setSuccess("");
-  try{const r=await request("",{body:{action,...params}});setSuccess("তথ্য সফলভাবে সংরক্ষিত হয়েছে");await refresh();
+  try{
+   const r=await request("",{body:{action,...params}});
+   setSuccess("তথ্য সফলভাবে সংরক্ষিত হয়েছে");
+   loadedRoutes.current.clear();routeCache.current.clear();
+   if(action==="attendance.set"){
+    setData(o=>({...o,attendance:[...(o.attendance||[]).filter(v=>v.studentId!==params.studentId),{
+     studentId:params.studentId,date:params.date,status:params.status
+    }]}));
+    loadedRoutes.current.add("attendance");
+   }else if(action==="marks.set"){
+    setData(o=>({...o,marks:[...(o.marks||[]).filter(v=>!(v.studentId===params.studentId&&v.subjectId===params.subjectId)),{
+     studentId:params.studentId,subjectId:params.subjectId,examId:params.examId,scores:params.scores
+    }]}));
+    loadedRoutes.current.add("marks");
+   }else await refresh(actor,date,examId,tab,true);
    return r;
   }catch(e){setError(e.message);return null}finally{setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
- const filtered=students.filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+s.section+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase()));
+ const filtered=useMemo(()=>students.filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())),[students,query]);
+ const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
+ const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
+ const admissions=data.admissions||[];
+ const admissionsCurrentPage=Math.min(admissionsPage,Math.max(1,Math.ceil(admissions.length/20)));
  const chosen=students.find(s=>s.id===selectedStudent);
  const exam=exams.find(e=>e.id===examId);
  const subjects=chosen?getSubjects(chosen.grade,chosen.group,chosen.elective,chosen.fourthSubject):[];
  const subject=subjects.find(s=>s.id===markSubject);
  const resultMap=useMemo(()=>Object.fromEntries((data.marks||[]).filter(m=>m.studentId===selectedStudent).map(m=>[m.subjectId,m.scores])),[data.marks,selectedStudent]);
- const summary=useMemo(()=>({students:students.length,applications:(data.admissions||[]).filter(a=>a.status==="pending").length,present:(data.attendance||[]).filter(a=>a.status==="present").length,absent:(data.attendance||[]).filter(a=>a.status!=="present").length}),[data,students]);
- async function changeDate(v){setDate(v);try{const att=await request("attendance",{params:"date="+encodeURIComponent(v)});setData(o=>({...o,attendance:att.items}))}catch(e){setError(e.message)}}
- async function changeExam(v){setExamId(v);try{const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};setData(o=>({...o,marks:m.items}))}catch(e){setError(e.message)}}
+ const summary=data.overview||{students:0,applications:0,present:0,absent:0};
+ async function changeDate(v){setDate(v);routeCache.current.delete("attendance");loadedRoutes.current.delete("attendance");try{const att=await request("attendance",{params:"date="+encodeURIComponent(v)});setData(o=>({...o,attendance:att.items}))}catch(e){setError(e.message)}}
+ async function changeExam(v){setExamId(v);routeCache.current.delete("marks");loadedRoutes.current.delete("marks");try{const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};setData(o=>({...o,marks:m.items}))}catch(e){setError(e.message)}}
  function chooseStudent(id){
   setSelectedStudent(id);setMarkSubject("");setMarkScores({});
   const s=students.find(t=>t.id===id);
@@ -159,21 +186,23 @@ export default function DashboardPortal() {
    </div>
   </div>
   <main className="container py-7">
-   <div className="dashboard-section-head"><div><span className="kicker">HMRS · {roleNames[actor.role]}</span><h1 className="section-title mt-1 mb-1">{(roles[actor.role]||[]).find(([key])=>key===tab)?.[1]||"ড্যাশবোর্ড"}</h1><p className="muted text-xs mb-0">বিদ্যালয়ের ডিজিটাল ব্যবস্থাপনা কেন্দ্র</p></div><button className="btn sm" disabled={working||loadingSection} onClick={()=>refresh().catch(e=>setError(e.message))}><RefreshCw size={14}/> রিফ্রেশ</button></div>
+   <div className="dashboard-section-head"><div><span className="kicker">HMRS · {roleNames[actor.role]}</span><h1 className="section-title mt-1 mb-1">{(roles[actor.role]||[]).find(([key])=>key===tab)?.[1]||"ড্যাশবোর্ড"}</h1><p className="muted text-xs mb-0">বিদ্যালয়ের ডিজিটাল ব্যবস্থাপনা কেন্দ্র</p></div><button className="btn sm" disabled={working||loadingSection} onClick={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}><RefreshCw size={14}/> রিফ্রেশ</button></div>
    {actor && !actor.pinEnabled && <div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
    {error&&<div role="alert" className="alert error mb-4">{error} <button type="button" onClick={()=>setError("")} className="float-right">×</button></div>}
    {success&&<div role="status" className="alert mb-4">{success}</div>}
+   <button className="dashboard-mobile-menu btn primary" type="button" aria-expanded={mobileNavOpen} aria-controls="dashboard-navigation" onClick={()=>setMobileNavOpen(v=>!v)}><Menu size={17}/> মেনু</button>
+   {mobileNavOpen&&<button className="dashboard-nav-backdrop" type="button" aria-label="মেনু বন্ধ করুন" onClick={()=>setMobileNavOpen(false)}/>}
    <div className="dashboard-layout">
-    <aside className="panel sidebar dashboard-nav" aria-label="ড্যাশবোর্ড মেনু">{(roles[actor.role]||[]).map(([key,label,Icon])=><Link key={key} href={"/dashboard/"+key} aria-current={tab===key?"page":undefined} className={tab===key?"active":""} onClick={()=>{setError("");setSuccess("")}}><Icon size={18}/><span>{label}</span></Link>)}</aside>
+    <aside id="dashboard-navigation" className={"panel sidebar dashboard-nav"+(mobileNavOpen?" is-open":"")} aria-label="ড্যাশবোর্ড মেনু">{(roles[actor.role]||[]).map(([key,label,Icon])=><Link key={key} href={"/dashboard/"+key} aria-current={tab===key?"page":undefined} className={tab===key?"active":""} onClick={()=>{setMobileNavOpen(false);setError("");setSuccess("")}}><Icon size={18}/><span>{label}</span></Link>)}</aside>
     <section className="min-w-0 grid gap-5 dashboard-section-content">
      {loadingSection&&<div className="dashboard-fetching"><div className="dashboard-loading-ring"/> তথ্য হালনাগাদ হচ্ছে...</div>}
      {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
      {actor.role==="student"?<>
        {tab==="overview"&&<><div className="panel p-6"><span className="kicker">STUDENT PROFILE</span><h2 className="section-title mt-2">{profile?.student?.name}</h2><div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mt-5">{[
-        ["শ্রেণি",gradeLabel(profile?.student?.grade)],["শাখা",sectionName(profile?.student?.section)],["রোল",toBanglaDigits(profile?.student?.roll)],
+        ["শ্রেণি",gradeLabel(profile?.student?.grade)],...(Number(profile?.student?.grade)>=9?[["বিভাগ",groupNames[profile?.student?.group]||"—"]]:[]),["রোল",toBanglaDigits(profile?.student?.roll)],
         ["পিতার নাম",profile?.student?.fatherName],["মাতার নাম",profile?.student?.motherName],["পূর্ববর্তী বিদ্যালয়",profile?.student?.previousSchool]
        ].map(([l,v])=><div key={l}><div className="muted text-xs mb-1">{l}</div><b>{v||"—"}</b></div>)}</div></div>
-       <div className="grid grid-cols-2 gap-4"><div className="panel stat"><div className="muted text-xs">বকেয়া/পাওনা</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong></div><div className="panel stat"><div className="muted text-xs">প্রকাশিত পরীক্ষা</div><strong>{toBanglaDigits(profile?.results?.length||0)}</strong></div></div></>}
+       <div className="grid grid-cols-2 gap-4"><div className="panel stat"><div className="muted text-xs">বকেয়া/পাওনা</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong></div><div className="panel stat"><div className="muted text-xs">প্রকাশিত পরীক্ষা</div><strong>{toBanglaDigits(profile?.publishedExams??profile?.results?.length??0)}</strong></div></div></>}
        {tab==="records"&&<><h2 className="section-title">হাজিরা ও প্রাতিষ্ঠানিক পাওনা</h2><div className="panel stat"><div className="muted">বর্তমান বকেয়া</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">কোনো অসঙ্গতি থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।</p></div>
         <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>উপস্থিতি</th><th>মন্তব্য</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toBanglaDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">হাজিরার তথ্য নেই।</p>}</div></>}
        {tab==="results"&&<><h2 className="section-title">ফলাফল ও নম্বরপত্র</h2>{!profile?.results?.length?<div className="panel empty">এখনো কোনো ফলাফল প্রকাশিত হয়নি।</div>:profile.results.map(({exam:ex,result})=><div className="panel p-6" key={ex.id}>
@@ -191,19 +220,54 @@ export default function DashboardPortal() {
       <>
        {tab==="overview"&&<><div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[[toBanglaDigits(summary.students),"শিক্ষার্থী",Users],[toBanglaDigits(summary.applications),"অপেক্ষমাণ আবেদন",ClipboardCheck],[toBanglaDigits(summary.present),"আজ উপস্থিত",CalendarCheck2],[toBanglaDigits(summary.absent),"অনুপস্থিত/বহির্গমন",FileText]].map(([val,label,Icon])=><div className="panel stat" key={label}><div className="flex justify-between items-center muted text-xs">{label}<Icon size={17} color="#176b61"/></div><strong>{val}</strong></div>)}</div>
         <div className="panel p-6"><h2 className="font-extrabold mb-2">স্বাগতম, {actor.name}</h2><p className="muted mb-0">বাম পাশের মেনু থেকে শিক্ষার্থী তালিকা, হাজিরা ও পরীক্ষার নম্বর ব্যবস্থাপনা করুন। {actor.role==="principal"?"প্রধান শিক্ষক হিসেবে সকল প্রশাসনিক ফিচার আপনার জন্য উন্মুক্ত।":""}</p></div></>}
-       {tab==="students"&&<><div className="flex items-center justify-between flex-wrap gap-3"><h2 className="section-title">শিক্ষার্থী তালিকা</h2><label className="field" style={{maxWidth:230,flex:1}}>খুঁজুন <Input value={query} onChange={setQuery} placeholder="নাম, শ্রেণি বা রোল"/></label></div><div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>শ্রেণি</th><th>শাখা</th><th>রোল</th><th>পাওনা</th><th>বিস্তারিত</th></tr></thead><tbody>{filtered.map(s=><tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)}</td><td>{sectionName(s.section)}</td><td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td><td><button className="btn sm" onClick={()=>{chooseStudent(s.id);router.push("/dashboard/marks")}}>নম্বর/বিস্তারিত</button></td></tr>)}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী পাওয়া যায়নি</p>}</div></>}
-       {tab==="admissions"&&<><h2 className="section-title">ভর্তি আবেদন ও অনুমোদন</h2><div className="grid gap-3">{(data.admissions||[]).map(a=><div key={a.id} className="panel p-5">
-        <div className="flex flex-wrap justify-between items-start gap-2"><div><b className="text-base">{a.studentName}</b><p className="muted text-xs mt-1 mb-0">শ্রেণি {toBanglaDigits(a.grade)} · শাখা {sectionName(a.section)} · পিতা: {a.fatherName} · {toBanglaDigits(a.fatherPhone)}</p><p className="muted text-xs mt-1 mb-0">পূর্ববর্তী বিদ্যালয়: {a.previousSchool} · পেমেন্ট: {a.paymentMethod} / {a.paymentStatus}</p></div><span className={"chip "+(a.status==="pending"?"":"gray")}>{a.status}</span></div>
-        {a.status==="pending"&&<AdmissionApproval item={a} busy={working} mutate={mutate} principal={actor.role==="principal"}/>}
-       </div>)}{!data.admissions?.length&&<div className="panel empty">কোনো আবেদন নেই।</div>}</div></>}
-       {tab==="attendance"&&<><div className="flex justify-between items-center gap-3 flex-wrap"><h2 className="section-title">দৈনিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
-        <div className="alert">অনুপস্থিত ও পালিয়ে যাওয়া শিক্ষার্থীর ক্ষেত্রে WhatsApp বাটনে ক্লিক করলে মেসেজ খুলবে; পাঠানোর সিদ্ধান্ত শিক্ষক নিজে নেবেন।</div>
-        <div className="panel table-wrap"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা চিহ্নিত করুন</th><th>অভিভাবক</th></tr></thead><tbody>{filtered.map(s=>{
+       {tab==="students"&&<>
+        <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থী তালিকা</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
+         <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label></div>
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map(s=><tr key={s.id}>
+         <td className="font-bold">{s.name}</td><td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
+         <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
+         <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);router.push("/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
+          {actor.role==="principal"&&<><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
+           <button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button></>}</div></td>
+        </tr>)}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী পাওয়া যায়নি</p>}</div>
+        <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
+         <b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)} · পাওনা ৳ {toBanglaDigits(s.due||0)}</p>
+         <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);router.push("/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
+          {actor.role==="principal"&&<><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
+           <button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button></>}</div>
+        </div>)}{!filtered.length&&<div className="panel empty">শিক্ষার্থী পাওয়া যায়নি</div>}</div>
+        <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
+       </>}
+       {tab==="admissions"&&<><div className="dashboard-toolbar"><div><h2 className="section-title">ভর্তি আবেদন ও অনুমোদন</h2><p className="muted text-xs">{toBanglaDigits(admissions.length)}টি আবেদন</p></div></div>
+        <div className="grid gap-3">{admissions.slice((admissionsCurrentPage-1)*20,admissionsCurrentPage*20).map(a=><div key={a.id} className="panel p-5 dashboard-application">
+         <div className="flex flex-wrap justify-between items-start gap-2"><div><b className="text-base">{a.studentName}</b><p className="muted text-xs mt-1 mb-0">শ্রেণি {formatClass(toBanglaDigits(a.grade),a.group)} · পিতা: {a.fatherName} · {toBanglaDigits(a.fatherPhone)}</p><p className="muted text-xs mt-1 mb-0">পূর্ববর্তী বিদ্যালয়: {a.previousSchool} · পেমেন্ট: {a.paymentMethod} / {a.paymentStatus}</p></div><span className={"chip "+(a.status==="pending"?"":"gray")}>{a.status}</span></div>
+         {actor.role==="principal"&&a.status!=="approved"&&<div className="inline-actions mt-3"><button className="btn sm" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> আবেদন এডিট</button></div>}
+         {a.status==="pending"&&<AdmissionApproval item={a} busy={working} mutate={mutate} principal={actor.role==="principal"}/>}
+         {a.status==="approved"&&actor.role==="principal"&&<p className="muted text-xs mt-3">ভর্তি সম্পন্ন — সংশ্লিষ্ট শিক্ষার্থীর তথ্য শিক্ষার্থী তালিকা থেকে এডিট করুন।</p>}
+        </div>)}{!admissions.length&&<div className="panel empty">কোনো আবেদন নেই।</div>}</div>
+        <Pager total={admissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
+       </>}
+       {tab==="attendance"&&<>
+        <div className="dashboard-toolbar"><h2 className="section-title">দৈনিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
+        <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map(s=>{
          const record=data.attendance?.find(a=>a.studentId===s.id);
-         return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td><td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
+         return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
+          <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
           <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
           <td>{record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</td>
-         </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div></>}
+         </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div>
+        <div className="dashboard-mobile-records">{pageItems.map(s=>{
+          const record=data.attendance?.find(a=>a.studentId===s.id);
+          return <div key={s.id} className="panel dashboard-mobile-record">
+           <div className="flex justify-between items-center gap-2"><div><b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}</p></div>
+            <span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></div>
+           <div className="inline-actions mt-3">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}
+            {record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</div>
+          </div>;
+        })}</div>
+        <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
+       </>}
        {tab==="marks"&&<><h2 className="section-title">পরীক্ষা ও নম্বর ব্যবস্থাপনা</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
@@ -230,12 +294,11 @@ export default function DashboardPortal() {
          <Field label="ধরন"><Select value={ledgerForm.type} onChange={v=>setLedgerForm(o=>({...o,type:v}))} choices={[["income","আয়"],["expense","ব্যয়"]]}/></Field>
          <Field label="টাকার পরিমাণ"><Input type="number" min="1" value={ledgerForm.amount} onChange={v=>setLedgerForm(o=>({...o,amount:v}))}/></Field>
          <Field label="শ্রেণি"><Select value={ledgerForm.grade} onChange={v=>setLedgerForm(o=>({...o,grade:v}))} choices={gradeChoices}/></Field>
-         <Field label="শাখা"><Select value={ledgerForm.section} onChange={v=>setLedgerForm(o=>({...o,section:v}))} choices={secChoices}/></Field>
          <Field label="বিবরণ"><Input value={ledgerForm.description} onChange={v=>setLedgerForm(o=>({...o,description:v}))}/></Field>
         </div><button disabled={working} className="btn primary mt-4" onClick={async()=>{const r=await mutate("ledger.add",ledgerForm);if(r)setLedgerForm(o=>({...o,amount:"",description:""}))}}>হিসাব সংরক্ষণ</button>
         </div>
         <div className="panel p-5"><h3 className="font-bold mb-3">শিক্ষার্থীর বকেয়া হালনাগাদ</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
-        <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}-{sectionName(l.section)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
+        <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&<><h2 className="section-title">নোটিশ ব্যবস্থাপনা</h2><div className="panel p-5 grid gap-3">
         <Field label="নোটিশ শিরোনাম"><Input value={notice.title} onChange={v=>setNotice(o=>({...o,title:v}))}/></Field>
         <Field label="নোটিশের বিবরণ"><textarea value={notice.message} onChange={e=>setNotice(o=>({...o,message:e.target.value}))}/></Field>
@@ -247,10 +310,10 @@ export default function DashboardPortal() {
         <Field label="মোবাইল নম্বর"><Input type="tel" value={login.phone} onChange={v=>setLogin(o=>({...o,phone:v}))} placeholder="01712345678 / +8801712345678"/></Field>
         <PinInput label="লগইন PIN" value={login.pin} onChange={v=>setLogin(o=>({...o,pin:v}))}/>
         <Field label="ভূমিকা"><Select value={login.role} onChange={v=>setLogin(o=>({...o,role:v}))} choices={[["teacher","শিক্ষক"],["class_teacher","শ্রেণি শিক্ষক"]]}/></Field>
-        {login.role==="class_teacher"&&<Field label="নিজ শ্রেণি/শাখা (যেমন 6-a,7-b)"><Input value={login.assignedClasses} onChange={v=>setLogin(o=>({...o,assignedClasses:v}))}/></Field>}
+        {login.role==="class_teacher"&&<Field label="নির্ধারিত শ্রেণি (যেমন 6,7,9)"><Input value={login.assignedClasses} onChange={v=>setLogin(o=>({...o,assignedClasses:v}))}/></Field>}
        </div><p className="muted text-xs mt-4">শিক্ষকের PIN নিরাপদভাবে প্রদান করুন। PIN সরাসরি সংরক্ষিত হয় না; ভুল PIN বারবার দিলে লগইন সাময়িক বন্ধ থাকে।</p>
        <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",phone:"",pin:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
-       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{(u.assignedClasses||[]).join(", ")}</td></tr>)}</tbody></table></div></>}
+       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{[...new Set((u.assignedClasses||[]).map(v=>String(v).split("-")[0]))].join(", ")}</td></tr>)}</tbody></table></div></>}
        {tab==="settings"&&<><h2 className="section-title">বিদ্যালয়ের ওয়েবসাইট সেটিংস</h2><div className="panel p-6 grid gap-4">
         <div className="alert">ছবি আপলোড করলে ImgBB-তে সংরক্ষিত হবে এবং হোমপেজের হিরো সেকশনে স্বয়ংক্রিয়ভাবে দেখাবে। আলাদা করে সেটিংস সংরক্ষণ করতে হবে না। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
         <Field label="হোমপেজের ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
@@ -264,6 +327,17 @@ export default function DashboardPortal() {
     </section>
    </div>
   </main>
+  {actor.role==="principal"&&editing&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={async values=>{
+   const action=editing.type==="student"?"student.update":"application.update";
+   const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
+   if(await mutate(action,payload))setEditing(null);
+  }}/>}
+  {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async confirmName=>{
+   if(await mutate("student.delete",{studentId:deleting.id,confirmName})){
+    if(selectedStudent===deleting.id)chooseStudent("");
+    setDeleting(null);
+   }
+  }}/>}
  </>;
 }
 
