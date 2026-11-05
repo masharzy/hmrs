@@ -160,7 +160,6 @@ export default function Admission(){
         <AdmissionField label="লিঙ্গ" name="gender" value={form.gender} onChange={change} error={errors.gender}
           options={[["male","ছাত্র"],["female","ছাত্রী"],["other","অন্যান্য"]]}/>
         <AdmissionField label="ভর্তিচ্ছু শ্রেণি" name="grade" value={form.grade} onChange={change} error={errors.grade} options={classOptions}/>
-        <AdmissionField label="শাখা" name="section" value={form.section} onChange={change} error={errors.section} options={sectionOptions}/>
         {Number(form.grade)>=9&&<AdmissionField label="বিভাগ" name="group" value={form.group} onChange={change} error={errors.group} options={groupOptions}/>}
        </div>}
        {step===1&&<div className="admission-fields">
