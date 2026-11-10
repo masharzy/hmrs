@@ -39,7 +39,7 @@ Create a Standard R2 bucket and attach a public custom domain; grant a scoped Cl
 
 ## Remaining performance work (needs measurements)
 
-- Abort superseded route GETs on mobile rapid tab switching and prevent initial auth observer re-entry; verify no user-facing AbortError.
+- Superseded route GETs now use `AbortController`; role cache is invalidated on Firebase user change and stale auth responses are discarded. Verify no visible `AbortError`, no old-account data leaks, and no unhandled promise rejections during rapid switching and sign-out.
 - Extract Attendance and Marks route components from the monolithic portal, memoize data grids and minimize state dependencies.
 - Replace client-side fetching of up to 900 students with Firestore pagination only after full record editing and filtering semantics are validated.
 - Optimize Firestore reads in summary: current attendance read fetches all today's rows before class-scoped filtering; review indexes before adding `where("grade","in",...)`.
