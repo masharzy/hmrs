@@ -152,14 +152,28 @@ export async function POST(req) {
       const credentialRef=store.collection("loginCredentials").doc(actor.uid);
       const securityRef=store.collection("loginSecurity").doc(actor.uid);
       const credential=makePinCredential(newPin);
-      await store.runTransaction(async tx=>{
+      const now=Date.now();
+      // Limit PIN guessing through an authenticated (possibly stolen) session.
+      // Failed attempts are recorded within the transaction, then returned without throwing.
+      const result=await store.runTransaction(async tx=>{
         const [oldSnap,securitySnap]=await Promise.all([tx.get(credentialRef),tx.get(securityRef)]);
-        if(!oldSnap.exists||!verifyPin(oldPin,oldSnap.data()))
-          throw Object.assign(Error("বর্তমান PIN সঠিক নয়"),{status:403});
-        if(securitySnap.data()?.locked)
-          throw Object.assign(Error("অ্যাকাউন্ট লক রয়েছে; প্রধান শিক্ষকের সঙ্গে যোগাযোগ করুন"),{status:423});
+        const security=securitySnap.data()||{};
+        if(security.locked)return {ok:false,status:423,error:"অ্যাকাউন্ট লক রয়েছে; প্রধান শিক্ষকের সঙ্গে যোগাযোগ করুন"};
+        if(Number(security.pinChangeBlockedUntil||0)>now)
+          return {ok:false,status:429,error:"ভুল PIN-এর কারণে কিছুক্ষণ পর আবার চেষ্টা করুন"};
+        if(!oldSnap.exists||!verifyPin(oldPin,oldSnap.data())){
+          const failures=Number(security.pinChangeFailures||0)+1;
+          tx.set(securityRef,{
+            pinChangeFailures:failures>=5?0:failures,
+            pinChangeBlockedUntil:failures>=5?now+15*60*1000:0
+          },{merge:true});
+          return {ok:false,status:403,error:"বর্তমান PIN সঠিক নয়"};
+        }
         tx.update(credentialRef,{...credential,updatedAt:iso()});
+        tx.set(securityRef,{pinChangeFailures:0,pinChangeBlockedUntil:0},{merge:true});
+        return {ok:true};
       });
+      if(!result.ok)return fail(result.error,result.status);
       await adminAuth().revokeRefreshTokens(actor.uid);
       await audit(actor,action,actor.uid);
       return json({ok:true,relogin:true});
