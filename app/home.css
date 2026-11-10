@@ -1,0 +1,94 @@
+/* Public HMRS homepage only: bright, accessible colors without changing dashboard UI. */
+.hmrs-home{overflow:clip;background:#f9fbff}
+.hmrs-home-hero{position:relative;isolation:isolate;overflow:hidden;background:
+ radial-gradient(ellipse 42% 60% at 98% 5%,#dbeafe 0,transparent 100%),
+ radial-gradient(ellipse 40% 70% at 2% 100%,#dcfce7 0,transparent 100%),
+ linear-gradient(117deg,#f2fbf8 0%,#ffffff 46%,#f3f3ff 100%);border-bottom:1px solid #e7edf7}
+.hmrs-home-hero:before{content:"";position:absolute;inset:0;z-index:-1;opacity:.28;
+ background-image:radial-gradient(#a1bdc6 1px,transparent 1px);background-size:23px 23px;
+ mask-image:linear-gradient(to right,transparent,black 75%)}
+.hmrs-home-hero-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);align-items:center;gap:clamp(22px,5vw,72px);padding-top:clamp(60px,7vw,100px);padding-bottom:clamp(66px,8vw,105px)}
+.hmrs-home-intro{position:relative;z-index:1}
+.hmrs-home-pill{display:inline-flex;align-items:center;gap:9px;border:1px solid #bce5d5;border-radius:100px;padding:9px 15px;background:#effbf4;color:#14725f;font-weight:750;font-size:12px;box-shadow:0 4px 16px #18765d0b}
+.hmrs-home-title{margin:20px 0;font-size:clamp(36px,4.8vw,68px);letter-spacing:-1.6px;line-height:1.32;font-weight:850;color:#163748}
+.hmrs-home-title span{background:linear-gradient(100deg,#0b876f 4%,#0d698b 52%,#6154bf 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hmrs-home-lead{font-size:clamp(14px,1.25vw,17px);line-height:2;max-width:560px;color:#526a79}
+.hmrs-home-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:29px}
+.hmrs-home .btn.hmrs-home-primary{background:linear-gradient(106deg,#0f8b78,#2169a8);color:#fff;border:0;border-radius:11px;padding:13px 19px;box-shadow:0 12px 24px #0b817e29}
+.hmrs-home .btn.hmrs-home-primary:hover{background:linear-gradient(106deg,#087663,#1d588d);transform:translateY(-1px)}
+.hmrs-home .btn.hmrs-home-secondary{border:1px solid #d8e4ec;background:#fff;color:#2b5665;border-radius:11px;padding:12px 18px}
+.hmrs-home .btn.hmrs-home-secondary:hover{background:#edf7ff}
+.hmrs-home-highlights{display:flex;gap:12px 21px;flex-wrap:wrap;margin-top:30px;color:#5b7582;font-size:11px;font-weight:700}
+.hmrs-home-highlights span{display:flex;align-items:center;gap:7px}
+.hmrs-home-highlights span:nth-child(1) svg{color:#10a473}.hmrs-home-highlights span:nth-child(2) svg{color:#5e68dd}.hmrs-home-highlights span:nth-child(3) svg{color:#df9516}
+.hmrs-home-visual{position:relative;min-width:0}
+.hmrs-home-photo{position:relative;overflow:hidden;border:9px solid #fff;border-radius:25px;box-shadow:0 26px 65px #1748702b;background:#dfebe7;transform:rotate(1.4deg)}
+.hmrs-home-photo img{display:block;width:100%;object-fit:cover}
+.hmrs-home-school-badge{position:absolute;bottom:-24px;left:-24px;max-width:calc(100% + 16px);display:flex;align-items:center;gap:12px;padding:15px 17px;background:#fff;border:1px solid #e4edf3;border-radius:15px;box-shadow:0 15px 40px #16385425}
+.hmrs-home-school-icon{width:41px;height:41px;display:grid;place-items:center;flex:none;border-radius:11px;background:linear-gradient(145deg,#c6fff0,#d8e7ff);color:#116a8a}
+.hmrs-home-school-badge strong,.hmrs-home-school-badge small{display:block}
+.hmrs-home-school-badge strong{font-size:12px;font-weight:850;color:#213f50}
+.hmrs-home-school-badge small{font-size:10px;color:#718794;margin-top:3px}
+.hmrs-home-visual-orbit{position:absolute;display:grid;place-items:center;width:68px;height:68px;right:-26px;top:-24px;border:5px solid #fff;border-radius:19px;background:#fef3c7;color:#bd7918;box-shadow:0 10px 28px #bf8b3926;transform:rotate(12deg)}
+.hmrs-home-services,.hmrs-home-notices{padding-top:66px}
+.hmrs-home-section-heading{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:16px}
+.hmrs-home-eyebrow{display:block;color:#167d75;font-family:system-ui,sans-serif;font-size:11px;letter-spacing:1.8px;font-weight:850;margin-bottom:8px}
+.hmrs-home-section-heading .section-title{font-size:clamp(23px,2.2vw,30px);letter-spacing:-.3px;color:#243f52;margin:0}
+.hmrs-home-section-heading p{color:#738792;font-size:13px;margin:5px 0 0}
+.hmrs-home-quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.hmrs-home-quick-card{--card-ink:#235a87;--card-bg:#e2f1fe;display:flex;flex-direction:column;gap:7px;position:relative;overflow:hidden;min-width:0;min-height:171px;padding:22px 17px;border:1px solid #e5ecf5;border-radius:18px;background:#fff;box-shadow:0 7px 23px #1c45630b;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.hmrs-home-quick-card:before{content:"";position:absolute;right:-31px;bottom:-60px;width:115px;height:115px;border-radius:50%;background:var(--card-bg);opacity:.65;pointer-events:none}
+.hmrs-home-quick-card:hover{transform:translateY(-4px);box-shadow:0 17px 30px #1c45631a;border-color:#cbdde9}
+.hmrs-home-quick-top{display:flex;align-items:start;justify-content:space-between;margin-bottom:17px}
+.hmrs-home-quick-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:12px;background:var(--card-bg);color:var(--card-ink)}
+.hmrs-home-quick-arrow{color:var(--card-ink);opacity:.55}
+.hmrs-home-quick-card strong{z-index:1;font-size:13px;color:#263c4d;font-weight:850}
+.hmrs-home-quick-card small{z-index:1;color:#6f8490;font-size:11px;line-height:1.6}
+.hmrs-home-quick-0{--card-bg:#dcfce7;--card-ink:#117856;background:linear-gradient(155deg,#f3fff8,#fff 65%)}
+.hmrs-home-quick-1{--card-bg:#dbeafe;--card-ink:#216bb3;background:linear-gradient(155deg,#f4f8ff,#fff 65%)}
+.hmrs-home-quick-2{--card-bg:#ede9fe;--card-ink:#6950b2;background:linear-gradient(155deg,#f8f6ff,#fff 65%)}
+.hmrs-home-quick-3{--card-bg:#fff0ca;--card-ink:#a96c08;background:linear-gradient(155deg,#fffcf1,#fff 65%)}
+.hmrs-home-quick-4{--card-bg:#ffebeb;--card-ink:#b65359;background:linear-gradient(155deg,#fff7f6,#fff 65%)}
+.hmrs-home-notices{scroll-margin-top:25px}
+.hmrs-home-notices .notice-board{border:1px solid #e4ebf3;border-radius:19px;box-shadow:0 8px 32px #2745600c;overflow:hidden}
+.hmrs-home-routines{margin-top:55px}
+.hmrs-home-final{padding:36px 0 72px}
+.hmrs-home-final-card{display:flex;align-items:center;gap:22px;padding:28px 32px;border-radius:21px;background:linear-gradient(112deg,#173f68,#256f79 70%,#148875);color:white;box-shadow:0 16px 42px #16536b2b}
+.hmrs-home-final-icon{display:grid;place-items:center;flex:none;width:62px;height:62px;border-radius:17px;background:#ffffff24;color:#fff}
+.hmrs-home-final-kicker{font-size:10px;letter-spacing:1.5px;color:#b9ebdf;font-family:system-ui,sans-serif;font-weight:850}
+.hmrs-home-final-card h2{font-size:21px;font-weight:850;margin:3px 0}
+.hmrs-home-final-card p{font-size:12px;color:#d6eceb;margin:0}
+.hmrs-home .btn.hmrs-home-final-button{margin-left:auto;background:#fff;color:#13615d;border:0;border-radius:11px;white-space:nowrap;padding:12px 17px}
+.hmrs-home .btn.hmrs-home-final-button:hover{background:#eafcf7}
+.hmrs-notice-attachment{margin-top:18px}
+.hmrs-notice-attachment-label{display:flex;align-items:center;gap:7px;margin-bottom:9px;color:#54768a;font-size:12px;font-weight:750}
+.hmrs-notice-attachment img{max-width:100%;max-height:470px;object-fit:contain;border:1px solid #e5ebf4;border-radius:12px}
+.hmrs-notice-pdf-link{display:flex;align-items:center;gap:13px;margin-top:17px;padding:16px;border:1px solid #cde6ef;background:#f2faff;color:#175877;border-radius:12px}
+.hmrs-notice-pdf-link>svg:first-child{flex:none;color:#287eac}.hmrs-notice-pdf-link>svg:last-child{margin-left:auto;flex:none}
+.hmrs-notice-pdf-link strong,.hmrs-notice-pdf-link small{display:block}
+.hmrs-notice-pdf-link strong{font-size:13px}.hmrs-notice-pdf-link small{font-size:11px;color:#688998;margin-top:3px;overflow-wrap:anywhere}
+@media(max-width:1050px){.hmrs-home-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:850px){.hmrs-home-hero-grid{grid-template-columns:1fr!important;padding-top:48px;padding-bottom:70px;gap:46px}.hmrs-home-intro{max-width:680px}.hmrs-home-visual{max-width:650px;width:100%;margin:auto}.hmrs-home-school-badge{left:8px}.hmrs-home-visual-orbit{right:-7px;top:-20px}}
+@media(max-width:600px){.hmrs-home-hero-grid{padding-top:30px;padding-bottom:52px;gap:35px}
+ .hmrs-home-title{font-size:clamp(32px,8.2vw,44px);line-height:1.38;letter-spacing:-.6px;margin:15px 0}
+ .hmrs-home-pill{font-size:10px;padding:8px 11px}
+ .hmrs-home-lead{font-size:13px;line-height:1.9}.hmrs-home-actions{gap:9px;margin-top:23px}
+ .hmrs-home-actions .btn{flex:1;font-size:11px;padding:11px 10px!important}
+ .hmrs-home-highlights{gap:10px;margin-top:23px;font-size:10px}
+ .hmrs-home-photo{border-width:6px;border-radius:17px;transform:none}
+ .hmrs-home-school-badge{position:relative;left:auto;bottom:auto;margin:-24px 12px 0;border-radius:12px;padding:10px;max-width:none}
+ .hmrs-home-school-badge strong{font-size:11px}.hmrs-home-school-badge small{font-size:9px}
+ .hmrs-home-visual-orbit{width:48px;height:48px;border-width:3px;border-radius:12px;right:-3px;top:-12px}
+ .hmrs-home-visual-orbit svg{width:22px;height:22px}
+ .hmrs-home-services,.hmrs-home-notices{padding-top:41px}
+ .hmrs-home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .hmrs-home-quick-card{min-height:147px;padding:16px 12px;border-radius:14px}
+ .hmrs-home-quick-top{margin-bottom:10px}.hmrs-home-quick-icon{width:37px;height:37px}
+ .hmrs-home-quick-card strong{font-size:12px}.hmrs-home-quick-card small{font-size:10px}
+ .hmrs-home-final{padding:30px 0 42px}
+ .hmrs-home-final-card{flex-wrap:wrap;gap:14px;padding:20px;border-radius:16px}
+ .hmrs-home-final-icon{width:44px;height:44px;border-radius:12px}
+ .hmrs-home-final-card h2{font-size:17px}.hmrs-home-final-card p{font-size:11px}
+ .hmrs-home .btn.hmrs-home-final-button{width:100%;margin:0}
+}
+@media(prefers-reduced-motion:reduce){.hmrs-home-quick-card,.hmrs-home .btn.hmrs-home-primary{transition:none}.hmrs-home-quick-card:hover,.hmrs-home .btn.hmrs-home-primary:hover{transform:none}}
