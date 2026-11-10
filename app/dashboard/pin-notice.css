@@ -1,0 +1,31 @@
+/* Isolated dashboard styles for notices and account PIN; base console remains unchanged. */
+.hmrs-notice-manager{max-width:100%}
+.hmrs-notice-files{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.hmrs-notice-files .field{padding:15px;border:1px solid #e3eaf0;border-radius:12px;background:#f9fbfd}
+.hmrs-notice-files input[type=file]{background:#fff;padding:11px;max-width:100%;overflow:hidden}
+.hmrs-notice-files .field small{color:#728590;font-size:10px;font-weight:500}
+.hmrs-notice-selection{display:flex;flex-wrap:wrap;gap:8px}
+.hmrs-notice-selection span{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:7px 10px;border:1px solid #c9e9dc;background:#f1faf6;border-radius:8px;color:#235e4f;font-size:11px;overflow-wrap:anywhere}
+.hmrs-notice-selection button{background:transparent;border:none;color:#236d58;display:grid;place-items:center}
+.hmrs-notice-admin-row{display:flex;justify-content:space-between;align-items:start;gap:18px}
+.hmrs-notice-admin-row>div:first-child{min-width:0}
+.hmrs-notice-admin-row p{max-width:75ch;overflow-wrap:anywhere;white-space:pre-wrap}
+.hmrs-notice-status{margin-top:9px;font-size:10px;font-weight:750;color:#0c7e73}
+.hmrs-change-pin{max-width:710px;padding:28px}
+.hmrs-change-pin-head{display:flex;gap:13px;align-items:center;margin-bottom:22px}
+.hmrs-change-pin-head h2{margin:0 0 5px}
+.hmrs-change-pin-head p{margin:0;line-height:1.75}
+.hmrs-change-pin-icon{width:49px;height:49px;display:grid;place-items:center;flex:none;border-radius:13px;background:#e2f7ee;color:#087868}
+.hmrs-pin-fields{display:grid;gap:18px}
+.hmrs-pin-fields .pin-field{max-width:460px;border:1px solid #e6edf1;background:#fcfdfd;padding:15px;border-radius:12px}
+.hmrs-pin-fields .pin-grid{max-width:390px}
+.hmrs-pin-fields .pin-cell{width:100%;height:51px;min-height:48px;font-size:20px}
+@media(max-width:680px){
+ .hmrs-notice-files{grid-template-columns:1fr}
+ .hmrs-notice-admin-row{flex-direction:column}
+ .hmrs-notice-admin-row .inline-actions{width:100%;gap:9px}
+ .hmrs-notice-admin-row .inline-actions .btn{flex:1}
+ .hmrs-change-pin{padding:18px}
+ .hmrs-change-pin-head{align-items:start}
+ .hmrs-pin-fields .pin-field{padding:11px}
+}
