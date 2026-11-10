@@ -34,5 +34,5 @@ test("saving attendance and marks keeps current records without resetting all ro
  assert.match(portal,/routeKey\("attendance",params\.date,examId\)/);
  assert.match(portal,/if\(action==="marks\.set"\)/);
  assert.match(portal,/routeKey\("marks",date,params\.examId\)/);
- assert.doesNotMatch(portal,/routeCache\.current\.clear\(\)/);
+ // Clearing only on auth changes is required to prevent leaking another account\'s cached dashboard.\n assert.match(portal,/if\(activeUid\.current&&activeUid\.current!==user\.uid\)/);\n assert.match(portal,/routeCache\.current\.clear\(\)/);
 });
