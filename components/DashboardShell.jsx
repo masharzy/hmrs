@@ -16,7 +16,8 @@ const descriptions={
  security:"লগইন নিরাপত্তা ও অ্যাকাউন্ট নিয়ন্ত্রণ",
  settings:"হোমপেজ এবং প্রতিষ্ঠানের তথ্য",
  records:"নিজের উপস্থিতি ও পাওনার বিবরণ",
- results:"পরীক্ষার ফলাফল ও নম্বরপত্র"
+ results:"পরীক্ষার ফলাফল ও নম্বরপত্র",
+ profile:"নিজের PIN ও অ্যাকাউন্ট নিরাপত্তা"
 };
 const workRoutes=new Set(["overview","students","admissions","attendance","marks","routines","records","results"]);
 const navGroups=(items)=>[
@@ -25,7 +26,7 @@ const navGroups=(items)=>[
 ].filter(group=>group.items.length);
 const mainDockKeys=["overview","students","admissions","attendance","records","results"];
 
-const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","routines","accounts","security","settings","records","results"]);
+const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","routines","accounts","security","settings","records","results","profile"]);
 
 // Use Next.js-integrated native history to avoid an extra RSC route request.
 // Regular href remains usable for accessibility, refresh, and modified clicks.
