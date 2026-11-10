@@ -26,7 +26,7 @@ test("attendance and marks use selection-specific cache keys",()=>{
 test("native-history nav supports all direct dashboard routes including profile",()=>{
  assert.match(shell,/window\.history\.pushState/);
  assert.match(shell,/"results","profile"\]/);
- assert.match(read("app/dashboard/[section]/page.jsx),/"results","profile"\]/);
+ assert.match(read("app/dashboard/[section]/page.jsx"),/"results","profile"\]/);
 });
 
 test("routine and notice save responses enable local cache updates",()=>{
