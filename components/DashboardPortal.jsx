@@ -123,7 +123,7 @@ export default function DashboardPortal() {
    activeUid.current=user.uid;
    try{
     const p=await request("dashboard.data",{params:"section="+encodeURIComponent(tab)+"&date="+encodeURIComponent(date)+"&examId="+encodeURIComponent(examId)});
-    if(!alive)return;
+    if(!alive||firebaseAuth().currentUser?.uid!==user.uid)return;
     if(p.profile)setProfile(p.profile);
     if(p.data){
      setData(old=>({...old,...p.data}));
