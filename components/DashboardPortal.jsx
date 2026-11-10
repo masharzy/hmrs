@@ -48,6 +48,7 @@ export default function DashboardPortal() {
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
  const loadedRoutes=useRef(new Set()),routeCache=useRef(new Map()),loadSequence=useRef(0);
+ const activeUid=useRef(""),activeRouteRequest=useRef(null);
  const dateSequence=useRef(0),examSequence=useRef(0);
  const [changingDate,setChangingDate]=useState(false),[changingExam,setChangingExam]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
@@ -67,7 +68,7 @@ export default function DashboardPortal() {
   const token=await u.getIdToken();
   const r=await fetch("/api/portal"+(opts?.body?"":"?resource="+encodeURIComponent(resource)+(opts?.params?"&"+opts.params:"")),{
    method:opts?.body?"POST":"GET",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
-   body:opts?.body?JSON.stringify(opts.body):undefined,cache:"no-store"
+   body:opts?.body?JSON.stringify(opts.body):undefined,cache:"no-store",signal:opts?.signal
   });
   const d=await r.json();if(!r.ok)throw Error(d.error||"সার্ভারে সমস্যা হয়েছে");return d;
  }
@@ -75,9 +76,11 @@ export default function DashboardPortal() {
   if(!who)return;
   const key=routeKey(section,chosenDate,chosenExam);
   if(section==="profile"||section==="security"){
+   activeRouteRequest.current?.abort();
    ++loadSequence.current;routeCache.current.set(key,{data:{}});setLoadingSection(false);return;
   }
   if(!force && routeCache.current.has(key)){
+   activeRouteRequest.current?.abort();
    // Invalidate any older in-flight route request before restoring cached data.
    ++loadSequence.current;
    setLoadingSection(false);
@@ -89,10 +92,13 @@ export default function DashboardPortal() {
    }
    return;
   }
+  activeRouteRequest.current?.abort();
+  const controller=new AbortController();
+  activeRouteRequest.current=controller;
   const seq=++loadSequence.current;
   setLoadingSection(true);
   try{
-   const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam)});
+   const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam),signal:controller.signal});
    if(loadSequence.current===seq){
     routeCache.current.set(key,{profile:r.profile,data:r.data});
     loadedRoutes.current.add(key);
@@ -102,12 +108,19 @@ export default function DashboardPortal() {
      if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
     }
    }
-  }finally{if(loadSequence.current===seq)setLoadingSection(false)}
+  }finally{if(loadSequence.current===seq)setLoadingSection(false);if(activeRouteRequest.current===controller)activeRouteRequest.current=null}
  }
  useEffect(()=>{
   let alive=true,unsubscribe=()=>{};
   try{unsubscribe=onAuthStateChanged(firebaseAuth(),async user=>{
-   if(!user){router.replace("/login/student");return;}
+   if(!user){activeUid.current="";activeRouteRequest.current?.abort();routeCache.current.clear();router.replace("/login/student");return;}
+   if(activeUid.current&&activeUid.current!==user.uid){
+    activeRouteRequest.current?.abort();routeCache.current.clear();loadedRoutes.current.clear();
+    ++loadSequence.current;setActor(null);setProfile(null);setBusy(true);
+    setData({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
+   }
+   if(activeUid.current===user.uid&&routeCache.current.has(routeKey(tab,date,examId)))return;
+   activeUid.current=user.uid;
    try{
     const p=await request("dashboard.data",{params:"section="+encodeURIComponent(tab)+"&date="+encodeURIComponent(date)+"&examId="+encodeURIComponent(examId)});
     if(!alive)return;
@@ -129,7 +142,7 @@ export default function DashboardPortal() {
   if(!(roles[actor.role]||[]).some(([key])=>key===tab)){
    router.replace("/dashboard/overview");return;
   }
-  refresh(actor,date,examId,tab).catch(e=>setError(e.message));
+  refresh(actor,date,examId,tab).catch(e=>{if(e?.name!=="AbortError")setError(e.message)});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[actor?.uid,tab]);
  async function mutate(action,params={}){
@@ -264,7 +277,7 @@ export default function DashboardPortal() {
    active={tab}
    loading={loadingSection||changingDate||changingExam}
    onNavigate={()=>{setError("");setSuccess("")}}
-   onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}
+   onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>{if(e?.name!=="AbortError")setError(e.message)})}
    onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
   >
    {actor&&!actor.pinEnabled&&<div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
