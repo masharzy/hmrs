@@ -76,7 +76,6 @@ export async function GET(req) {
       }
       return json({ actor, student, dues, attendance: asDocs(attendance), results });
     }
-    needRole(actor, allowedStaff);
     if (resource === "dashboard.data") {
       const result = await getDashboardData(actor,{
         section:u.searchParams.get("section")||"overview",
@@ -85,6 +84,7 @@ export async function GET(req) {
       });
       return json({actor,...result});
     }
+    needRole(actor, allowedStaff);
     if (resource === "overview.summary") {
       needRole(actor, allowedStaff);
       return json({summary:await getDashboardSummary(actor,store)});
