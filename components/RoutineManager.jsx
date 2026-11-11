@@ -67,17 +67,19 @@ export default function RoutineManager({items=[],working,mutate}){
    setForm(old=>({...old,imageUrl:data.imageUrl}));
    setSelectedFile(null);
    if(inputRef.current)inputRef.current.value="";
-   setNotice("রুটিনের ছবি আপলোড হয়েছে। এখন নিচে সংরক্ষণ করুন।");
+   setNotice("রুটিনের ছবি আপলোড হয়েছে।");
+   return data.imageUrl;
   }catch(e){setError(e.message)}
   finally{setUploading(false)}
  }
  async function save(){
   if(uploading||working)return;
-  if(selectedFile){setError("আগে নির্বাচিত ছবিটি আপলোড করুন");return}
   setError("");setNotice("");
   if(!form.title.trim()){setError("রুটিনের নাম লিখুন");return}
-  if(!form.imageUrl){setError("রুটিনের একটি ছবি আপলোড করুন");return}
-  const result=await mutate("routine.save",form);
+  // A single Save click uploads an optional new image and persists metadata.
+  const imageUrl=selectedFile?await upload():form.imageUrl;
+  if(!imageUrl){if(!selectedFile)setError("রুটিনের একটি ছবি আপলোড করুন");return}
+  const result=await mutate("routine.save",{...form,imageUrl});
   if(result)reset();
  }
  function edit(item){
@@ -136,7 +138,7 @@ export default function RoutineManager({items=[],working,mutate}){
     <label className="routine-publish"><input type="checkbox" checked={form.published} onChange={e=>change("published",e.target.checked)}/>
      <span><b>ওয়েবসাইটে প্রকাশ করুন</b><small>প্রকাশিত রুটিন সবাই দেখতে পারবে</small></span></label>
     <div className="routine-form-actions"><button className="btn" type="button" onClick={reset} disabled={uploading||working}>বাতিল</button>
-     <button className="btn primary" type="button" disabled={uploading||working||!!selectedFile||!form.imageUrl||!form.title.trim()} onClick={save}><Check size={16}/>{working?"সংরক্ষণ হচ্ছে...":form.id?"পরিবর্তন সংরক্ষণ":"রুটিন প্রকাশ / সংরক্ষণ"}</button>
+     <button className="btn primary" type="button" disabled={uploading||working||(!selectedFile&&!form.imageUrl)||!form.title.trim()} onClick={save}><Check size={16}/>{working?"সংরক্ষণ হচ্ছে...":selectedFile?"ছবি আপলোড ও সংরক্ষণ":form.id?"পরিবর্তন সংরক্ষণ":"রুটিন প্রকাশ / সংরক্ষণ"}</button>
     </div>
    </div>
   </section>

@@ -11,7 +11,8 @@ test("the dashboard never displays repetitive route-update banner",()=>{
  assert.doesNotMatch(portal,/তথ্য হালনাগাদ হচ্ছে/);
  assert.match(portal,/showPlaceholder\?\s*<DashboardSkeleton/);
  assert.match(shell,/hmrs-top-progress/);
- assert.match(portal,/routeCache\.current\.has\(tab\)/);
+ assert.match(portal,/routeCache\.current\.has\(key\)/);
+ assert.match(portal,/routeCache\.current\.has\(routeKey\(tab,date,examId\)\)/);
 });
 test("all roles keep the same secure route navigation with mobile and desktop access",()=>{
  assert.match(shell,/hmrs-console-sidebar/);
@@ -30,8 +31,8 @@ test("overview uses real summary data and fast working links, not placeholder me
 });
 test("saving attendance and marks keeps current records without resetting all route caches",()=>{
  assert.match(portal,/if\(action==="attendance\.set"\)/);
- assert.match(portal,/routeCache\.current\.set\("attendance"/);
+ assert.match(portal,/routeKey\("attendance",params\.date,examId\)/);
  assert.match(portal,/if\(action==="marks\.set"\)/);
- assert.match(portal,/routeCache\.current\.set\("marks"/);
- assert.doesNotMatch(portal,/routeCache\.current\.clear\(\)/);
+ assert.match(portal,/routeKey\("marks",date,params\.examId\)/);
+ // Clearing only on auth changes is required to prevent leaking another account\'s cached dashboard.\n assert.match(portal,/if\(activeUid\.current&&activeUid\.current!==user\.uid\)/);\n assert.match(portal,/routeCache\.current\.clear\(\)/);
 });

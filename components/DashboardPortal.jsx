@@ -15,18 +15,22 @@ import DashboardShell, { DashboardSkeleton } from "./DashboardShell";
 import DashboardOverview from "./DashboardOverview";
 import DashboardStudentHome from "./DashboardStudentHome";
 const RoutineManager=dynamic(()=>import("./RoutineManager"),{ssr:false});
+const NoticeManager=dynamic(()=>import("./NoticeManager"),{ssr:false});
+const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
 
+// Parameter-scoped keys keep attendance dates and exam results separate.
+const routeKey=(section,date,examId)=>section==="attendance"?"attendance:"+date:section==="marks"?"marks:"+(examId||"none"):section;
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const roleNames={principal:"প্রতিষ্ঠান প্রধান",class_teacher:"শ্রেণি শিক্ষক",teacher:"শিক্ষক",student:"শিক্ষার্থী"};
 const statusNames={present:"উপস্থিত",absent:"অনুপস্থিত",left_early:"পালিয়ে গেছে"};
 const roles={
- student: [["overview","আমার ড্যাশবোর্ড",LayoutDashboard],["records","হাজিরা ও পাওনা",CalendarCheck2],["results","ফলাফল ও নম্বরপত্র",GraduationCap]],
- teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine]],
- class_teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","শ্রেণির হিসাব",Wallet]],
- principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["routines","রুটিন",CalendarCheck2],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings]]
+ student: [["overview","আমার ড্যাশবোর্ড",LayoutDashboard],["records","হাজিরা ও পাওনা",CalendarCheck2],["results","ফলাফল ও নম্বরপত্র",GraduationCap],["profile","আমার PIN",LockKeyhole]],
+ teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["profile","আমার PIN",LockKeyhole]],
+ class_teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","শ্রেণির হিসাব",Wallet],["profile","আমার PIN",LockKeyhole]],
+ principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["routines","রুটিন",CalendarCheck2],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings],["profile","আমার PIN",LockKeyhole]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
@@ -44,6 +48,7 @@ export default function DashboardPortal() {
  const [actor,setActor]=useState(null),[profile,setProfile]=useState(null);
  const [loadingSection,setLoadingSection]=useState(false);
  const loadedRoutes=useRef(new Set()),routeCache=useRef(new Map()),loadSequence=useRef(0);
+ const activeUid=useRef(""),activeRouteRequest=useRef(null);
  const dateSequence=useRef(0),examSequence=useRef(0);
  const [changingDate,setChangingDate]=useState(false),[changingExam,setChangingExam]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
@@ -52,7 +57,7 @@ export default function DashboardPortal() {
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
- const [newExam,setNewExam]=useState(""),[notice,setNotice]=useState({title:"",message:"",published:true}),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6"});
+ const [newExam,setNewExam]=useState(""),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6"});
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const photoUploadInput=useRef(null);
@@ -63,17 +68,23 @@ export default function DashboardPortal() {
   const token=await u.getIdToken();
   const r=await fetch("/api/portal"+(opts?.body?"":"?resource="+encodeURIComponent(resource)+(opts?.params?"&"+opts.params:"")),{
    method:opts?.body?"POST":"GET",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
-   body:opts?.body?JSON.stringify(opts.body):undefined,cache:"no-store"
+   body:opts?.body?JSON.stringify(opts.body):undefined,cache:"no-store",signal:opts?.signal
   });
   const d=await r.json();if(!r.ok)throw Error(d.error||"সার্ভারে সমস্যা হয়েছে");return d;
  }
  async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab,force=false){
   if(!who)return;
-  if(!force && routeCache.current.has(section)){
+  const key=routeKey(section,chosenDate,chosenExam);
+  if(section==="profile"||section==="security"){
+   activeRouteRequest.current?.abort();
+   ++loadSequence.current;routeCache.current.set(key,{data:{}});setLoadingSection(false);return;
+  }
+  if(!force && routeCache.current.has(key)){
+   activeRouteRequest.current?.abort();
    // Invalidate any older in-flight route request before restoring cached data.
    ++loadSequence.current;
    setLoadingSection(false);
-   const cached=routeCache.current.get(section);
+   const cached=routeCache.current.get(key);
    if(cached.profile)setProfile(cached.profile);
    if(cached.data){
     setData(old=>({...old,...cached.data}));
@@ -81,35 +92,45 @@ export default function DashboardPortal() {
    }
    return;
   }
+  activeRouteRequest.current?.abort();
+  const controller=new AbortController();
+  activeRouteRequest.current=controller;
   const seq=++loadSequence.current;
   setLoadingSection(true);
   try{
-   const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam)});
+   const r=await request("dashboard.data",{params:"section="+encodeURIComponent(section)+"&date="+encodeURIComponent(chosenDate)+"&examId="+encodeURIComponent(chosenExam),signal:controller.signal});
    if(loadSequence.current===seq){
-    routeCache.current.set(section,{profile:r.profile,data:r.data});
-    loadedRoutes.current.add(section);
+    routeCache.current.set(key,{profile:r.profile,data:r.data});
+    loadedRoutes.current.add(key);
     if(r.profile)setProfile(r.profile);
     if(r.data){
      setData(old=>({...old,...r.data}));
      if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
     }
    }
-  }finally{if(loadSequence.current===seq)setLoadingSection(false)}
+  }finally{if(loadSequence.current===seq)setLoadingSection(false);if(activeRouteRequest.current===controller)activeRouteRequest.current=null}
  }
  useEffect(()=>{
   let alive=true,unsubscribe=()=>{};
   try{unsubscribe=onAuthStateChanged(firebaseAuth(),async user=>{
-   if(!user){router.replace("/login/student");return;}
+   if(!user){activeUid.current="";activeRouteRequest.current?.abort();routeCache.current.clear();router.replace("/login/student");return;}
+   if(activeUid.current&&activeUid.current!==user.uid){
+    activeRouteRequest.current?.abort();routeCache.current.clear();loadedRoutes.current.clear();
+    ++loadSequence.current;setActor(null);setProfile(null);setBusy(true);
+    setData({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
+   }
+   if(activeUid.current===user.uid&&routeCache.current.has(routeKey(tab,date,examId)))return;
+   activeUid.current=user.uid;
    try{
     const p=await request("dashboard.data",{params:"section="+encodeURIComponent(tab)+"&date="+encodeURIComponent(date)+"&examId="+encodeURIComponent(examId)});
-    if(!alive)return;
+    if(!alive||firebaseAuth().currentUser?.uid!==user.uid)return;
     if(p.profile)setProfile(p.profile);
     if(p.data){
      setData(old=>({...old,...p.data}));
      if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setSubtitle(p.data.settings.subtitle||"")}
     }
-    routeCache.current.set(tab,{profile:p.profile,data:p.data});
-    loadedRoutes.current.add(tab);
+    routeCache.current.set(routeKey(tab,date,examId),{profile:p.profile,data:p.data});
+    loadedRoutes.current.add(routeKey(tab,date,examId));
     setActor(p.actor);setBusy(false);
    }catch(e){if(alive){setError(e.message);setBusy(false)}}
   })}catch(e){setError(e.message);setBusy(false)}
@@ -121,7 +142,7 @@ export default function DashboardPortal() {
   if(!(roles[actor.role]||[]).some(([key])=>key===tab)){
    router.replace("/dashboard/overview");return;
   }
-  refresh(actor,date,examId,tab).catch(e=>setError(e.message));
+  refresh(actor,date,examId,tab).catch(e=>{if(e?.name!=="AbortError")setError(e.message)});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[actor?.uid,tab]);
  async function mutate(action,params={}){
@@ -130,20 +151,35 @@ export default function DashboardPortal() {
    const r=await request("",{body:{action,...params}});
    setSuccess("পরিবর্তন সংরক্ষিত হয়েছে");
    if(action==="attendance.set"){
-    const current=routeCache.current.get("attendance");
+    const key=routeKey("attendance",params.date,examId);
+    const current=routeCache.current.get(key);
     const record={studentId:params.studentId,date:params.date,status:params.status};
     const items=[...(current?.data?.attendance||data.attendance||[]).filter(v=>v.studentId!==params.studentId),record];
     setData(old=>({...old,attendance:items}));
-    if(current)routeCache.current.set("attendance",{...current,data:{...current.data,attendance:items}});
+    if(current)routeCache.current.set(key,{...current,data:{...current.data,attendance:items}});
     routeCache.current.delete("overview");
     return r;
    }
    if(action==="marks.set"){
-    const current=routeCache.current.get("marks");
+    const key=routeKey("marks",date,params.examId);
+    const current=routeCache.current.get(key);
     const record={studentId:params.studentId,subjectId:params.subjectId,examId:params.examId,scores:params.scores};
     const items=[...(current?.data?.marks||data.marks||[]).filter(v=>!(v.studentId===params.studentId&&v.subjectId===params.subjectId)),record];
     setData(old=>({...old,marks:items}));
-    if(current)routeCache.current.set("marks",{...current,data:{...current.data,marks:items}});
+    if(current)routeCache.current.set(key,{...current,data:{...current.data,marks:items}});
+    return r;
+   }
+   if(action==="pin.change")return r;
+   if(action==="routine.save"||action==="routine.delete"||action==="notice.save"||action==="notice.delete"){
+    const section=action.startsWith("routine.")?"routines":"notices";
+    const current=routeCache.current.get(section);
+    const previous=current?.data?.[section]||data[section]||[];
+    const item=section==="routines"?r.routine:r.notice;
+    const updated=action.endsWith(".delete")
+     ?previous.filter(row=>row.id!==(r.id||params.id))
+     :[item,...previous.filter(row=>row.id!==item.id)];
+    setData(old=>({...old,[section]:updated}));
+    routeCache.current.set(section,{...current,data:{...current?.data,[section]:updated}});
     return r;
    }
    const affected=action.startsWith("student.")?["students","attendance","marks","finance","overview","admissions"]
@@ -156,12 +192,15 @@ export default function DashboardPortal() {
     :action.startsWith("settings.")?["settings"]
     :action.startsWith("exam.")?["marks"]
     :[];
-   for(const section of affected)if(section!==tab)routeCache.current.delete(section);
+   for(const key of [...routeCache.current.keys()])
+    if(affected.some(section=>key===section||key.startsWith(section+":"))&&key!==routeKey(tab,date,examId))
+     routeCache.current.delete(key);
    await refresh(actor,date,examId,tab,true);
    return r;
   }catch(e){setError(e.message);return null}finally{setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
+ const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
  const filtered=useMemo(()=>students.filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())),[students,query]);
  const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
  const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
@@ -181,8 +220,9 @@ export default function DashboardPortal() {
    const att=await request("attendance",{params:"date="+encodeURIComponent(v)});
    if(seq!==dateSequence.current)return;
    setData(o=>({...o,attendance:att.items}));
-   const current=routeCache.current.get("attendance");
-   if(current)routeCache.current.set("attendance",{...current,data:{...current.data,attendance:att.items}});
+   const key=routeKey("attendance",v,examId);
+   const current=routeCache.current.get(key);
+   routeCache.current.set(key,{...current,data:{...current?.data,students,attendance:att.items}});
   }catch(e){if(seq===dateSequence.current)setError(e.message)}
   finally{if(seq===dateSequence.current)setChangingDate(false)}
  }
@@ -195,8 +235,9 @@ export default function DashboardPortal() {
    const m=v?await request("marks",{params:"examId="+encodeURIComponent(v)}):{items:[]};
    if(seq!==examSequence.current)return;
    setData(o=>({...o,marks:m.items}));
-   const current=routeCache.current.get("marks");
-   if(current)routeCache.current.set("marks",{...current,data:{...current.data,marks:m.items}});
+   const key=routeKey("marks",date,v);
+   const current=routeCache.current.get(key);
+   routeCache.current.set(key,{...current,data:{...current?.data,students,exams,marks:m.items}});
   }catch(e){if(seq===examSequence.current)setError(e.message)}
   finally{if(seq===examSequence.current)setChangingExam(false)}
  }
@@ -227,7 +268,7 @@ export default function DashboardPortal() {
  if(busy)return <div className="hmrs-auth-loading" aria-busy="true" aria-label="অ্যাকাউন্ট যাচাই চলছে"><div className="hmrs-auth-icon"><School size={24}/></div><div className="hmrs-auth-lines"><span/><span/></div><div className="hmrs-auth-layout"><span/><span/><span/><span/></div></div>;
  if(!actor)return <main className="container py-16"><div className="panel p-8"><h1 className="section-title">ড্যাশবোর্ডে প্রবেশ করা যায়নি</h1><p className="alert error">{error||"অ্যাকাউন্ট পাওয়া যায়নি"}</p><Link className="btn primary mt-4" href="/login/student">পুনরায় লগইন</Link></div></main>;
  const options=(arr,place="নির্বাচন করুন")=>[["",place],...arr];
- const showPlaceholder=tab!=="security" && !routeCache.current.has(tab);
+ const showPlaceholder=tab!=="security" && tab!=="profile" && !routeCache.current.has(routeKey(tab,date,examId));
  return <>
   <DashboardShell
    actor={actor}
@@ -236,7 +277,7 @@ export default function DashboardPortal() {
    active={tab}
    loading={loadingSection||changingDate||changingExam}
    onNavigate={()=>{setError("");setSuccess("")}}
-   onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>setError(e.message))}
+   onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>{if(e?.name!=="AbortError")setError(e.message)})}
    onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
   >
    {actor&&!actor.pinEnabled&&<div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
@@ -245,6 +286,7 @@ export default function DashboardPortal() {
    <section className="hmrs-main-content dashboard-section-content">
     {showPlaceholder?<DashboardSkeleton kind={tab}/>:<>
      {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
+     {tab==="profile"&&<ChangePinForm actor={actor} mutate={mutate} working={working}/>}
      {actor.role==="student"?<>
        {tab==="overview"&&<DashboardStudentHome profile={profile}/>}
        {tab==="records"&&<><h2 className="section-title">হাজিরা ও প্রাতিষ্ঠানিক পাওনা</h2><div className="panel stat"><div className="muted">বর্তমান বকেয়া</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">কোনো অসঙ্গতি থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।</p></div>
@@ -294,14 +336,14 @@ export default function DashboardPortal() {
         <div className="dashboard-toolbar"><h2 className="section-title">হাজিরার তালিকা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
         <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map(s=>{
-         const record=data.attendance?.find(a=>a.studentId===s.id);
+         const record=attendanceByStudent.get(s.id);
          return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
           <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
           <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
           <td>{record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</td>
          </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=>{
-          const record=data.attendance?.find(a=>a.studentId===s.id);
+          const record=attendanceByStudent.get(s.id);
           return <div key={s.id} className="panel dashboard-mobile-record">
            <div className="flex justify-between items-center gap-2"><div><b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}</p></div>
             <span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></div>
@@ -342,13 +384,8 @@ export default function DashboardPortal() {
         </div>
         <div className="panel p-5"><h3 className="font-bold mb-3">শিক্ষার্থীর বকেয়া হালনাগাদ</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
         <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
-       {tab==="notices"&&<><h2 className="section-title">নতুন নোটিশ</h2><div className="panel p-5 grid gap-3">
-        <Field label="নোটিশ শিরোনাম"><Input value={notice.title} onChange={v=>setNotice(o=>({...o,title:v}))}/></Field>
-        <Field label="নোটিশের বিবরণ"><textarea value={notice.message} onChange={e=>setNotice(o=>({...o,message:e.target.value}))}/></Field>
-        <label className="flex gap-2 items-center text-xs"><input type="checkbox" checked={notice.published} onChange={e=>setNotice(o=>({...o,published:e.target.checked}))}/> প্রকাশ করুন</label>
-        <button disabled={working} className="btn primary justify-self-start" onClick={async()=>{const r=await mutate("notice.save",notice);if(r)setNotice({title:"",message:"",published:true})}}><Send size={15}/> নোটিশ সংরক্ষণ</button>
-       </div><div className="grid gap-2">{(data.notices||[]).map(n=><div className="panel p-4 flex items-center justify-between gap-3" key={n.id}><div><b>{n.title}</b><div className="muted text-xs">{n.message}</div></div><button className="btn sm danger" onClick={()=>{if(confirm("নোটিশটি মুছে ফেলবেন?"))mutate("notice.delete",{id:n.id})}}><X size={14}/> মুছুন</button></div>)}</div></>}
-       {tab==="routines"&&actor.role==="principal"&&<RoutineManager items={data.routines||[]} working={working} mutate={mutate}/>}
+       {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
+        {tab==="routines"&&actor.role==="principal"&&<RoutineManager items={data.routines||[]} working={working} mutate={mutate}/>}
        {tab==="accounts"&&<><h2 className="section-title">শিক্ষক অ্যাকাউন্ট তৈরি</h2><div className="panel p-5"><div className="form-grid">
         <Field label="নাম"><Input value={login.name} onChange={v=>setLogin(o=>({...o,name:v}))}/></Field>
         <Field label="মোবাইল নম্বর"><Input type="tel" value={login.phone} onChange={v=>setLogin(o=>({...o,phone:v}))} placeholder="01712345678 / +8801712345678"/></Field>

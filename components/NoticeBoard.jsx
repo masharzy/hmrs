@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronRight, CalendarDays, X } from "lucide-react";
+import { Bell, ChevronRight, CalendarDays, X, FileDown, Image as ImageIcon } from "lucide-react";
 import { loadPublicData } from "../lib/public-client";
 
 export default function NoticeBoard({compact=false}){
@@ -45,6 +45,8 @@ export default function NoticeBoard({compact=false}){
     <div className="notice-dialog-content">
      {selected.createdAt&&<p className="notice-dialog-date"><CalendarDays size={16}/> {new Date(selected.createdAt).toLocaleDateString("bn-BD",{day:"numeric",month:"long",year:"numeric"})}</p>}
      <div className="notice-dialog-message">{selected.message}</div>
+     {selected.imageUrl&&<div className="hmrs-notice-attachment"><div className="hmrs-notice-attachment-label"><ImageIcon size={16}/> সংযুক্ত ছবি</div><a href={selected.imageUrl} target="_blank" rel="noopener noreferrer" aria-label="নোটিশের সম্পূর্ণ ছবি দেখুন"><img src={selected.imageUrl} alt={selected.title+" — সংযুক্ত ছবি"} loading="lazy"/></a></div>}
+     {selected.pdfUrl&&<a className="hmrs-notice-pdf-link" href={selected.pdfUrl} target="_blank" rel="noopener noreferrer" type="application/pdf"><FileDown size={19}/><span><strong>সংযুক্ত PDF দেখুন</strong><small>{selected.pdfName||"নোটিশের PDF ফাইল"} · নতুন ট্যাবে খুলবে</small></span><ChevronRight size={17}/></a>}
     </div>
     <footer className="notice-dialog-footer"><button type="button" className="btn primary" onClick={()=>setSelected(null)}>বন্ধ করুন</button></footer>
    </section>

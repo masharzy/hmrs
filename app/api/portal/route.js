@@ -9,7 +9,7 @@ import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
-import { normalizePhone, normalizePin, makePinCredential } from "../../../lib/phone-pin";
+import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
 import { registerPhoneCredential } from "../../../lib/phone-accounts";
 
 export const dynamic = "force-dynamic";
@@ -76,7 +76,6 @@ export async function GET(req) {
       }
       return json({ actor, student, dues, attendance: asDocs(attendance), results });
     }
-    needRole(actor, allowedStaff);
     if (resource === "dashboard.data") {
       const result = await getDashboardData(actor,{
         section:u.searchParams.get("section")||"overview",
@@ -85,6 +84,7 @@ export async function GET(req) {
       });
       return json({actor,...result});
     }
+    needRole(actor, allowedStaff);
     if (resource === "overview.summary") {
       needRole(actor, allowedStaff);
       return json({summary:await getDashboardSummary(actor,store)});
@@ -145,6 +145,39 @@ export async function POST(req) {
     const body = await req.json();
     const action = cleanText(body.action, 60);
     const store = db();
+    if (action === "pin.change") {
+      const oldPin=normalizePin(body.oldPin),newPin=normalizePin(body.newPin);
+      if(!oldPin||!newPin)return fail("বর্তমান এবং নতুন PIN পাঁচ সংখ্যার হতে হবে");
+      if(oldPin===newPin)return fail("নতুন PIN আগের PIN থেকে আলাদা হতে হবে");
+      const credentialRef=store.collection("loginCredentials").doc(actor.uid);
+      const securityRef=store.collection("loginSecurity").doc(actor.uid);
+      const credential=makePinCredential(newPin);
+      const now=Date.now();
+      // Limit PIN guessing through an authenticated (possibly stolen) session.
+      // Failed attempts are recorded within the transaction, then returned without throwing.
+      const result=await store.runTransaction(async tx=>{
+        const [oldSnap,securitySnap]=await Promise.all([tx.get(credentialRef),tx.get(securityRef)]);
+        const security=securitySnap.data()||{};
+        if(security.locked)return {ok:false,status:423,error:"অ্যাকাউন্ট লক রয়েছে; প্রধান শিক্ষকের সঙ্গে যোগাযোগ করুন"};
+        if(Number(security.pinChangeBlockedUntil||0)>now)
+          return {ok:false,status:429,error:"ভুল PIN-এর কারণে কিছুক্ষণ পর আবার চেষ্টা করুন"};
+        if(!oldSnap.exists||!verifyPin(oldPin,oldSnap.data())){
+          const failures=Number(security.pinChangeFailures||0)+1;
+          tx.set(securityRef,{
+            pinChangeFailures:failures>=5?0:failures,
+            pinChangeBlockedUntil:failures>=5?now+15*60*1000:0
+          },{merge:true});
+          return {ok:false,status:403,error:"বর্তমান PIN সঠিক নয়"};
+        }
+        tx.update(credentialRef,{...credential,updatedAt:iso()});
+        tx.set(securityRef,{pinChangeFailures:0,pinChangeBlockedUntil:0},{merge:true});
+        return {ok:true};
+      });
+      if(!result.ok)return fail(result.error,result.status);
+      await adminAuth().revokeRefreshTokens(actor.uid);
+      await audit(actor,action,actor.uid);
+      return json({ok:true,relogin:true});
+    }
     if (action === "application.update") {
       needRole(actor, ["principal"]);
       const id = cleanText(body.id, 150), ref = store.collection("admissions").doc(id);
@@ -297,7 +330,7 @@ export async function POST(req) {
       const now=iso();
       await ref.set({...routine,createdAt:previous?.data()?.createdAt||now,updatedAt:now,updatedBy:actor.uid},{merge:false});
       await audit(actor,action,ref.id);
-      return json({ok:true,id:ref.id});
+      return json({ok:true,id:ref.id,routine:{id:ref.id,...routine,createdAt:previous?.data()?.createdAt||now,updatedAt:now,updatedBy:actor.uid}});
     }
     if (action === "routine.delete") {
       needRole(actor, ["principal"]);
@@ -307,21 +340,30 @@ export async function POST(req) {
       if(!(await ref.get()).exists)return fail("রুটিনটি পাওয়া যায়নি",404);
       await ref.delete();
       await audit(actor,action,id);
-      return json({ok:true});
+      return json({ok:true,id});
     }
     if (action === "notice.save") {
       needRole(actor, ["principal"]);
       const title = cleanText(body.title, 170), message = cleanText(body.message, 3000);
       if (!title || !message) return fail("শিরোনাম ও বিবরণ দিন");
+      const imageUrl=cleanText(body.imageUrl,1200),pdfUrl=cleanText(body.pdfUrl,1200);
+      const pdfName=cleanText(body.pdfName,180);
+      if(imageUrl&&!/^https:\/\/(?:i\.ibb\.co|image\.ibb\.co)\/[^\s]+$/i.test(imageUrl))
+        return fail("নোটিশের ছবির URL অনুমোদিত নয়");
+      const publicBase=(process.env.CLOUDFLARE_R2_PUBLIC_URL||"").replace(/\/$/,"");
+      if(pdfUrl&&(!publicBase.startsWith("https://")||!pdfUrl.startsWith(publicBase+"/notices/")||!/\.pdf$/i.test(pdfUrl)))
+        return fail("নোটিশের PDF URL অনুমোদিত নয়");
       const ref = body.id ? store.collection("notices").doc(String(body.id)) : store.collection("notices").doc();
-      await ref.set({ title, message, published: !!body.published, createdAt: iso(), updatedBy: actor.uid }, { merge: true });
-      await audit(actor, action, ref.id); return json({ ok: true });
+      const now=iso(),record={ title, message, imageUrl, pdfUrl, pdfName, published: !!body.published, updatedAt:now, updatedBy: actor.uid };
+      if(!body.id)record.createdAt=now;
+      await ref.set(record, { merge: true });
+      await audit(actor, action, ref.id); return json({ ok: true,notice:{id:ref.id,...record} });
     }
     if (action === "notice.delete") {
       needRole(actor, ["principal"]);
       if (!body.id) return fail("নোটিশ নির্বাচন করুন");
       await store.collection("notices").doc(String(body.id)).delete();
-      await audit(actor, action, body.id); return json({ ok: true });
+      await audit(actor, action, body.id); return json({ ok: true,id:String(body.id) });
     }
     if (action === "settings.update") {
       needRole(actor, ["principal"]);
