@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, RefreshCw } from "lucide-react";
-import { getStudentSubjects } from "../lib/academic";
+import { getStudentSubjects,evaluateTranscript } from "../lib/academic";
 import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { toAsciiDigits } from "../lib/bangla-numbers";
-import {enGrade,enStream,enNumber,enPaper,enPart,enSubject} from "../lib/result-english.js";
+import {enGrade,enStream,enNumber,enPart} from "../lib/result-english.js";
 import {pendingMarkBatch,clearSavedMarkEdits} from "../lib/marks-autosave.js";
 
 const grades=[6,7,8,9,10],groupOptions=[["","All groups"],["science","Science"],["business","Business Studies"],["humanities","Humanities"]];
@@ -18,7 +18,7 @@ function displayGroups(specs){
  for(const subjects of specs.values())for(const subject of subjects){
   for(const part of subject.parts){
    const paper=part.paper||(part.key==="first"?"১ম পত্র":part.key==="second"?"২য় পত্র":"");
-   const name=paper?enPaper(subject.id,paper):enSubject(subject.id,subject.name);
+   const name=paper?(paper.startsWith(subject.name)?paper:subject.name+" "+paper):subject.name;
    const id=subject.id+"::"+(paper||"all");
    if(!map.has(id))map.set(id,{id,subjectId:subject.id,name,parts:new Map()});
    const shortLabel=enPart(part.label,part.key);
@@ -41,9 +41,20 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const groups=useMemo(()=>displayGroups(subjectsByStudent),[subjectsByStudent]);
  const displayed=subjectId?groups.filter(s=>s.id===subjectId):groups;
  const byKey=useMemo(()=>new Map(sheet.map(m=>[keyFor(m.studentId,m.subjectId),m.scores||{}])),[sheet]);
- useEffect(()=>{setSubjectId("");setEdits({});setError("");setSaved("")},[grade,group,examId]);
+ const studentGpas=useMemo(()=>new Map(rows.map(student=>{
+  const markMap={};
+  for(const mark of sheet.filter(m=>m.studentId===student.id))markMap[mark.subjectId]={...(mark.scores||{})};
+  for(const [key,scores] of Object.entries(edits)){
+   const i=key.indexOf("|");if(key.slice(0,i)!==student.id)continue;
+   const subjectId=key.slice(i+1);
+   markMap[subjectId]={...(markMap[subjectId]||{}),...scores};
+  }
+  try{return [student.id,evaluateTranscript(student,markMap)]}
+  catch{return [student.id,null]}
+ })),[rows,sheet,edits]);
+ useEffect(()=>{setSubjectId("");setEdits({});setError("");setSaved("")},[grade,group]);
  useEffect(()=>{
-  let live=true;setSheet([]);setLoading(!!examId);setError("");setSaved("");
+  let live=true;setLoading(!!examId);setError("");setSaved("");
   if(!examId){setLoading(false);return;}
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
    .then(result=>{if(live)setSheet(result.items||[])})
@@ -156,6 +167,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-roll">Roll</th>
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-name">Student</th>
       {displayed.map(g=><th colSpan={g.parts.length} key={g.id}>{g.name}</th>)}
+      <th rowSpan={2} className="hmrs-sheet-gpa">GPA</th>
      </tr><tr>{displayed.flatMap(g=>g.parts.map(part=><th key={g.id+":"+part.key}>{part.label}</th>))}</tr></thead>
      <tbody>{rows.map((student,index)=>{
        const own=subjectsByStudent.get(student.id)||[];
@@ -174,7 +186,11 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
            onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked}
            maxLength={6} title={"Maximum "+enNumber(valid.max)} placeholder="—"/>
          </td>;
-        }))}</tr>;
+        }))}
+        <td className="hmrs-sheet-gpa" title={"GPA (without 4th): "+Number(studentGpas.get(student.id)?.withoutFourthGpa??0).toFixed(2)}>
+         <strong>{Number(studentGpas.get(student.id)?.gpa??0).toFixed(2)}</strong>
+         {!studentGpas.get(student.id)?.complete&&<span className="hmrs-gpa-provisional" title="Some marks are missing; counted as zero">!</span>}
+        </td></tr>;
      })}</tbody></table>
    </div>
    <div className="hmrs-sheet-bottom"><span>{enNumber(displayed.length)} subject/paper groups · All valid changes auto-save</span></div>
