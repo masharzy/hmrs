@@ -358,14 +358,24 @@ export default function DashboardPortal() {
        {tab==="records"&&<><h2 className="section-title">Attendance & Outstanding Dues</h2><div className="panel stat"><div className="muted">Outstanding Balance</div><strong>BDT  {toAsciiDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">Contact your class teacher if you notice any incorrect dues.</p></div>
         <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toAsciiDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">No attendance records found.</p>}</div></>}
        {tab==="results"&&<>
-        <h2 className="section-title">My Results & Marksheets</h2>
-        {!profile?.results?.length?<div className="panel empty">No exam results have been published for your account yet.</div>:
-         profile.results.map(({exam:ex,result,metrics,marks})=>
-          <StudentResultCard key={ex.id} exam={ex} result={result} metrics={metrics} marks={marks}
-           onPrint={()=>printMarksheet(ex.id)}/>)}
-        {profile?.student&&(profile.results||[]).map(({exam:ex,result,metrics,marks})=>
-          <Marksheet key={ex.id} printId={"mark-print-"+ex.id} student={profile.student}
-           exam={ex} report={result} metrics={metrics} marks={marks}/>)}
+        <h2 className="section-title">My Exam Results</h2>
+        {!profile?.results?.length?<div className="panel empty">No published results for your class yet.</div>:
+         !selectedPublishedExam?<div className="hmrs-student-exam-list">
+          {profile.results.map(({exam:ex})=><button key={ex.id} type="button" className="hmrs-student-exam-option panel"
+           onClick={()=>setSelectedPublishedExam(ex.id)}>
+            <GraduationCap size={19}/><span><b>{ex.name}</b><small>{ex.scopeGrade?enGrade(ex.scopeGrade):enGrade(profile.student?.grade)} · View Result</small></span><ChevronRight size={19}/>
+           </button>)}
+         </div>:<>
+          <button type="button" className="btn sm hmrs-exam-back" onClick={()=>setSelectedPublishedExam("")}>
+           <ChevronLeft size={15}/> All Exams</button>
+          {profile.results.filter(x=>x.exam.id===selectedPublishedExam).map(({exam:ex,result,metrics,marks})=>
+           <React.Fragment key={ex.id}>
+            <StudentResultCard exam={ex} result={result} metrics={metrics} marks={marks}
+             onPrint={()=>printMarksheet(ex.id)}/>
+            <Marksheet printId={"mark-print-"+ex.id} student={profile.student}
+             exam={ex} report={result} metrics={metrics} marks={marks}/>
+           </React.Fragment>)}
+         </>}
        </>}
       </>:
       <>
@@ -474,11 +484,18 @@ export default function DashboardPortal() {
         })}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
+       {tab==="exams"&&(actor.role==="principal"||actor.role==="class_teacher")&&
+        <ExamManager actor={actor} exams={exams} working={working} onCreate={()=>setCreatingExam(true)}
+         onEdit={item=>setEditingExam(item)}
+         onSelect={id=>{changeExam(id)}}
+         onDelete={async item=>{
+          if(!window.confirm("Delete '"+item.name+"' from the site? Existing marks will be archived, not erased."))return;
+          const result=await mutate("exam.delete",{examId:item.id,confirmed:true});
+          if(result&&examId===item.id)await changeExam("");
+         }}/>}
        {tab==="marks"&&<>
         <div className="hmrs-results-page-head">
-         <div><h2>Exams & Marks</h2><p>Create exams, enter marks and publish student results.</p></div>
-         {(actor.role==="principal"||actor.role==="class_teacher")&&
-          <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> Create Exam</button>}
+         <div><h2>Marks</h2><p>Select an exam, class and group to enter marks or review results.</p></div>
         </div>
         <div className="hmrs-marks-mode" role="group" aria-label="Marks entry mode">
          <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>Class Marks (Excel)</button>
@@ -486,11 +503,7 @@ export default function DashboardPortal() {
         </div>
         {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
          students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}
-           onDelete={async id=>{
-            const result=await mutate("exam.delete",{examId:id,confirmed:true});
-            if(result){await changeExam("");return true}
-            return false;
-           }}/> }
+           onDelete={undefined}/> }
         {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam}
           students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
          <>
@@ -543,7 +556,7 @@ export default function DashboardPortal() {
         <div className="panel p-5"><h3 className="font-bold mb-3">Update Student Dues</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
         <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Class</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toAsciiDigits(l.createdAt?.slice(0,10))}</td><td>{toAsciiDigits(l.grade)}</td><td>{l.type==="income"?"Income":"Expense"}</td><td>{l.description}</td><td>BDT  {toAsciiDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
-        {tab==="routines"&&actor.role==="principal"&&<RoutineManager items={data.routines||[]} working={working} mutate={mutate}/>}
+        {false&&null}
        {tab==="accounts"&&actor.role==="principal"&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}
        {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2><div className="panel p-6 grid gap-4">
         <div className="alert">Upload a school photo to ImgBB and it will appear on the home page. Use only your school's own images.</div>
@@ -558,14 +571,13 @@ export default function DashboardPortal() {
     </>}
    </section>
   </DashboardShell>
-  {creatingExam&&<ExamCreateModal actor={actor} working={working}
-    onClose={()=>setCreatingExam(false)}
+  {(creatingExam||editingExam)&&<ExamCreateModal key={editingExam?.id||"new"} actor={actor}
+    exam={editingExam} working={working} onClose={()=>{setCreatingExam(false);setEditingExam(null)}}
     onCreate={async values=>{
-     const result=await mutate("exam.create",values);
+     const update=!!values.examId;
+     const result=await mutate(update?"exam.update":"exam.create",values);
      if(!result)return false;
-     await changeExam(result.examId);
-     setIndividualGrade(values.scopeGrade==="all"?"":String(values.scopeGrade));
-     setIndividualGroup("");
+     setEditingExam(null);setCreatingExam(false);
      return true;
     }}/>}
   {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor
