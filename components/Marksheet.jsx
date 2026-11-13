@@ -1,6 +1,6 @@
 "use client";
 import {evaluateTranscript} from "../lib/academic";
-import {reportPaperRows} from "../lib/report-paper-rows.js";
+import {reportPaperRows,paperScoreCells} from "../lib/report-paper-rows.js";
 import {enNumber,enGrade,enStream,enPaper,enPart} from "../lib/result-english.js";
 const n=v=>enNumber(v??0);
 const gp=v=>Number(v??0).toFixed(2);
@@ -23,16 +23,17 @@ export default function Marksheet({student,marks,exam,printId="mark-print",repor
    <div><b>Mother's Name</b><span>{student.motherName||"—"}</span></div>
   </div>
   <table className="hmrs-mark-table">
-   <thead><tr><th>Subject / Paper</th><th>CQ / MCQ / Practical</th><th>Full</th>
-    <th>Obtained</th><th>Highest</th><th>Grade</th><th>GP</th></tr></thead>
+   <thead><tr><th>Subject / Paper</th><th>CQ / Written</th><th>MCQ</th><th>Practical</th>
+    <th>Obtained / Full</th><th>Highest</th><th>Grade</th><th>GP</th></tr></thead>
    <tbody>{papers.map(row=><tr key={row.id}>
     <td className="hmrs-mark-subject"><strong>{enPaper(row.subjectId,row.paperName)}</strong>
      {row.optional&&<small>4th Subject</small>}{row.legacy&&<small>Legacy combined marks — no paper breakdown</small>}
      {!row.complete&&<small>Missing = 0</small>}</td>
-    <td className="hmrs-mark-parts"><div className="hmrs-mark-paper">
-     {row.parts.map(part=><span key={part.key}>{enPart(part.label,part.key)}: {n(part.received)}/{n(part.max)}</span>)}
-    </div></td>
-    <td>{n(row.possible)}</td><td>{n(row.obtained)}</td>
+    {["written","mcq","practical"].map(key=>{
+      const part=paperScoreCells(row)[key];
+      return <td key={key} className="hmrs-result-mark-cell">{part?n(part.received)+"/"+n(part.max):"—"}</td>;
+     })}
+    <td>{n(row.obtained)} / {n(row.possible)}</td>
     <td>{row.highest===null||row.highest===undefined?"—":n(row.highest)}</td>
     <td>{row.subjectGrade||"—"}</td><td>{row.subjectPoint===null||row.subjectPoint===undefined?"—":n(row.subjectPoint)}</td>
    </tr>)}</tbody>
