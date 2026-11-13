@@ -112,7 +112,7 @@ export async function GET(req) {
     }
     if (resource === "users") {
       needRole(actor, ["principal"]);
-      const snap = await store.collection("users").limit(200).get();
+      const snap = await store.collection("users").limit(1000).get();
       return json({ items: asDocs(snap) });
     }
     if (resource === "attendance") {
@@ -407,6 +407,90 @@ export async function POST(req) {
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });
+    }
+    if (action === "account.update") {
+      needRole(actor,["principal"]);
+      const uid=cleanText(body.uid,128),values=body.values||{};
+      if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
+      const userRef=store.collection("users").doc(uid),current=await userRef.get();
+      if(!current.exists)return fail("অ্যাকাউন্ট পাওয়া যায়নি",404);
+      const before=current.data(),name=cleanText(values.name,120);
+      const role=values.role,active=values.active===true;
+      if(!name)return fail("ব্যবহারকারীর নাম লিখুন");
+      if(before.role==="student" && role!=="student")return fail("শিক্ষার্থীর ভূমিকা পরিবর্তন করা যাবে না");
+      if(before.role!=="student" && !["teacher","class_teacher","principal"].includes(role))return fail("ভূমিকা সঠিক নয়");
+      if(uid===actor.uid && (role!=="principal"||!active))return fail("নিজের প্রধান শিক্ষক অধিকার বা অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না",403);
+      const oldPhone=normalizePhone(before.phone||"");
+      const suppliedPhone=cleanText(values.phone,30);
+      const phone=suppliedPhone?normalizePhone(suppliedPhone):oldPhone;
+      if(suppliedPhone&&!phone)return fail("সঠিক লগইন মোবাইল নম্বর দিন");
+      if(oldPhone&&!phone)return fail("লগইন নম্বর ফাঁকা করা যাবে না");
+      const pinText=cleanText(values.pin,10),pin=pinText?normalizePin(pinText):null;
+      if(pinText&&!pin)return fail("PIN অবশ্যই পাঁচ সংখ্যার হতে হবে");
+      if(pin&&!phone)return fail("PIN সেট করতে আগে লগইন মোবাইল দিন");
+      const assignedClasses=role==="class_teacher"&&Array.isArray(values.assignedClasses)
+        ?[...new Set(values.assignedClasses.map(v=>toAsciiDigits(cleanText(v,20)).split("-")[0]).filter(v=>/^(6|7|8|9|10)$/.test(v)))].slice(0,5):[];
+      if(role==="class_teacher"&&!assignedClasses.length)return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি দিন");
+      const phoneChanged=phone!==oldPhone;
+      const credential=pin?makePinCredential(pin):null,now=iso();
+      const credentialRef=store.collection("loginCredentials").doc(uid);
+      const studentRef=before.role==="student"&&before.studentId?store.collection("students").doc(before.studentId):null;
+      const oldMapping=oldPhone?store.collection("loginPhones").doc(oldPhone):null;
+      const newMapping=phone?store.collection("loginPhones").doc(phone):null;
+      await store.runTransaction(async tx=>{
+        const [latest,oldMap,newMap,existingCredential,studentSnap]=await Promise.all([
+          tx.get(userRef),oldMapping?tx.get(oldMapping):null,
+          newMapping&&phoneChanged?tx.get(newMapping):null,
+          tx.get(credentialRef),studentRef?tx.get(studentRef):null
+        ]);
+        if(!latest.exists)return;
+        if(latest.data().phone!==before.phone||latest.data().role!==before.role)
+          throw Object.assign(Error("অ্যাকাউন্টের তথ্য পরিবর্তিত হয়েছে, আবার খুলুন"),{status:409});
+        if(newMap?.exists&&newMap.data()?.uid!==uid)
+          throw Object.assign(Error("এই লগইন নম্বর অন্য অ্যাকাউন্টে ব্যবহার হচ্ছে"),{status:409});
+        if(studentRef&&(!studentSnap?.exists||studentSnap.data()?.deleting))
+          throw Object.assign(Error("শিক্ষার্থীর অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
+        tx.set(userRef,{name,phone:phone||"",role,active,
+          assignedClasses,pinEnabled:!!(existingCredential.exists||pin),updatedAt:now,updatedBy:actor.uid},{merge:true});
+        if(phoneChanged&&newMapping)tx.set(newMapping,{uid,createdAt:now});
+        if(phoneChanged&&oldMap?.exists&&oldMap.data()?.uid===uid)tx.delete(oldMapping);
+        if(credential)tx.set(credentialRef,{...credential,phone,updatedAt:now},{merge:true});
+        else if(phoneChanged&&existingCredential.exists)tx.update(credentialRef,{phone});
+        if(studentRef)tx.update(studentRef,{name,phone:phone||"",updatedAt:now,updatedBy:actor.uid});
+      });
+      if(pin||!active)await adminAuth().revokeRefreshTokens(uid);
+      await audit(actor,action,uid);
+      return json({ok:true});
+    }
+    if (action === "account.delete") {
+      needRole(actor,["principal"]);
+      const uid=cleanText(body.uid,128);
+      if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
+      if(uid===actor.uid)return fail("নিজের অ্যাকাউন্ট ডিলিট করা যাবে না",403);
+      if(body.confirmed!==true)return fail("ডিলিট করার আগে নিশ্চিত করুন");
+      const userRef=store.collection("users").doc(uid),snap=await userRef.get();
+      if(!snap.exists)return fail("অ্যাকাউন্ট পাওয়া যায়নি",404);
+      const user=snap.data();
+      if(user.role==="student"){
+        if(!user.studentId)return fail("শিক্ষার্থীর রেকর্ড খুঁজে পাওয়া যাচ্ছে না",409);
+        return removeStudentRecords(actor,user.studentId,store,action);
+      }
+      await userRef.update({active:false,deleting:true,updatedAt:iso()});
+      try{await adminAuth().deleteUser(uid)}
+      catch(e){if(e.code!=="auth/user-not-found")throw e}
+      const related=await store.collection("deviceRecognitions").where("uid","==",uid).get();
+      const refs=[userRef,store.collection("loginCredentials").doc(uid),
+        store.collection("loginSecurity").doc(uid),...related.docs.map(d=>d.ref)];
+      const phone=normalizePhone(user.phone||"");
+      if(phone){
+        const phoneRef=store.collection("loginPhones").doc(phone);
+        const mapping=await phoneRef.get();
+        if(mapping.exists&&mapping.data()?.uid===uid)refs.push(phoneRef);
+      }
+      const batch=store.batch();
+      for(const ref of refs)batch.delete(ref);
+      await batch.commit();
+      await audit(actor,action,uid);return json({ok:true});
     }
     if (action === "application.approve") {
       needRole(actor, ["principal", "class_teacher"]);
