@@ -341,3 +341,70 @@
  .hmrs-teacher-grade-pickers{grid-template-columns:1fr;gap:0}
  .hmrs-teacher-picker-subjects .hmrs-teacher-picker-grid{max-height:180px;grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Unified exam workflow: top-level creation, grade-scoped selections and paper rows */
+.hmrs-results-page-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+ padding:15px 16px;margin-bottom:12px;background:#fff;border:1px solid #dbe5e7;border-radius:9px}
+.hmrs-results-page-head h2{font-size:18px;color:#1e3d49;font-weight:850;letter-spacing:-.2px;margin:0 0 3px}
+.hmrs-results-page-head p{font-size:11px;color:#71838b;margin:0;line-height:1.5}
+.hmrs-results-page-head>.btn{min-height:37px;flex:none}
+.hmrs-exam-modal{width:min(565px,calc(100vw - 24px))}
+.hmrs-exam-modal .record-modal-head h2{display:flex;align-items:center;gap:8px;font-size:16px}
+.hmrs-exam-modal .record-modal-body{padding:20px}
+.hmrs-exam-modal .record-modal-body>.field{font-size:12px;font-weight:700}
+.hmrs-exam-modal .record-modal-body>.field input{margin-top:5px;min-height:42px;font-size:13px}
+.hmrs-exam-scope{margin-top:17px}
+.hmrs-exam-scope h3{font-size:12px;font-weight:800;margin:0 0 3px}
+.hmrs-exam-scope>p{color:#6c818c;font-size:11px;margin:0 0 11px}
+.hmrs-exam-scope-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.hmrs-exam-scope-option{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:40px;
+ padding:9px 10px;border:1px solid #dbe5e8;background:#fff;border-radius:7px;color:#385966;
+ font-size:11px;font-weight:700;cursor:pointer}
+.hmrs-exam-scope-option.selected{background:#e9f6f1;color:#0c604e;border-color:#62af97}
+.hmrs-exam-scope-option:focus-visible{outline:2px solid #14806a;outline-offset:2px}
+.hmrs-exam-explain{background:#f5f8fa;border:1px solid #e4ebee;border-radius:6px;padding:10px;
+ font-size:11px;color:#54717e;margin-top:12px;line-height:1.55}
+.hmrs-individual-lookup{padding:15px 17px;border:1px solid #dce6e8;margin-bottom:14px}
+.hmrs-individual-lookup-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;
+ margin-bottom:12px}
+.hmrs-individual-lookup-head h3{font-size:14px;font-weight:800;color:#1d3b48;margin:0}
+.hmrs-individual-lookup-head p{font-size:11px;color:#6b818e;margin:0}
+.hmrs-individual-lookup-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.hmrs-individual-lookup-grid .field{min-width:0;font-size:11px}
+.hmrs-individual-lookup-grid select{width:100%;height:38px;min-height:38px;font-size:11px;
+ padding:5px 8px;border:1px solid #d6e3e8;border-radius:6px;background:white}
+.hmrs-individual-context{display:inline-block;font-size:10px;color:#567783;border-radius:4px;
+ margin:12px 0 0;background:#eff5f7;padding:5px 8px}
+.hmrs-individual-entry{padding:13px 16px;margin:12px 0;border:1px solid #dee9e9}
+.hmrs-individual-entry h3{font-size:13px;font-weight:800;margin:0}
+.hmrs-individual-entry p{font-size:11px;color:#718994;margin:5px 0 12px}
+.hmrs-individual-entry .field{font-size:11px;max-width:380px}
+.hmrs-individual-score-fields{margin-top:14px}
+.hmrs-publish-top{display:flex;align-items:start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.hmrs-publish-top h3{display:flex;align-items:center;gap:7px}
+.hmrs-publish-state{display:inline-flex;align-items:center;border-radius:4px;background:#f1f5f7;
+ border:1px solid #dfe8eb;font-size:10px;color:#627c86;font-weight:700;padding:5px 7px}
+.hmrs-publish-state.published{background:#e7f6ef;border-color:#cbe5d8;color:#17654d}
+.hmrs-publish-individual{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:#f6f9fa;
+ border-top:1px solid #e2eaed;margin-top:9px;padding:10px}
+.hmrs-publish-individual>div{flex:1 1 175px}
+.hmrs-publish-individual b{display:block;font-size:12px}
+.hmrs-publish-individual span{font-size:10px;color:#728590}
+.hmrs-publish-empty{font-size:11px;color:#6d8693;margin:4px 0 12px}
+.hmrs-student-parts-table td:first-child{min-width:135px}
+.hmrs-student-part-group span{display:block;line-height:1.6;white-space:normal}
+.hmrs-student-part-group{max-width:450px}
+.hmrs-mark-table .hmrs-mark-subject strong{font-weight:800}
+.hmrs-mark-table .hmrs-mark-parts span{display:inline-flex}
+@media(max-width:800px){.hmrs-individual-lookup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:550px){
+ .hmrs-results-page-head{padding:12px;align-items:stretch}
+ .hmrs-results-page-head>.btn{width:100%;justify-content:center}
+ .hmrs-individual-lookup{padding:12px}
+ .hmrs-individual-lookup-grid{grid-template-columns:1fr;gap:8px}
+ .hmrs-individual-lookup-grid .field{min-width:0}
+ .hmrs-exam-scope-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .hmrs-exam-modal .record-modal-body{padding:14px}
+ .hmrs-publish-controls .btn{flex:1 1 auto;justify-content:center}
+}

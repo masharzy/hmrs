@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Save } from "lucide-react";
 import { getStudentSubjects } from "../lib/academic";
+import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { gradeLabel, toBanglaDigits, toAsciiDigits } from "../lib/bangla-numbers";
 
@@ -30,7 +31,9 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const [loading,setLoading]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState("");
  const [revision,setRevision]=useState(0),tableRef=useRef(null);
  const exam=exams.find(e=>e.id===examId);
- const rows=useMemo(()=>students.filter(s=>Number(s.grade)===Number(grade)&&(!group||s.group===group)).sort(sortStudents),[students,grade,group]);
+ const scopedGrade=examScopeGrade(exam);
+ useEffect(()=>{if(scopedGrade&&Number(grade)!==scopedGrade){setGrade(String(scopedGrade));setGroup("");}},[scopedGrade,grade]);
+ const rows=useMemo(()=>students.filter(s=>examAppliesToStudent(exam,s)&&Number(s.grade)===Number(grade)&&(!group||s.group===group)).sort(sortStudents),[students,grade,group,exam]);
  const subjectsByStudent=useMemo(()=>new Map(rows.map(s=>[s.id,allowedSubjects(actor,s)])),[rows,actor]);
  const groups=useMemo(()=>displayGroups(subjectsByStudent),[subjectsByStudent]);
  const displayed=subjectId?groups.filter(s=>s.id===subjectId):groups;
@@ -111,8 +114,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
    <button className="btn primary sm" type="button" disabled={!entries.length||!examId||loading||working||sending||locked} onClick={save}><Save size={14}/>{sending?"সংরক্ষণ হচ্ছে...":"সংরক্ষণ"}</button></div>
   <div className="hmrs-sheet-filters">
    <label className="field">পরীক্ষা<select value={examId} onChange={e=>{if(changeGuard())onExamChange(e.target.value)}}>
-    <option value="">পরীক্ষা নির্বাচন করুন</option>{exams.map(e=><option key={e.id} value={e.id}>{e.name}{e.published?" (প্রকাশিত)":""}</option>)}</select></label>
-   <label className="field">শ্রেণি<select value={grade} onChange={e=>{if(changeGuard()){setGrade(e.target.value);setGroup("")}}}>{grades.map(n=><option key={n} value={n}>{gradeLabel(n)}</option>)}</select></label>
+    <option value="">পরীক্ষা নির্বাচন করুন</option>{exams.map(e=><option key={e.id} value={e.id}>{e.name} · {examScopeLabel(e)}{e.published?" (প্রকাশিত)":""}</option>)}</select></label>
+   <label className="field">শ্রেণি<select value={grade} disabled={!!scopedGrade} onChange={e=>{if(changeGuard()){setGrade(e.target.value);setGroup("")}}}>{grades.filter(n=>!scopedGrade||n===scopedGrade).map(n=><option key={n} value={n}>{gradeLabel(n)}</option>)}</select></label>
    {Number(grade)>=9&&<label className="field">বিভাগ<select value={group} onChange={e=>{if(changeGuard())setGroup(e.target.value)}}>
     {groupOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
    <label className="field">বিষয় / পত্র<select value={subjectId} onChange={e=>setSubjectId(e.target.value)}>

@@ -108,5 +108,6 @@ test("dashboard has no old import panel/hint and has learner-only PDF/publicatio
  assert.match(portal,/<StudentResultCard/);
  assert.match(grid,/printCompactSheet/);
  assert.match(marksheet,/fatherName/);assert.match(marksheet,/motherName/);
- assert.match(marksheet,/metrics\?\.highest/);
+ assert.match(marksheet,/reportPaperRows/);
+ assert.match(marksheet,/row.highest/);
 });
