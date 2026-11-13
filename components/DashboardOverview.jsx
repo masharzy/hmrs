@@ -1,7 +1,7 @@
 "use client";
 import { DashboardRouteLink } from "./DashboardShell";
 import { ArrowRight, ArrowUpRight, CalendarCheck2, ClipboardCheck, FilePenLine, FileText, GraduationCap, ShieldCheck, Users, Wallet } from "lucide-react";
-import { toBanglaDigits } from "../lib/bangla-numbers";
+import { toAsciiDigits } from "../lib/bangla-numbers";
 
 const links={
  students:{label:"Student Management",desc:"Student records and search",Icon:Users},
