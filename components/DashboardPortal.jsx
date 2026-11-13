@@ -204,7 +204,7 @@ export default function DashboardPortal() {
     :action.startsWith("ledger.")?["finance"]
     :action.startsWith("notice.")?["notices"]
     :action.startsWith("routine.")?["routines"]
-    :action.startsWith("account.")?["accounts"]
+    :action.startsWith("account.")?["accounts","students","attendance","marks","overview"]
     :action.startsWith("settings.")?["settings"]
     :action.startsWith("exam.")?["marks"]
     :[];
@@ -217,7 +217,7 @@ export default function DashboardPortal() {
  }
  const students=data.students||[],exams=data.exams||[];
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
- const filtered=useMemo(()=>students.filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())),[students,query]);
+ const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||Number(a.roll)-Number(b.roll)).filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())),[students,query]);
  const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
  const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
  const admissions=data.admissions||[];
@@ -324,7 +324,7 @@ export default function DashboardPortal() {
        {tab==="students"&&<>
         <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থীর রেকর্ড</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
          <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label></div>
-        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map(s=><tr key={s.id}>
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toBanglaDigits((visiblePage-1)*25+i+1)}</td>
          <td className="font-bold">{s.name}</td><td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
          <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
          <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
@@ -351,9 +351,9 @@ export default function DashboardPortal() {
        {tab==="attendance"&&<>
         <div className="dashboard-toolbar"><h2 className="section-title">হাজিরার তালিকা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
         <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
-        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map(s=>{
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>ক্রমিক</th><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map((s,i)=>{
          const record=attendanceByStudent.get(s.id);
-         return <tr key={s.id}><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
+         return <tr key={s.id}><td>{toBanglaDigits((visiblePage-1)*25+i+1)}</td><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
           <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
           <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
           <td>{record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</td>
@@ -415,7 +415,7 @@ export default function DashboardPortal() {
         {login.role==="class_teacher"&&<Field label="নির্ধারিত শ্রেণি (যেমন 6,7,9)"><Input value={login.assignedClasses} onChange={v=>setLogin(o=>({...o,assignedClasses:v}))}/></Field>}
        </div><p className="muted text-xs mt-4">শিক্ষকের PIN নিরাপদভাবে প্রদান করুন। PIN সরাসরি সংরক্ষিত হয় না; ভুল PIN বারবার দিলে লগইন সাময়িক বন্ধ থাকে।</p>
        <button disabled={working} className="btn primary" onClick={async()=>{const r=await mutate("account.create",{...login,assignedClasses:login.assignedClasses.split(",").map(s=>s.trim())});if(r)setLogin(o=>({...o,name:"",phone:"",pin:""}))}}><UserPlus size={15}/> অ্যাকাউন্ট তৈরি</button></div>
-       <div className="panel table-wrap"><table><thead><tr><th>নাম</th><th>মোবাইল নম্বর</th><th>ভূমিকা</th><th>শ্রেণি</th></tr></thead><tbody>{data.users?.filter(u=>u.role!=="student").map(u=><tr key={u.id}><td>{u.name}</td><td>{u.phone||"পুরোনো অ্যাকাউন্ট"}</td><td>{roleNames[u.role]}</td><td>{[...new Set((u.assignedClasses||[]).map(v=>String(v).split("-")[0]))].join(", ")}</td></tr>)}</tbody></table></div></>}
+       <AccountManager users={data.users||[]} actor={actor} working={working} mutate={mutate} error={error}/></>}
        {tab==="settings"&&<><h2 className="section-title">হোমপেজের তথ্য ও ছবি</h2><div className="panel p-6 grid gap-4">
         <div className="alert">ছবি আপলোড করলে ImgBB-তে সংরক্ষিত হবে এবং হোমপেজের হিরো সেকশনে স্বয়ংক্রিয়ভাবে দেখাবে। আলাদা করে সেটিংস সংরক্ষণ করতে হবে না। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
         <Field label="হোমপেজের ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
