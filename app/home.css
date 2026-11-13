@@ -92,3 +92,9 @@
  .hmrs-home .btn.hmrs-home-final-button{width:100%;margin:0}
 }
 @media(prefers-reduced-motion:reduce){.hmrs-home-quick-card,.hmrs-home .btn.hmrs-home-primary{transition:none}.hmrs-home-quick-card:hover,.hmrs-home .btn.hmrs-home-primary:hover{transform:none}}
+
+/* Compact header brand: do not split the school title into two hard-coded fragments. */
+.hmrs-site-brand-text{display:flex;flex-direction:column;min-width:0;max-width:400px}
+.hmrs-site-brand-text strong{font-weight:800;font-size:clamp(11px,1.2vw,15px);line-height:1.35;white-space:nowrap;letter-spacing:-.3px;color:#203747}
+.hmrs-site-brand-text small{font-size:10px;color:#66788b;margin-top:3px}
+@media(max-width:550px){.hmrs-site-brand-text strong{font-size:clamp(9px,2.65vw,12px)}.site-header .container{gap:8px!important}.site-header .container>a:first-child{gap:7px}}
