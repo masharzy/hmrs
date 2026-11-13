@@ -12,6 +12,7 @@ import { sameStudentRoll } from "../../../lib/school-identity.js";
 import {incompleteStudentFields} from "../../../lib/selection-import.js";
 import {getPublishedStudentResults} from "../../../lib/published-student-results.js";
 import {publicationKey} from "../../../lib/result-publication.js";
+import {examAppliesToStudent,examStudents} from "../../../lib/exam-scope.js";
 import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
 import {auditExamScores} from "../../../lib/result-audit.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
@@ -116,7 +117,7 @@ export async function GET(req) {
        store.collection("marks").where("examId","==",examId).limit(5000).get()
       ]);
       if(!ex.exists)return fail("পরীক্ষা পাওয়া যায়নি",404);
-      return json({examId,audit:auditExamScores(asDocs(studentsSnap).filter(x=>!x.deleting),asDocs(marksSnap))});
+      return json({examId,audit:auditExamScores(examStudents(ex.data(),asDocs(studentsSnap)),asDocs(marksSnap))});
     }
     if (resource === "staff.accounts") {
       needRole(actor,["principal"]);
@@ -670,11 +671,17 @@ export async function POST(req) {
     }
     if (action === "exam.create") {
       needRole(actor, ["principal", "class_teacher"]);
-      const name = cleanText(body.name, 130);
-      if (!name) return fail("পরীক্ষার নাম লিখুন");
-      const ref = await store.collection("exams").add({ name, year: new Date().getFullYear(),
-        published: false, createdAt: iso(), createdBy: actor.uid });
-      await audit(actor, action, ref.id); return json({ ok: true, examId: ref.id });
+      const name=cleanText(body.name,130);
+      if(!name)return fail("পরীক্ষার নাম লিখুন");
+      const raw=body.scopeGrade??"all";
+      const scopeGrade=raw==="all"||raw===""?null:parseBanglaNumber(raw);
+      if(scopeGrade!==null&&![6,7,8,9,10].includes(scopeGrade))return fail("সঠিক শ্রেণি নির্বাচন করুন");
+      if(actor.role!=="principal"&&(scopeGrade===null||!canManageHomeroom(actor,scopeGrade)))
+       return fail("শুধু নিজের দায়িত্বপ্রাপ্ত শ্রেণির জন্য পরীক্ষা তৈরি করতে পারবেন",403);
+      const ref=await store.collection("exams").add({name,scopeGrade,year:new Date().getFullYear(),
+       published:false,publicationVersion:0,createdAt:iso(),createdBy:actor.uid});
+      await audit(actor,action,ref.id);
+      return json({ok:true,examId:ref.id,scopeGrade});
     }
     if(action==="result.publish"){
       needRole(actor,["principal"]);
@@ -685,6 +692,7 @@ export async function POST(req) {
        store.collection("exams").doc(examId).get(),store.collection("students").doc(studentId).get()
       ]);
       if(!examSnap.exists||!studentSnap.exists||studentSnap.data()?.deleting)return fail("পরীক্ষা বা শিক্ষার্থী পাওয়া যায়নি",404);
+      if(!examAppliesToStudent(examSnap.data(),studentSnap.data()))return fail("এই পরীক্ষা শিক্ষার্থীর শ্রেণির জন্য নয়",409);
       const published=body.published===true;
       if(published&&!body.allowIncomplete){
        const subjects=await store.collection("marks").where("examId","==",examId).limit(5000).get();
@@ -693,23 +701,26 @@ export async function POST(req) {
        if(audit.incompleteCount)return json({error:"এই শিক্ষার্থীর কিছু বিষয়ের নম্বর দেওয়া হয়নি",audit},409);
       }
       const ref=store.collection("resultPublications").doc(publicationKey(examId,studentId));
-      await ref.set({examId,studentId,published,updatedAt:iso(),updatedBy:actor.uid},{merge:true});
+      await ref.set({examId,studentId,published,publicationVersion:examSnap.data()?.publicationVersion||0,
+       updatedAt:iso(),updatedBy:actor.uid},{merge:true});
       await audit(actor,action,ref.id);
       return json({ok:true,published});
     }
     if (action === "exam.publish") {
       needRole(actor, ["principal"]);
       const ref = store.collection("exams").doc(cleanText(body.examId, 150));
-      if (!(await ref.get()).exists) return fail("পরীক্ষা পাওয়া যায়নি");
+      const examSnap=await ref.get();
+      if(!examSnap.exists)return fail("পরীক্ষা পাওয়া যায়নি");
       if(body.published===true&&!body.allowIncomplete){
        const [rosterSnap,marksSnap]=await Promise.all([
         store.collection("students").limit(950).get(),
         store.collection("marks").where("examId","==",ref.id).limit(5000).get()
        ]);
-       const audit=auditExamScores(asDocs(rosterSnap).filter(x=>!x.deleting),asDocs(marksSnap));
+       const audit=auditExamScores(examStudents(examSnap.data(),asDocs(rosterSnap)),asDocs(marksSnap));
        if(audit.incompleteCount)return json({error:"কিছু শিক্ষার্থীর নম্বর অসম্পূর্ণ; আগে Preview দেখুন",audit},409);
       }
-      await ref.update({ published: !!body.published, updatedAt: iso() });
+      // Advance the version so "publish all" also supersedes earlier per-student hides.
+      await ref.update({published:!!body.published,publicationVersion:FieldValue.increment(1),updatedAt:iso()});
       await audit(actor, action, ref.id); return json({ ok: true });
     }
     if (action === "marks.set") {
@@ -720,6 +731,7 @@ export async function POST(req) {
       
       const exam = await store.collection("exams").doc(examId).get();
       if (!exam.exists) return fail("পরীক্ষা পাওয়া যায়নি");
+      if(!examAppliesToStudent(exam.data(),student))return fail("এই পরীক্ষা শিক্ষার্থীর শ্রেণির জন্য নয়",409);
       if (exam.data().published && actor.role !== "principal") return fail("প্রকাশিত ফল প্রধান শিক্ষক ছাড়া পরিবর্তন করতে পারবেন না");
       const scores = Object.fromEntries(Object.entries(body.scores||{}).map(([part,value])=>[part,parseBanglaNumber(value)]));
       validateMarkForStudent(student, subjectId, scores);
@@ -746,6 +758,7 @@ export async function POST(req) {
         const student=studentMap.get(cleanText(entry?.studentId,120));
         const subjectId=cleanText(entry?.subjectId,80);
         if(!student)return fail("নম্বর দেওয়ার জন্য শিক্ষার্থী পাওয়া যায়নি",404);
+        if(!examAppliesToStudent(examSnap.data(),student))return fail("এই পরীক্ষা শিক্ষার্থীর শ্রেণির জন্য নয়",409);
         if(!canManageSubject(actor,student,subjectId))return fail("এই শ্রেণি বা বিষয়ে নম্বর দেওয়ার অনুমতি নেই",403);
         const subject=getStudentSubjects(student).find(s=>s.id===subjectId);
         if(!subject)return fail(student.name+" এর জন্য বিষয়টি প্রযোজ্য নয়");
