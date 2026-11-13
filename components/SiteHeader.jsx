@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { BookOpen, GraduationCap, LayoutDashboard, Menu, X } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 
-const items=[["হোম","/"],["ভর্তি আবেদন","/admission"],["নোটিশ","/#notices"],["রুটিন","/#routines"],["ফলাফল","/login/student"]];
+const items=[["হোম","/"],["নোটিশ","/#notices"],["রুটিন","/#routines"],["ফলাফল","/login/student"]];
 export default function SiteHeader(){
  const [open,setOpen]=useState(false);
  const [signedIn,setSignedIn]=useState(null);
@@ -22,7 +22,7 @@ export default function SiteHeader(){
   <div className="container flex items-center justify-between" style={{height:72,gap:20}}>
    <Link href="/" className="flex items-center gap-3" aria-label="বিদ্যালয়ের হোম পেজ">
     <div style={{height:43,width:43,borderRadius:8,background:"#176b61",color:"white"}} className="flex items-center justify-center"><GraduationCap size={24}/></div>
-    <div><div style={{fontSize:15,fontWeight:800,lineHeight:1.45}}>হাজী মতিউর রহমান সরকার</div><div style={{fontSize:11,color:"#66788b"}}>উচ্চ বিদ্যালয় <span style={{marginLeft:7,color:"#177263"}}>EIIN ১১২৩৫৯</span></div></div>
+    <div className="hmrs-site-brand-text"><strong>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</strong><small>EIIN ১১২৩৫৯</small></div>
    </Link>
    <nav className="desktop-only flex items-center gap-6" aria-label="মূল নেভিগেশন">
     {items.filter(([label])=>signedIn!==true||label!=="ফলাফল").map(([label,href])=><Link key={href} className="text-sm font-semibold hover:text-primary" href={href}>{label}</Link>)}
