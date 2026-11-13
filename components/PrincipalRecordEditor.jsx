@@ -62,6 +62,7 @@ function choicesFor(key,values){
 export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
  const isStudent=type==="student";
  const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":""}));
+ const [loginPin,setLoginPin]=useState("");
  const fields=(isStudent?studentFields:applicantFields).filter(key=>key!=="group"||Number(values.grade)>=9);
  if(isStudent&&Number(values.grade)>=9)fields.push("elective","fourthSubject","optionalId");
  const change=(key,value)=>setValues(old=>{
@@ -79,7 +80,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
   <section className="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-edit-title">
    <div className="record-modal-head"><div><h2 id="record-edit-title"><Pencil size={18}/> {isStudent?"শিক্ষার্থীর তথ্য এডিট":"ভর্তি আবেদন এডিট"}</h2><p className="muted text-xs">{isStudent?item.name:item.studentName}</p></div>
     <button type="button" className="btn sm" aria-label="বন্ধ করুন" onClick={onClose} disabled={working}><X size={18}/></button></div>
-   <form onSubmit={e=>{e.preventDefault();onSave(values)}}>
+   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin)}}>
     <div className="record-modal-body">
      {error&&<p className="alert error" role="alert">{error}</p>}
      <div className="form-grid">{fields.map(key=><label className={"field "+(key==="guardianAddress"?"record-wide":"")} key={key}>
@@ -94,6 +95,14 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
           autoComplete="off" required={["name","studentName","roll","phone","studentPhone","fatherName","motherName"].includes(key)}/>}
      </label>)}</div>
      <p className="muted text-xs mt-4">রোল, শ্রেণি বা মোবাইল পরিবর্তন করলে পুরোনো রেকর্ড ও লগইন সংযোগ অক্ষত রাখা হবে।</p>
+     {isStudent&&item.importIncomplete===true&&<div className="hmrs-editor-incomplete">
+       <strong>⚠ তথ্য অসম্পূর্ণ</strong>
+       <p>বাকি তথ্য: {(item.missingFields||[]).join(" · ")||"শিক্ষার্থীর পরিচয় ও লগইন যাচাই করুন"}</p>
+       {!item.uid&&<label className="field">অ্যাকাউন্ট চালু করতে ৫ সংখ্যার PIN (সব তথ্য পূরণ না হলে ফাঁকা রাখুন)
+         <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={5}
+          placeholder="৫ সংখ্যার PIN" value={loginPin} onChange={e=>setLoginPin(e.target.value)}/>
+       </label>}
+      </div>}
     </div>
     <div className="record-modal-actions"><button type="button" className="btn" disabled={working} onClick={onClose}>বাতিল</button><button className="btn primary" type="submit" disabled={working}>{working?"সংরক্ষণ হচ্ছে...":"পরিবর্তন সংরক্ষণ"}</button></div>
    </form>
