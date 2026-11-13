@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Save } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
 import { getStudentSubjects } from "../lib/academic";
 import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { toAsciiDigits } from "../lib/bangla-numbers";
 import {enGrade,enStream,enNumber,enPaper,enPart,enSubject} from "../lib/result-english.js";
+import {pendingMarkBatch,clearSavedMarkEdits} from "../lib/marks-autosave.js";
 
 const grades=[6,7,8,9,10],groupOptions=[["","All groups"],["science","Science"],["business","Business Studies"],["humanities","Humanities"]];
 const keyFor=(studentId,subjectId)=>studentId+"|"+subjectId;
@@ -30,7 +31,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const [grade,setGrade]=useState("6"),[group,setGroup]=useState(""),[subjectId,setSubjectId]=useState("");
  const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({});
  const [loading,setLoading]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState("");
- const tableRef=useRef(null);
+ const [attempt,setAttempt]=useState(0);
+ const savingRef=useRef(false),tableRef=useRef(null);
  const exam=exams.find(e=>e.id===examId);
  const scopedGrade=examScopeGrade(exam);
  useEffect(()=>{if(scopedGrade&&Number(grade)!==scopedGrade){setGrade(String(scopedGrade));setGroup("");}},[scopedGrade,grade]);
@@ -54,7 +56,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   const i=key.indexOf("|");return {studentId:key.slice(0,i),subjectId:key.slice(i+1),scores};
  }),[edits]);
  const locked=!!exam?.published&&actor?.role!=="principal";
- const changeGuard=()=>!entries.length||window.confirm("সংরক্ষণ না করা নম্বর আছে। এগুলো বাদ দিয়ে পরিবর্তন করবেন?");
+ const changeGuard=()=>!savingRef.current&&(!entries.length||window.confirm("Some marks are still pending auto-save. Discard them and switch?"));
  function scoreFor(student,subject,part){
   const key=keyFor(student.id,subject.subjectId);
   return edits[key]?.[part.key]??byKey.get(key)?.[part.key]??"";
@@ -66,7 +68,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  }
  function printCompactSheet(){
   if(!rows.length||!examId||loading)return;
-  if(entries.length && !window.confirm("সংরক্ষণ না করা নম্বর PDF-এ নাও আসতে পারে। এগোবেন?"))return;
+  if((entries.length||savingRef.current)&&!window.confirm("Some recent changes have not finished auto-saving. Continue printing?"))return;
   document.body.classList.add("hmrs-print-sheet");
   const restore=()=>{document.body.classList.remove("hmrs-print-sheet");window.removeEventListener("afterprint",restore)};
   window.addEventListener("afterprint",restore);
@@ -80,53 +82,58 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   if(input){event.preventDefault();input.focus();input.select()}
  }
  async function save(){
-  if(!examId||loading||working||sending||locked||!entries.length)return;
-  const rowMap=new Map(rows.map(s=>[s.id,s]));
-  for(const entry of entries){
-   const student=rowMap.get(entry.studentId);
-   const subject=student&&subjectsByStudent.get(student.id)?.find(s=>s.id===entry.subjectId);
-   if(!subject){setError("বিষয় বা শিক্ষার্থী পাওয়া যায়নি");return;}
-   const parts=new Map(subject.parts.map(p=>[p.key,p]));
-   for(const [key,raw] of Object.entries(entry.scores)){
-    const part=parts.get(key);
-    if(!part||raw===""||!Number.isFinite(Number(raw))||Number(raw)<0||Number(raw)>part.max){
-     setError(student.name+" — "+subject.name+" এর "+(part?.label||key)+" ০–"+enNumber(part?.max||0)+" এর মধ্যে দিন");return;
-    }
-   }
+  if(!examId||loading||working||locked||savingRef.current)return;
+  const valid=pendingMarkBatch(edits,new Map(rows.map(s=>[s.id,s])),subjectsByStudent);
+  if(!valid.ready.length){
+   if(valid.invalid.length)setError(valid.invalid[0].reason);
+   return;
   }
-  setSending(true);setError("");setSaved("");
-  let processed=0;
+  savingRef.current=true;setSending(true);setSaved("");setError("");
+  let savedCount=0;
   try{
-   for(let i=0;i<entries.length;i+=50){
-    const batch=entries.slice(i,i+50);
+   for(let i=0;i<valid.ready.length;i+=50){
+    const batch=valid.ready.slice(i,i+50);
+    // Existing authenticated batch endpoint; validation and staff permissions stay server-side.
     const result=await mutate("marks.batch",{examId,entries:batch});
-    if(!result)throw Error("নম্বর সংরক্ষণ ব্যর্থ হয়েছে");
-    processed+=batch.length;
-    const committed=new Set(batch.map(e=>keyFor(e.studentId,e.subjectId)));
-    setEdits(old=>Object.fromEntries(Object.entries(old).filter(([key])=>!committed.has(key))));
-    // Update the visible cells in place; never reset current exam/grade/stream/subject/scroll.
+    if(!result)throw Error("Network or validation error. Your edits are still here.");
+    savedCount+=batch.length;
     setSheet(old=>{
      const next=[...old];
      for(const item of batch){
-      const i=next.findIndex(x=>x.studentId===item.studentId&&x.subjectId===item.subjectId);
-      const merged={...(i>=0?next[i]:{}),studentId:item.studentId,subjectId:item.subjectId,
-       scores:{...(i>=0?next[i].scores:{}),...item.scores}};
-      if(i>=0)next[i]=merged;else next.push(merged);
+      const index=next.findIndex(x=>x.studentId===item.studentId&&x.subjectId===item.subjectId);
+      const previous=index>=0?next[index]:null;
+      const updated={...(previous||{}),studentId:item.studentId,subjectId:item.subjectId,
+       scores:{...(previous?.scores||{}),...item.scores}};
+      if(index>=0)next[index]=updated;else next.push(updated);
      }
      return next;
     });
+    setEdits(old=>clearSavedMarkEdits(old,batch));
    }
-   setSaved(enNumber(processed)+" mark records saved. Your filters and scroll are unchanged.");
-  }catch(e){setError(enNumber(processed)+" records saved; remaining save failed: "+e.message)}
-  finally{setSending(false)}
+   if(valid.invalid.length)setError(valid.invalid[0].reason);
+   else setSaved("All changes saved");
+  }catch(e){setError("Auto-save failed: "+e.message+" · Changes kept locally. Retry when ready.")}
+  finally{
+   savingRef.current=false;setSending(false);
+   if(savedCount)setAttempt(a=>a+1); // pick up edits typed while the request was in flight
+  }
  }
+ useEffect(()=>{
+  if(!examId||loading||locked||!Object.keys(edits).length||savingRef.current)return;
+  const timer=setTimeout(()=>{save()},900);
+  return()=>clearTimeout(timer);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[edits,examId,grade,group,locked,loading,attempt]);
  return <section className="hmrs-sheet panel" aria-label="Excel score entry">
-  <div className="hmrs-sheet-heading"><strong>Marks Entry Sheet</strong><span>{enNumber(rows.length)} students · {enNumber(entries.length)} changes</span>
+  <div className="hmrs-sheet-heading"><strong>Marks Entry Sheet</strong>
+   <span className="hmrs-autosave-status" role="status" aria-live="polite">
+    {sending?"Saving…":error&&entries.length?"Auto-save needs attention":entries.length?"Unsaved changes · saving automatically…":saved||"Auto-save enabled"}
+   </span>
    <button className="btn sm" type="button" disabled={!rows.length||!examId||loading} onClick={printCompactSheet}>Print / Save PDF</button>
-   <button className="btn primary sm" type="button" disabled={!entries.length||!examId||loading||working||sending||locked} onClick={save}><Save size={14}/>{sending?"Saving...":"Save Marks"}</button></div>
+   {error&&entries.length&&<button className="btn sm" type="button" onClick={()=>{setError("");setAttempt(v=>v+1)}}><RefreshCw size={14}/> Retry</button>}</div>
   <div className="hmrs-sheet-filters">
    <label className="field">Exam<select value={examId} onChange={e=>{if(changeGuard())onExamChange(e.target.value)}}>
-    <option value="">Select exam</option>{exams.map(e=><option key={e.id} value={e.id}>{e.name} · {examScopeLabel(e)}{e.published?" (প্রকাশিত)":""}</option>)}</select></label>
+    <option value="">Select exam</option>{exams.map(e=><option key={e.id} value={e.id}>{e.name} · {examScopeLabel(e)}{e.published?" (Published)":""}</option>)}</select></label>
    <label className="field">Class<select value={grade} disabled={!!scopedGrade} onChange={e=>{if(changeGuard()){setGrade(e.target.value);setGroup("")}}}>{grades.filter(n=>!scopedGrade||n===scopedGrade).map(n=><option key={n} value={n}>{enGrade(n)}</option>)}</select></label>
    {Number(grade)>=9&&<label className="field">Group<select value={group} onChange={e=>{if(changeGuard())setGroup(e.target.value)}}>
     {groupOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
@@ -158,14 +165,13 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
          return <td key={g.id+":"+part.key} className={touched?"hmrs-sheet-changed":""}>
           <input data-sheet-row={index} data-sheet-col={column} aria-label={student.name+" — "+g.name+" — "+part.label}
            value={scoreFor(student,g,part)} onChange={e=>put(student,g,part,e.target.value)}
-           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked||sending}
+           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked}
            maxLength={6} title={"Maximum "+enNumber(valid.max)} placeholder="—"/>
          </td>;
         }))}</tr>;
      })}</tbody></table>
    </div>
-   <div className="hmrs-sheet-bottom"><span>{enNumber(displayed.length)} subject/paper groups</span>
-    <button className="btn primary sm" type="button" disabled={!entries.length||!examId||loading||working||sending||locked} onClick={save}><Save size={14}/> Save {enNumber(entries.length)} changes</button></div>
+   <div className="hmrs-sheet-bottom"><span>{enNumber(displayed.length)} subject/paper groups · All valid changes auto-save</span></div>
   </>}
  </section>;
 }
