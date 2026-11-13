@@ -16,7 +16,7 @@ test("legacy exams support all classes; new exams may scope grade 6-10",()=>{
  assert.equal(examScopeGrade({}),null);
  assert.equal(examScopeGrade({scopeGrade:null}),null);
  assert.equal(examScopeGrade({scopeGrade:10}),10);
- assert.equal(examScopeLabel({scopeGrade:10}),"10ম শ্রেণি");
+ assert.equal(examScopeLabel({scopeGrade:10}),"দশম (১০) শ্রেণি");
  const all=[{grade:6,id:"one"},{grade:10,id:"two",deleting:false},{grade:9,id:"three"}];
  assert.deepEqual(examStudents({scopeGrade:10},all).map(s=>s.id),["two"]);
  assert.equal(examAppliesToStudent({scopeGrade:6},student),false);
