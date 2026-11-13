@@ -276,3 +276,68 @@
 .hmrs-option-label{display:block;color:#16826c;font-size:10px;margin-top:2px}
 @media(max-width:600px){.hmrs-publish-panel{padding:11px}.hmrs-publish-panel .hmrs-publish-controls .field{flex:1 1 100%;max-width:none}
  .hmrs-student-result-card{padding:12px}.hmrs-student-result-top h2{font-size:15px}}
+
+/* Teacher editor: clear role cards, class pills, searchable subjects — no checkbox grid. */
+.hmrs-accounts .hmrs-teacher-modal{width:min(760px,calc(100vw - 24px));max-height:min(91dvh,850px);
+ display:flex;flex-direction:column;overflow:hidden;border:1px solid #dce7e9;box-shadow:0 28px 90px #0b22342b}
+.hmrs-teacher-modal .record-modal-head{flex:none;background:#fff;padding:18px 22px 14px;border-bottom:1px solid #e5ecee}
+.hmrs-teacher-modal .record-modal-head h2{font-size:17px;font-weight:850}
+.hmrs-teacher-modal .record-modal-head p{line-height:1.5;margin:4px 0 0}
+.hmrs-teacher-modal form{display:flex;flex-direction:column;min-height:0;flex:1}
+.hmrs-teacher-modal .record-modal-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:17px 22px;
+ flex:1;background:#fcfdfd}
+.hmrs-teacher-modal .record-modal-actions{flex:none;border-top:1px solid #e5ecee;background:#fff;
+ padding:12px 22px;display:flex;gap:8px;justify-content:flex-end}
+.hmrs-teacher-picker{background:#fff;border:1px solid #e2eaed;border-radius:9px;padding:13px;margin-top:12px}
+.hmrs-teacher-picker-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:11px}
+.hmrs-teacher-picker-heading h3{font-size:12px;font-weight:800;margin:0;color:#1f3949}
+.hmrs-teacher-picker-heading p{font-size:10px;color:#6a8290;margin:4px 0 0;line-height:1.5}
+.hmrs-teacher-selected-count{flex:none;background:#f2f5f7;border:1px solid #e4ebee;color:#57707d;
+ border-radius:5px;padding:4px 7px;font-size:10px;font-weight:700}
+.hmrs-teacher-picker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:7px}
+.hmrs-teacher-option{min-width:0;min-height:39px;display:flex;align-items:center;gap:8px;padding:8px 10px;
+ border:1px solid #dfe8ec;border-radius:7px;background:#fbfcfd;color:#385160;text-align:left;
+ font-size:11px;cursor:pointer;transition:background .12s,border-color .12s}
+.hmrs-teacher-option:hover{border-color:#94b3b4;background:#f4faf8}
+.hmrs-teacher-option.is-selected{background:#edf8f3;border-color:#86b9a8;color:#155e4e}
+.hmrs-teacher-option:focus-visible{outline:2px solid #176b61;outline-offset:2px}
+.hmrs-teacher-option-check{display:grid;place-items:center;width:17px;height:17px;flex:none;
+ border:1px solid #c8d5db;border-radius:5px;background:white;color:transparent}
+.hmrs-teacher-option.is-selected .hmrs-teacher-option-check{background:#1d8068;border-color:#1d8068;color:white}
+.hmrs-teacher-option-label{min-width:0;flex:1;display:block}
+.hmrs-teacher-option-label b{font-weight:750}
+.hmrs-teacher-option-label small{display:block;font-size:10px;font-weight:500;margin-top:4px;line-height:1.35;opacity:.8}
+.hmrs-teacher-picker-roles .hmrs-teacher-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.hmrs-teacher-picker-roles .hmrs-teacher-option{min-height:61px;padding:12px}
+.hmrs-teacher-grade-pickers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.hmrs-teacher-picker-classes .hmrs-teacher-picker-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.hmrs-teacher-picker-classes .hmrs-teacher-option{min-height:40px;padding:8px 5px;justify-content:center}
+.hmrs-teacher-picker-classes .hmrs-teacher-option-check{width:15px;height:15px}
+.hmrs-teacher-picker-subjects .hmrs-teacher-picker-grid{grid-template-columns:repeat(auto-fill,minmax(143px,1fr));
+ max-height:235px;overflow-y:auto;padding:2px 3px 3px 0;gap:6px}
+.hmrs-teacher-picker-search{display:flex;align-items:center;gap:8px;border:1px solid #dae5e9;
+ background:#f8fafb;border-radius:7px;padding:0 10px;margin-bottom:10px;color:#657e89}
+.hmrs-teacher-picker-search input{border:0!important;background:transparent!important;width:100%;
+ min-width:0;box-shadow:none!important;height:34px;min-height:34px;outline:0;font-size:11px}
+.hmrs-teacher-no-match{font-size:11px;color:#6e8390;margin:6px}
+.hmrs-teacher-pin-row{margin-top:11px;grid-template-columns:minmax(0,1fr)!important}
+.hmrs-teacher-pin-row .field{max-width:340px}
+.hmrs-teacher-account-switch{border:1px solid #d9e5e8;border-radius:7px;padding:8px 12px;background:#fff;
+ display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:700;margin-top:13px;color:#405f6b}
+.hmrs-teacher-switch-knob{display:inline-block;width:32px;height:18px;border-radius:20px;background:#b8c4cc;
+ position:relative;transition:background .15s}
+.hmrs-teacher-switch-knob::after{content:"";position:absolute;left:3px;top:3px;width:12px;height:12px;
+ border-radius:50%;background:#fff;transition:transform .15s}
+.hmrs-teacher-account-switch.is-on .hmrs-teacher-switch-knob{background:#238267}
+.hmrs-teacher-account-switch.is-on .hmrs-teacher-switch-knob::after{transform:translateX(14px)}
+@media(max-width:600px){
+ .hmrs-accounts .hmrs-teacher-modal{max-height:94dvh;width:calc(100vw - 12px)}
+ .hmrs-teacher-modal .record-modal-head{padding:14px 15px}
+ .hmrs-teacher-modal .record-modal-body{padding:12px 14px}
+ .hmrs-teacher-modal .record-modal-actions{padding:11px 14px}
+ .hmrs-teacher-picker{padding:10px;margin-top:10px}
+ .hmrs-teacher-picker-roles .hmrs-teacher-option{padding:8px;min-height:65px}
+ .hmrs-teacher-picker-classes .hmrs-teacher-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .hmrs-teacher-grade-pickers{grid-template-columns:1fr;gap:0}
+ .hmrs-teacher-picker-subjects .hmrs-teacher-picker-grid{max-height:180px;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
