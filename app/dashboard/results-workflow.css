@@ -52,3 +52,74 @@
  .hmrs-accounts-toolbar .field{width:100%}
  .hmrs-sheet-filters{grid-template-columns:1fr 1fr;gap:8px}
 }
+
+/* Dense workbook: spreadsheet cells, not padded cards. */
+.hmrs-sheet{padding:0!important;border-radius:6px;overflow:hidden}
+.hmrs-sheet .hmrs-sheet-heading{margin:0;padding:8px 10px;display:flex;align-items:center;gap:10px;background:#f5f8fa;border-bottom:1px solid #dce4e8}
+.hmrs-sheet-heading strong{font-weight:800;font-size:13px;white-space:nowrap}
+.hmrs-sheet-heading>span{color:#6a7b88;font-size:11px;margin-right:auto}
+.hmrs-sheet-heading .btn{width:auto;min-height:30px!important;padding:5px 9px!important;font-size:11px}
+.hmrs-sheet .hmrs-sheet-filters{padding:7px 10px;display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:0;background:#fff;border-bottom:1px solid #dce4e8}
+.hmrs-sheet .hmrs-sheet-filters .field{flex:1 1 130px;gap:3px;font-size:10px;font-weight:650}
+.hmrs-sheet .hmrs-sheet-filters .field:first-child{flex:2 1 180px}
+.hmrs-sheet .hmrs-sheet-filters .field select{height:32px;min-height:32px;padding:4px 7px;border-radius:4px;font-size:11px}
+.hmrs-sheet .hmrs-sheet-scroll{border:0;border-radius:0;width:100%}
+.hmrs-sheet .hmrs-sheet-table{font-size:11px}
+.hmrs-sheet .hmrs-sheet-table th,.hmrs-sheet .hmrs-sheet-table td{padding:0 3px;height:27px;min-height:27px;border-right:1px solid #dfe6e9;border-bottom:1px solid #e1e8eb}
+.hmrs-sheet .hmrs-sheet-table th{height:27px;min-width:58px;font-size:10px;color:#304d5b;background:#eaf1f5;padding:3px}
+.hmrs-sheet .hmrs-sheet-table thead tr:last-child th{height:24px;font-size:10px;background:#f2f6f8}
+.hmrs-sheet .hmrs-sheet-table .hmrs-sheet-serial{left:0;width:34px;min-width:34px}
+.hmrs-sheet .hmrs-sheet-table .hmrs-sheet-roll{left:34px;width:42px;min-width:42px}
+.hmrs-sheet .hmrs-sheet-table .hmrs-sheet-name{left:76px;width:155px;min-width:155px;max-width:155px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hmrs-sheet .hmrs-sheet-table td input{height:26px;min-height:26px;width:53px;padding:1px 3px;border:none;border-radius:0;text-align:center;font-size:11px;background:transparent}
+.hmrs-sheet .hmrs-sheet-table td input:focus{outline:2px solid #1880c7;outline-offset:-2px;box-shadow:none;background:#fff}
+.hmrs-sheet .hmrs-sheet-table td input::placeholder{font-size:10px;color:#c3cbd1}
+.hmrs-sheet .hmrs-sheet-table td.hmrs-sheet-changed{background:#fff2b3!important}
+.hmrs-sheet .hmrs-sheet-table tbody tr:hover td{background:#eaf4fa}
+.hmrs-sheet .hmrs-sheet-hint{margin:0;padding:5px 10px;background:#fff8e9;border-bottom:1px solid #f0e5ca;color:#805f2d;font-size:10px}
+.hmrs-sheet .hmrs-sheet-bottom{margin:0;padding:7px 10px;border-top:1px solid #dce4e8;background:#f8fafb}
+.hmrs-sheet .hmrs-sheet-bottom .btn{padding:5px 9px;font-size:10px}
+.hmrs-sheet .alert{margin:7px 10px;font-size:11px}
+.hmrs-marks-mode{margin-bottom:12px}
+.hmrs-marks-mode .btn{min-height:35px;font-size:11px;padding:7px 10px}
+.hmrs-accounts-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.hmrs-accounts-actions .field input{min-width:min(260px,90vw)}
+.hmrs-teacher-subject-summary{max-width:250px;overflow:hidden;text-overflow:ellipsis}
+.hmrs-teacher-modal{width:min(690px,calc(100vw - 24px))}
+.hmrs-teacher-choices{border:1px solid #e1e9ee;border-radius:8px;padding:10px;margin-top:13px}
+.hmrs-teacher-choices legend{font-size:12px;font-weight:800;padding:0 5px}
+.hmrs-teacher-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:6px}
+.hmrs-teacher-choice-grid label{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:5px;background:#f8fafb;border:1px solid #e1e8ee;font-size:11px;font-weight:650;cursor:pointer}
+.hmrs-teacher-choice-grid label.selected{color:#136351;background:#eaf8f2;border-color:#85c4a7}
+.hmrs-teacher-choice-grid input{accent-color:#176b61;flex:none}
+.hmrs-admission-head{display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.hmrs-admission-head .section-title{margin:0 0 3px}
+.hmrs-admission-filters{display:flex;align-items:end;gap:9px;flex-wrap:wrap}
+.hmrs-admission-filters .field{min-width:145px}
+.hmrs-admission-list{display:grid;gap:10px}
+.hmrs-admission-card{padding:13px 15px;border:1px solid #e1e8ed;border-radius:10px;box-shadow:0 3px 12px #1c4e6410}
+.hmrs-admission-card-head{display:flex;align-items:start;gap:12px}
+.hmrs-admission-number{width:29px;height:29px;border-radius:7px;display:grid;place-items:center;background:#eef5f8;color:#316a73;font-size:11px;font-weight:800;flex:none}
+.hmrs-admission-card-info{min-width:0;flex:1}
+.hmrs-admission-card-info h3{margin:0 0 5px;font-size:14px;font-weight:850}
+.hmrs-admission-meta{display:flex;flex-wrap:wrap;gap:5px 13px;color:#49697a;font-size:11px}
+.hmrs-admission-card-info p{color:#80919e;font-size:10px;margin:6px 0 0}
+.hmrs-admission-actions{margin-top:10px;padding-top:8px;border-top:1px solid #e8eef1}
+.hmrs-admission-actions .inline-actions,.hmrs-admission-actions>.flex{gap:8px}
+.hmrs-admission-actions .pin-cell{height:40px;min-height:40px}
+.hmrs-admission-edit{margin-top:9px}
+@media(max-width:650px){
+ .hmrs-sheet .hmrs-sheet-heading{flex-wrap:wrap}
+ .hmrs-sheet .hmrs-sheet-heading .btn{width:auto}
+ .hmrs-sheet .hmrs-sheet-table .hmrs-sheet-name{width:110px;min-width:110px;max-width:110px}
+ .hmrs-sheet .hmrs-sheet-table td input{width:46px}
+ .hmrs-sheet .hmrs-sheet-filters .field{flex:1 1 115px}
+ .hmrs-accounts-actions{width:100%}
+ .hmrs-accounts-actions .field{flex:1}
+ .hmrs-accounts-actions .field input{min-width:0}
+ .hmrs-admission-card{padding:11px}
+ .hmrs-admission-filters{width:100%}
+ .hmrs-admission-filters .field{flex:1;min-width:0}
+ .hmrs-admission-card-head{gap:8px;flex-wrap:wrap}
+ .hmrs-admission-card-head>.chip{margin-left:auto}
+}
