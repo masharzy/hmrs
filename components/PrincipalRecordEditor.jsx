@@ -92,7 +92,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
         :<input value={values[key]??""} onChange={e=>change(key,e.target.value)}
           type={key==="dob"?"date":key==="studentPhone"||key==="phone"||key.endsWith("Phone")?"tel":"text"}
           inputMode={key==="roll"||key==="birthRegistration"||key==="previousClass"?"numeric":undefined}
-          autoComplete="off" required={["name","studentName","roll","phone","studentPhone","fatherName","motherName"].includes(key)}/>}
+          autoComplete="off" required={["name","studentName","roll","studentPhone","fatherName","motherName"].includes(key)||(key==="phone"&&!!item.uid)}/>}
      </label>)}</div>
      <p className="muted text-xs mt-4">রোল, শ্রেণি বা মোবাইল পরিবর্তন করলে পুরোনো রেকর্ড ও লগইন সংযোগ অক্ষত রাখা হবে।</p>
      {isStudent&&item.importIncomplete===true&&<div className="hmrs-editor-incomplete">
