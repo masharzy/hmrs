@@ -19,9 +19,11 @@ const NoticeManager=dynamic(()=>import("./NoticeManager"),{ssr:false});
 const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
 const ResultEntryGrid=dynamic(()=>import("./ResultEntryGrid"),{ssr:false});
 const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
+const SelectionImportPanel=dynamic(()=>import("./SelectionImportPanel"),{ssr:false});
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
+import { allowedSubjects } from "../lib/staff-permissions.js";
 
 // Parameter-scoped keys keep attendance dates and exam results separate.
 const routeKey=(section,date,examId)=>section==="attendance"?"attendance:"+date:section==="marks"?"marks:"+(examId||"none"):section;
@@ -55,6 +57,7 @@ export default function DashboardPortal() {
  const [changingDate,setChangingDate]=useState(false),[changingExam,setChangingExam]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
+ const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState("");
  const [admissionGrade,setAdmissionGrade]=useState(""),[admissionGroup,setAdmissionGroup]=useState("");
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
@@ -219,7 +222,10 @@ export default function DashboardPortal() {
  }
  const students=data.students||[],exams=data.exams||[];
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
- const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||Number(a.roll)-Number(b.roll)).filter(s=>(s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())),[students,query]);
+ const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||String(a.group||"").localeCompare(String(b.group||""))||Number(a.roll)-Number(b.roll)).filter(s=>
+   (tab!=="students"||(!studentGrade||Number(s.grade)===Number(studentGrade))&&(!studentGroup||s.group===studentGroup))&&
+   (s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())
+ ),[students,query,tab,studentGrade,studentGroup]);
  const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
  const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
  const admissions=data.admissions||[];
@@ -229,7 +235,7 @@ export default function DashboardPortal() {
  const admissionsCurrentPage=Math.min(admissionsPage,Math.max(1,Math.ceil(filteredAdmissions.length/20)));
  const chosen=students.find(s=>s.id===selectedStudent);
  const exam=exams.find(e=>e.id===examId);
- const subjects=chosen?getSubjects(chosen.grade,chosen.group,chosen.elective,chosen.fourthSubject):[];
+ const subjects=chosen?allowedSubjects(actor,chosen):[];
  const subject=subjects.find(s=>s.id===markSubject);
  const resultMap=useMemo(()=>Object.fromEntries((data.marks||[]).filter(m=>m.studentId===selectedStudent).map(m=>[m.subjectId,m.scores])),[data.marks,selectedStudent]);
  const summary=data.overview||{students:0,applications:0,present:0,absent:0};
@@ -328,7 +334,13 @@ export default function DashboardPortal() {
         {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
        {tab==="students"&&<>
         <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থীর রেকর্ড</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
-         <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label></div>
+         <div className="hmrs-student-filters">
+           <label className="field">শ্রেণি<select value={studentGrade} onChange={e=>{setStudentGrade(e.target.value);setStudentGroup("");setPage(1)}}>
+            <option value="">সব শ্রেণি</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+           {Number(studentGrade)>=9&&<label className="field">বিভাগ<select value={studentGroup} onChange={e=>{setStudentGroup(e.target.value);setPage(1)}}>
+            <option value="">সব বিভাগ</option><option value="science">বিজ্ঞান</option><option value="business">ব্যবসায় শিক্ষা</option><option value="humanities">মানবিক</option></select></label>}
+           <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
+          </div></div>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toBanglaDigits((visiblePage-1)*25+i+1)}</td>
          <td className="font-bold">{s.name}</td><td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
          <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
@@ -395,11 +407,12 @@ export default function DashboardPortal() {
     <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
     <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
    </div>
-   {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
+   {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>
+     {actor.role==="principal"&&<SelectionImportPanel onImported={async(importedExamId)=>{await changeExam(importedExamId);routeCache.current.delete(routeKey("marks",date,importedExamId));await refresh(actor,date,importedExamId,"marks",true)}}/>}</>:
    <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
-         <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
+         <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+(Number(s.grade)>=9?" "+(groupNames[s.group]||""):"")+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
         </div><div className="flex flex-wrap gap-2 items-end mt-4"><Field label="নতুন পরীক্ষার নাম"><Input value={newExam} onChange={setNewExam} placeholder="যেমন: বার্ষিক পরীক্ষা"/></Field><button disabled={working||!newExam.trim()} className="btn sm" onClick={async()=>{const r=await mutate("exam.create",{name:newExam});if(r){setNewExam("");await changeExam(r.examId)}}}><Plus size={14}/> পরীক্ষা তৈরি</button>
          {actor.role==="principal"&&exam&&<button className="btn sm" disabled={working} onClick={()=>mutate("exam.publish",{examId:exam.id,published:!exam.published})}>{exam.published?"ফলাফল অপ্রকাশ করুন":"ফলাফল প্রকাশ করুন"}</button>}</div></div>
         {chosen&&Number(chosen.grade)>=9&&<div className="panel p-5"><h3 className="font-extrabold mb-3">বিভাগ, নৈর্বাচনিক ও ৪র্থ বিষয়</h3><div className="form-grid">

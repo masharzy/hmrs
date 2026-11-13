@@ -25,8 +25,8 @@ test("shared parent phones are valid even across distinct pupils",()=>{
  assert.equal(normalizeAdmissionData(base).fatherPhone,normalizeAdmissionData(sameContact).fatherPhone);
 });
 test("class teacher sees all students in marks but remains scoped elsewhere",()=>{
- assert.match(data,/actor.role==="class_teacher"&&section!=="marks"/);
- assert.match(data,/section==="marks"&&actor.role==="class_teacher"/);
+ assert.match(data,/allStaffGrades\(actor\)/);
+ assert.match(data,/canManageSubject\(actor,student,x.subjectId\)/);
  assert.match(api,/async function studentForMarks/);
  assert.match(api,/const student = await studentForMarks\(actor/);
  assert.match(api,/resource === "marks"/);

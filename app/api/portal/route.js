@@ -7,11 +7,13 @@ import { getSubjects } from "../../../lib/academic";
 import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
 import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
+import { sameStudentRoll } from "../../../lib/school-identity.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
 import { registerPhoneCredential } from "../../../lib/phone-accounts";
 import { cleanAssignedClasses, cleanTeachingSubjects } from "../../../lib/teacher-subjects";
+import { teacherAssignments, canManageSubject, canManageHomeroom, canViewGrade, studentVisibleForTeaching } from "../../../lib/staff-permissions.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,7 +30,7 @@ async function studentForMarks(actor,id){
   if(!snap.exists||snap.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
   const {section,...value}=snap.data();
   const student={id:snap.id,...value};
-  if(actor.role==="teacher"&&!visible(actor,student))
+  if(actor.role!=="principal"&&!studentVisibleForTeaching(actor,student))
     throw Object.assign(Error("এই শ্রেণিতে পাঠদান করার অনুমতি নেই"),{status:403});
   return student;
 }
@@ -103,12 +105,12 @@ export async function GET(req) {
     }
     if (resource === "students") {
       const snap = await store.collection("students").limit(900).get();
-      return json({ items: asDocs(snap).filter(s => visible(actor, s)) });
+      return json({ items: asDocs(snap).filter(s => studentVisibleForTeaching(actor,s)) });
     }
     if (resource === "admissions") {
       needRole(actor, ["class_teacher", "principal"]);
       const snap = await store.collection("admissions").orderBy("createdAt", "desc").limit(250).get();
-      return json({ items: asDocs(snap).filter(a => visible(actor, a)) });
+      return json({ items: asDocs(snap).filter(a => canManageHomeroom(actor,a.grade)) });
     }
     if (resource === "notices") {
       const snap = await store.collection("notices").orderBy("createdAt", "desc").limit(100).get();
@@ -151,7 +153,7 @@ export async function GET(req) {
       const grade=scoped?parseBanglaNumber(gradeValue):null;
       const query=store.collection("marks").where("examId","==",examId);
       const snap=await query.limit(5000).get();
-      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&(actor.role==="class_teacher"||visible(actor,m))) });
+      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&canViewGrade(actor,m.grade)&&(!Array.isArray(actor.teachingSubjects)||actor.teachingSubjects.includes(m.subjectId))) });
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -200,9 +202,11 @@ async function removeStudentRecords(actor,id,store,action){
         const mapping=await store.collection("loginPhones").doc(phone).get();
         if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
       }
-      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
-      const ownedRoll=await rollRef.get();
+      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll,student.group));
+      const oldRollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
+      const [ownedRoll,ownedLegacy]=await Promise.all([rollRef.get(),oldRollRef.get()]);
       if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
+      if(oldRollRef.id!==rollRef.id&&ownedLegacy.exists&&ownedLegacy.data()?.studentId===id)refs.push(oldRollRef);
       const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
       for(let i=0;i<unique.length;i+=400){
         const batch=store.batch();
@@ -295,15 +299,16 @@ export async function POST(req) {
         if (!subjects.some(x => x.id === next.optionalId) || !allowedOptional.includes(next.optionalId))
           next.optionalId = allowedOptional[0];
       }
-      const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll;
+      const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll || (Number(next.grade)>=9 && old.group!==next.group);
       if (isNewRoll) {
         const sameGrade = await store.collection("students").where("grade", "==", next.grade).limit(950).get();
-        if (sameGrade.docs.some(d => d.id !== id && Number(d.data().roll) === next.roll))
-          return fail("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর", 409);
+        if (sameGrade.docs.some(d => d.id !== id && sameStudentRoll(d.data(),next)))
+          return fail("এই শ্রেণি ও বিভাগে রোলটি অন্য শিক্ষার্থীর", 409);
       }
       const studentRef=store.collection("students").doc(id);
-      const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll));
-      const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll));
+      const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll,next.group));
+      const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll,old.group));
+      const legacyRollRef=Number(old.grade)>=9?store.collection("studentRolls").doc(studentKey(old.grade,old.roll)):null;
       const newPhoneRef=store.collection("loginPhones").doc(next.phone);
       const prevPhone=normalizePhone(old.phone || "");
       const oldPhoneRef=prevPhone ? store.collection("loginPhones").doc(prevPhone) : null;
@@ -319,19 +324,21 @@ export async function POST(req) {
       ]):[{docs:[]},{docs:[]}];
       if(historicMarks.size+historicAttendance.size>380)return fail("অনেক পুরোনো রেকর্ড আছে; নিরাপদভাবে পরিবর্তনের জন্য প্রশাসকের সহায়তা প্রয়োজন",409);
       await store.runTransaction(async tx=>{
-        const [current,newRoll,oldRoll,newPhone,oldPhone,credential,application]=await Promise.all([
+        const [current,newRoll,oldRoll,newPhone,oldPhone,credential,application,legacyRoll]=await Promise.all([
           tx.get(studentRef),tx.get(newRollRef),rollChanged?tx.get(oldRollRef):null,
           phoneChanged && old.uid ? tx.get(newPhoneRef):null,
           phoneChanged && oldPhoneRef ? tx.get(oldPhoneRef):null,
           phoneChanged && credRef ? tx.get(credRef):null,
-          applicationRef ? tx.get(applicationRef):null
+          applicationRef ? tx.get(applicationRef):null,
+          legacyRollRef?tx.get(legacyRollRef):null
         ]);
         if(!current.exists||current.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
         if(isNewRoll && newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
         if(newPhone?.exists && newPhone.data()?.uid!==old.uid)throw Object.assign(Error("লগইন মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
         tx.update(studentRef,{...next,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
-        if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,roll:next.roll},{merge:true});
+        if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,group:next.group,roll:next.roll},{merge:true});
         if(rollChanged&&oldRoll?.exists&&oldRoll.data()?.studentId===id)tx.delete(oldRollRef);
+        if(legacyRoll?.exists&&legacyRoll.data()?.studentId===id&&legacyRollRef.id!==newRollRef.id)tx.delete(legacyRollRef);
         if(userRef)tx.set(userRef,{name:next.name,phone:next.phone},{merge:true});
         if(phoneChanged&&old.uid) {
           tx.set(newPhoneRef,{uid:old.uid,createdAt:iso()});
@@ -412,18 +419,13 @@ export async function POST(req) {
     }
     if (action === "account.create") {
       needRole(actor, ["principal"]);
-      const role = body.role, name = cleanText(body.name, 120),
-        phone = normalizePhone(body.phone), pin = normalizePin(body.pin);
-      if (!["teacher", "class_teacher"].includes(role) || !name || !phone || !pin)
-        return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
-      const assignedClasses=cleanAssignedClasses(body.assignedClasses);
-      const teachingSubjects=cleanTeachingSubjects(body.teachingSubjects);
-      if(!assignedClasses.length)return fail("অন্তত একটি শ্রেণি নির্বাচন করুন");
-      if(!teachingSubjects.length)return fail("অন্তত একটি বিষয় নির্বাচন করুন");
+      const name=cleanText(body.name,120),phone=normalizePhone(body.phone),pin=normalizePin(body.pin);
+      if(!name||!phone||!pin)return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
+      const assignments=teacherAssignments({...body,roles:Array.isArray(body.roles)?body.roles:[body.role]},{});
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
-        userPatch: { name, role, assignedClasses, teachingSubjects, active: true, createdAt: iso() }
+        userPatch: { name, ...assignments, active: true, createdAt: iso() }
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });
@@ -435,10 +437,12 @@ export async function POST(req) {
       const userRef=store.collection("users").doc(uid),current=await userRef.get();
       if(!current.exists)return fail("অ্যাকাউন্ট পাওয়া যায়নি",404);
       const before=current.data(),name=cleanText(values.name,120);
-      const role=values.role,active=values.active===true;
+      const staffAccount=["teacher","class_teacher"].includes(before.role);
+      const assignments=staffAccount?teacherAssignments({...values,roles:Array.isArray(values.roles)?values.roles:[values.role]},before):null;
+      const role=staffAccount?assignments.role:values.role,active=values.active===true;
       if(!name)return fail("ব্যবহারকারীর নাম লিখুন");
       if(before.role==="student" && role!=="student")return fail("শিক্ষার্থীর ভূমিকা পরিবর্তন করা যাবে না");
-      if(before.role!=="student" && !["teacher","class_teacher","principal"].includes(role))return fail("ভূমিকা সঠিক নয়");
+      if(before.role==="principal" && role!=="principal")return fail("প্রধান শিক্ষকের ভূমিকা এখানে পরিবর্তন করা যাবে না");
       if(uid===actor.uid && (role!=="principal"||!active))return fail("নিজের প্রধান শিক্ষক অধিকার বা অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না",403);
       const oldPhone=normalizePhone(before.phone||"");
       const suppliedPhone=cleanText(values.phone,30);
@@ -448,11 +452,8 @@ export async function POST(req) {
       const pinText=cleanText(values.pin,10),pin=pinText?normalizePin(pinText):null;
       if(pinText&&!pin)return fail("PIN অবশ্যই পাঁচ সংখ্যার হতে হবে");
       if(pin&&!phone)return fail("PIN সেট করতে আগে লগইন মোবাইল দিন");
-      const staffRole=["teacher","class_teacher"].includes(role);
-      const assignedClasses=staffRole?cleanAssignedClasses(values.assignedClasses):[];
-      const teachingSubjects=staffRole?cleanTeachingSubjects(values.teachingSubjects):[];
-      if(staffRole&&!assignedClasses.length)return fail("অন্তত একটি শ্রেণি নির্বাচন করুন");
-      if(staffRole&&!teachingSubjects.length)return fail("অন্তত একটি বিষয় নির্বাচন করুন");
+      const assignedClasses=assignments?.assignedClasses||[];
+      const teachingSubjects=assignments?.teachingSubjects||[];
       const phoneChanged=phone!==oldPhone;
       const credential=pin?makePinCredential(pin):null,now=iso();
       const credentialRef=store.collection("loginCredentials").doc(uid);
@@ -473,7 +474,7 @@ export async function POST(req) {
         if(studentRef&&(!studentSnap?.exists||studentSnap.data()?.deleting))
           throw Object.assign(Error("শিক্ষার্থীর অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
         tx.set(userRef,{name,phone:phone||"",role,active,
-          assignedClasses,teachingSubjects,pinEnabled:!!(existingCredential.exists||pin),updatedAt:now,updatedBy:actor.uid},{merge:true});
+          assignedClasses,teachingSubjects,...(assignments?{roles:assignments.roles,teachingClasses:assignments.teachingClasses,classTeacherClasses:assignments.classTeacherClasses}:{}),pinEnabled:!!(existingCredential.exists||pin),updatedAt:now,updatedBy:actor.uid},{merge:true});
         if(newMapping&&(phoneChanged||!newMap?.exists))tx.set(newMapping,{uid,createdAt:now});
         if(phoneChanged&&oldMap?.exists&&oldMap.data()?.uid===uid)tx.delete(oldMapping);
         if(credential)tx.set(credentialRef,{...credential,phone,updatedAt:now},{merge:true});
@@ -521,15 +522,15 @@ export async function POST(req) {
       const snap = await ref.get();
       if (!snap.exists) return fail("আবেদন পাওয়া যায়নি");
       const application = snap.data();
-      if (!visible(actor, application)) return fail("এই শ্রেণির অনুমতি নেই", 403);
+      if (!canManageHomeroom(actor,application.grade)) return fail("এই শ্রেণির ভর্তি অনুমোদনের অনুমতি নেই",403);
       if (application.status !== "pending") return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে");
       const phone = normalizePhone(body.phone || application.studentPhone || application.fatherPhone);
       if (!/^[1-9][0-9]{0,3}$/.test(roll) || !pin || !phone) return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const studentRef = store.collection("students").doc();
       const idStudent = studentRef.id;
       const duplicateRoll = await store.collection("students").where("grade", "==", Number(application.grade)).limit(950).get();
-      if (duplicateRoll.docs.some(d => Number(d.data().roll) === Number(roll))) return fail("এই শ্রেণিতে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
-      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll));
+      if (duplicateRoll.docs.some(d => sameStudentRoll(d.data(),{grade:application.grade,group:application.group,roll:Number(roll)}))) return fail("এই শ্রেণি ও বিভাগে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
+      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll,application.group));
       if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
       const user = await adminAuth().createUser({ displayName: application.studentName });
       createdUid = user.uid;
@@ -553,7 +554,7 @@ export async function POST(req) {
         if (existing.exists || existingRoll.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
         if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
         t.create(studentRef, student);
-        t.create(rollRef, { studentId: idStudent, grade: student.grade, roll: student.roll });
+        t.create(rollRef, { studentId: idStudent, grade: student.grade, group: student.group, roll: student.roll });
         t.create(phoneRef, { uid: user.uid, createdAt: iso() });
         t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
         t.set(store.collection("users").doc(user.uid), { role: "student", name: student.name, active: true,
@@ -567,7 +568,7 @@ export async function POST(req) {
       needRole(actor, ["class_teacher", "principal"]);
       const ref = store.collection("admissions").doc(cleanText(body.id, 150));
       const snap = await ref.get();
-      if (!snap.exists || !visible(actor, snap.data())) return fail("আবেদন পাওয়া যায়নি");
+      if (!snap.exists || !canManageHomeroom(actor,snap.data().grade)) return fail("আবেদন পাওয়া যায়নি");
       if (snap.data().status !== "pending") return fail("ইতিমধ্যে নিষ্পত্তি হয়েছে");
       await ref.update({ status: "rejected", reviewedBy: actor.uid, reviewedAt: iso() });
       await audit(actor, action, ref.id); return json({ ok: true });
@@ -604,8 +605,8 @@ export async function POST(req) {
       needRole(actor, allowedStaff);
       const student = await studentForMarks(actor, cleanText(body.studentId, 120));
       const examId = cleanText(body.examId, 150), subjectId = cleanText(body.subjectId, 80);
-      if(actor.role==="teacher" && actor.teachingSubjects?.length && !actor.teachingSubjects.includes(subjectId))
-        return fail("এই বিষয়ে নম্বর দেওয়ার অনুমতি নেই",403);
+      if(!canManageSubject(actor,student,subjectId))return fail("এই বিষয় বা শ্রেণির নম্বর দেওয়ার অনুমতি নেই",403);
+      
       const exam = await store.collection("exams").doc(examId).get();
       if (!exam.exists) return fail("পরীক্ষা পাওয়া যায়নি");
       if (exam.data().published && actor.role !== "principal") return fail("প্রকাশিত ফল প্রধান শিক্ষক ছাড়া পরিবর্তন করতে পারবেন না");
@@ -634,9 +635,7 @@ export async function POST(req) {
         const student=studentMap.get(cleanText(entry?.studentId,120));
         const subjectId=cleanText(entry?.subjectId,80);
         if(!student)return fail("নম্বর দেওয়ার জন্য শিক্ষার্থী পাওয়া যায়নি",404);
-        if(actor.role==="teacher" && (!visible(actor,student) ||
-           (actor.teachingSubjects?.length && !actor.teachingSubjects.includes(subjectId))))
-          return fail("এই শ্রেণি বা বিষয়ে নম্বর দেওয়ার অনুমতি নেই",403);
+        if(!canManageSubject(actor,student,subjectId))return fail("এই শ্রেণি বা বিষয়ে নম্বর দেওয়ার অনুমতি নেই",403);
         const subject=getSubjects(student.grade,student.group,student.elective,student.fourthSubject).find(s=>s.id===subjectId);
         if(!subject)return fail(student.name+" এর জন্য বিষয়টি প্রযোজ্য নয়");
         const key=examId+"_"+student.id+"_"+subjectId;

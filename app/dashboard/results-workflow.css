@@ -123,3 +123,27 @@
  .hmrs-admission-card-head{gap:8px;flex-wrap:wrap}
  .hmrs-admission-card-head>.chip{margin-left:auto}
 }
+
+/* Student list selectors and verified Excel import workflow */
+.hmrs-student-filters{display:flex;align-items:end;flex-wrap:wrap;gap:8px}
+.hmrs-student-filters .field{min-width:125px;flex:0 1 170px;font-size:11px}
+.hmrs-student-filters .dashboard-search{min-width:190px;flex:1 1 190px}
+.hmrs-student-filters select,.hmrs-student-filters input{height:37px;min-height:37px;padding:6px 9px;font-size:12px}
+.hmrs-import{padding:16px;margin-top:17px;border:1px solid #e0e7ec}
+.hmrs-import-head{display:flex;gap:10px;align-items:start;margin-bottom:13px}
+.hmrs-import-head>svg{color:#0f806e;flex:none}
+.hmrs-import-head b{font-size:14px}
+.hmrs-import-head p{margin:4px 0 0}
+.hmrs-import-preview{margin-top:13px;padding:13px;border:1px solid #d4e3e9;border-radius:7px;background:#fafdfd}
+.hmrs-import-preview>p{font-size:12px;margin:0 0 9px}
+.hmrs-import-statline{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#365d6b}
+.hmrs-import-statline span{background:#e9f4f2;padding:5px 8px;border-radius:4px}
+.hmrs-import-warning{display:flex;gap:8px;align-items:start;margin:10px 0;padding:9px;color:#885b1a;background:#fff3d9;font-size:11px}
+.hmrs-import-warning svg{flex:none}
+.hmrs-import-review{padding:9px 0;font-size:11px;color:#496271}
+.hmrs-import-review p{margin:4px 0}
+.hmrs-import-confirm{margin:12px 0;display:flex;align-items:start;gap:8px;font-size:11px;line-height:1.6}
+.hmrs-import-confirm input{margin-top:3px;flex:none}
+.hmrs-import-done{display:flex;gap:9px;margin-top:12px;padding:11px;background:#e5f6ed;color:#155a40;border-radius:7px;font-size:12px}
+.hmrs-import-done p{margin:4px 0 0;font-size:11px}
+@media(max-width:600px){.hmrs-student-filters{width:100%}.hmrs-student-filters .field{flex:1 1 130px}.hmrs-student-filters .dashboard-search{flex:1 1 100%}.hmrs-import{padding:12px}}
