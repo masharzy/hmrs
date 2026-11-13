@@ -4,7 +4,7 @@ import {randomInt} from "node:crypto";
 import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
 import { admissionSchema } from "../../../lib/admission-schema";
 import { normalizeStudentEdit } from "../../../lib/student-admin";
-import { getSubjects } from "../../../lib/academic";
+import { getSubjects, getStudentSubjects, fourthSubjectSelection, selectedFourthSubject } from "../../../lib/academic";
 import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
 import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
@@ -290,16 +290,10 @@ export async function POST(req) {
       if(actor.role!=="principal"&&!visible(actor,{grade:next.grade}))
         return fail("এই শ্রেণির শিক্ষার্থীর তথ্য পরিবর্তনের অনুমতি নেই",403);
       if (next.grade >= 9) {
-        const initial = { science:"higher-math", business:"agriculture", humanities:"civics" };
-        try { getSubjects(next.grade, next.group, next.elective, next.fourthSubject); }
-        catch { next.elective = initial[next.group]; }
-        if (next.group === "humanities" && !["agriculture","home-science"].includes(next.fourthSubject))
-          next.fourthSubject = "agriculture";
-        const subjects = getSubjects(next.grade, next.group, next.elective, next.fourthSubject);
-        const allowedOptional = next.group === "science" ? ["biology",next.elective]
-          : next.group === "business" ? [next.elective] : [next.fourthSubject];
-        if (!subjects.some(x => x.id === next.optionalId) || !allowedOptional.includes(next.optionalId))
-          next.optionalId = allowedOptional[0];
+        let derived;
+        try{derived=fourthSubjectSelection(next.group,selectedFourthSubject(next))}
+        catch{return fail("শ্রেণি ও বিভাগের ৪র্থ বিষয় সঠিক নয়");}
+        Object.assign(next,derived);
       }
       const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll || (Number(next.grade)>=9 && old.group!==next.group);
       if (isNewRoll) {
@@ -753,7 +747,7 @@ export async function POST(req) {
         const subjectId=cleanText(entry?.subjectId,80);
         if(!student)return fail("নম্বর দেওয়ার জন্য শিক্ষার্থী পাওয়া যায়নি",404);
         if(!canManageSubject(actor,student,subjectId))return fail("এই শ্রেণি বা বিষয়ে নম্বর দেওয়ার অনুমতি নেই",403);
-        const subject=getSubjects(student.grade,student.group,student.elective,student.fourthSubject).find(s=>s.id===subjectId);
+        const subject=getStudentSubjects(student).find(s=>s.id===subjectId);
         if(!subject)return fail(student.name+" এর জন্য বিষয়টি প্রযোজ্য নয়");
         const key=examId+"_"+student.id+"_"+subjectId;
         if(used.has(key))return fail("একই বিষয়ের নম্বর একাধিকবার পাঠানো হয়েছে");
@@ -789,14 +783,13 @@ export async function POST(req) {
       needRole(actor, ["principal", "class_teacher"]);
       const student = await studentFor(actor, cleanText(body.studentId, 120));
       if (student.grade < 9) return fail("শুধু ৯ম ও ১০ম শ্রেণির জন্য");
-      const group = body.group, elective = body.elective, fourthSubject = body.fourthSubject,
-        optionalId = body.optionalId;
-      const { getSubjects } = await import("../../../lib/academic");
-      const subjects = getSubjects(student.grade, group, elective, fourthSubject);
-      if (!subjects.some(s => s.id === optionalId)) return fail("চতুর্থ বিষয় সঠিক নয়");
-      if (group === "science" && !["biology", elective].includes(optionalId)) return fail("বিজ্ঞান বিভাগের চতুর্থ বিষয়টি সঠিক নয়");
-      if (group !== "science" && optionalId !== (group === "business" ? elective : fourthSubject)) return fail("চতুর্থ বিষয়টি নির্বাচন করুন");
-      await store.collection("students").doc(student.id).update({ group, elective, fourthSubject, optionalId });
+      const group=body.group||student.group, choice=body.optionalId;
+      let subjectFields;
+      try{subjectFields=fourthSubjectSelection(group,choice)}
+      catch{return fail("বিভাগ অনুযায়ী শুধু সঠিক ৪র্থ বিষয় নির্বাচন করুন",400)}
+      const subjects=getStudentSubjects({...student,group,...subjectFields});
+      if(!subjects.some(s=>s.id===choice))return fail("এই শিক্ষার্থীর ৪র্থ বিষয়টি প্রযোজ্য নয়",400);
+      await store.collection("students").doc(student.id).update({group,...subjectFields,updatedAt:iso(),updatedBy:actor.uid});
       await audit(actor, action, student.id); return json({ ok: true });
     }
     if (action === "payment.verify") {
