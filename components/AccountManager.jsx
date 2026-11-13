@@ -7,7 +7,7 @@ import PinInput from "./PinInput";
 const roles={principal:"প্রধান শিক্ষক",teacher:"শিক্ষক",class_teacher:"শ্রেণি শিক্ষক",student:"শিক্ষার্থী"};
 const display=u=>roles[u.role]||u.role;
 const classList=v=>(v||[]).map(x=>String(x).split("-")[0]).join(", ");
-export default function AccountManager({users=[],actor,mutate,working}){
+export default function AccountManager({users=[],actor,mutate,working,error}){
  const [search,setSearch]=useState(""),[page,setPage]=useState(1),[editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [values,setValues]=useState({}),[localError,setLocalError]=useState("");
  const filtered=useMemo(()=>{
@@ -58,7 +58,7 @@ export default function AccountManager({users=[],actor,mutate,working}){
     <div className="record-modal-head"><div><h2 id="hmrs-account-title"><Pencil size={18}/> অ্যাকাউন্ট এডিট</h2><p className="muted text-xs">{editing.name} · {display(editing)}</p></div>
      <button type="button" className="btn sm" disabled={working} onClick={close} aria-label="বন্ধ করুন"><X size={18}/></button></div>
     <form onSubmit={save}><div className="record-modal-body">
-     {localError&&<p role="alert" className="alert error">{localError}</p>}
+     {(localError||error)&&<p role="alert" className="alert error">{localError||error}</p>}
      <div className="form-grid">
       <label className="field">নাম<input value={values.name} required maxLength={120} onChange={e=>setValues(v=>({...v,name:e.target.value}))}/></label>
       <label className="field">লগইন মোবাইল<input type="tel" value={values.phone} placeholder="01XXXXXXXXX" onChange={e=>setValues(v=>({...v,phone:e.target.value}))}/></label>
@@ -76,7 +76,7 @@ export default function AccountManager({users=[],actor,mutate,working}){
     <div className="record-modal-head"><h2 id="hmrs-account-delete"><AlertTriangle size={20}/> অ্যাকাউন্ট ডিলিট করবেন?</h2>
      <button className="btn sm" type="button" onClick={close} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
     <div className="record-modal-body"><p id="hmrs-account-delete-description"><b>{deleting.name}</b> ({display(deleting)})-এর অ্যাকাউন্ট স্থায়ীভাবে ডিলিট হবে।{deleting.role==="student"?" শিক্ষার্থীর হাজিরা, নম্বর এবং লগইন রেকর্ডও মুছে যাবে।":""} এই কাজ ফিরিয়ে আনা যাবে না।</p>
-     {localError&&<p className="alert error" role="alert">{localError}</p>}</div>
+     {(localError||error)&&<p className="alert error" role="alert">{localError||error}</p>}</div>
     <div className="record-modal-actions"><button className="btn" type="button" onClick={close} disabled={working}>বাতিল</button><button className="btn danger" type="button" onClick={remove} disabled={working}><Trash2 size={15}/> {working?"ডিলিট হচ্ছে...":"নিশ্চিত, ডিলিট করুন"}</button></div>
    </section></div>}
  </section>;
