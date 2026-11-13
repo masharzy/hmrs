@@ -1,15 +1,15 @@
 "use client";
 import { DashboardRouteLink } from "./DashboardShell";
 import { ArrowUpRight, BookOpenCheck, CalendarCheck2, GraduationCap, UserRound, Wallet } from "lucide-react";
-import { gradeLabel, toAsciiDigits } from "../lib/bangla-numbers";
-import { groupNames } from "../lib/student-admin";
+import { toAsciiDigits } from "../lib/bangla-numbers";
+import {enGrade,enStream} from "../lib/result-english.js";
 
 export default function DashboardStudentHome({profile}){
  const student=profile?.student;
  if(!student)return null;
  const entries=[
-  ["Class",gradeLabel(student.grade)],
-  ...(Number(student.grade)>=9?[["Group",groupNames[student.group]||"—"]]:[]),
+  ["Class",enGrade(student.grade)],
+  ...(Number(student.grade)>=9?[["Group",enStream(student.group)||"—"]]:[]),
   ["Roll",toAsciiDigits(student.roll)],
   ["Father's Name",student.fatherName],
   ["Mother's Name",student.motherName],
@@ -19,11 +19,11 @@ export default function DashboardStudentHome({profile}){
   <section className="hmrs-student-hero">
    <span className="hmrs-student-hero-icon"><GraduationCap size={28}/></span>
    <div className="hmrs-student-hero-copy"><span>Student Profile</span><h2>{student.name}</h2>
-    <p>{gradeLabel(student.grade)} {Number(student.grade)>=9?" · "+(groupNames[student.group]||""):""} · Roll {toAsciiDigits(student.roll)}</p>
+    <p>{enGrade(student.grade)} {Number(student.grade)>=9?" · "+(enStream(student.group)||""):""} · Roll {toAsciiDigits(student.roll)}</p>
    </div>
   </section>
   <div className="hmrs-student-summary">
-   <div className="hmrs-student-summary-card"><span><Wallet size={19}/></span><div><small>Outstanding Dues</small><strong>BDT  {toAsciiDigits(profile.dues||0)}</strong></div></div>
+   <div className="hmrs-student-summary-card"><span><Wallet size={19}/></span><div><small>Outstanding Dues</small><strong>BDT {toAsciiDigits(profile.dues||0)}</strong></div></div>
    <div className="hmrs-student-summary-card"><span><BookOpenCheck size={19}/></span><div><small>Published Exams</small><strong>{toAsciiDigits(profile.publishedExams??profile.results?.length??0)}</strong></div></div>
   </div>
   <section className="hmrs-student-info">
