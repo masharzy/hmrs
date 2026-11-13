@@ -1,0 +1,54 @@
+/* Isolated to the marks spreadsheet and principal account manager. */
+.hmrs-marks-mode{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px}
+.hmrs-marks-mode .btn{border-radius:9px;font-size:12px;min-height:43px}
+.hmrs-sheet{min-width:0;max-width:100%;overflow:hidden}
+.hmrs-sheet-heading{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:20px}
+.hmrs-sheet-heading .section-title{margin:0 0 6px}
+.hmrs-sheet-heading p{margin:0;line-height:1.7}
+.hmrs-sheet-filters{display:grid;grid-template-columns:minmax(230px,2fr) minmax(120px,1fr) minmax(200px,1.5fr);gap:12px;margin-bottom:19px}
+.hmrs-sheet-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;border:1px solid #dfebed;border-radius:12px}
+.hmrs-sheet-scroll:focus-visible{outline:2px solid #0f8274;outline-offset:2px}
+.hmrs-sheet-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.hmrs-sheet-table th,.hmrs-sheet-table td{border-right:1px solid #e6edf0;border-bottom:1px solid #e9eef1;padding:8px;white-space:nowrap;text-align:center}
+.hmrs-sheet-table th{background:#edf7f6;color:#234c56;font-size:11px;min-width:105px}
+.hmrs-sheet-table thead tr:last-child th{background:#f4f9fa;font-size:10px;font-weight:650}
+.hmrs-sheet-table td{background:white;height:53px}
+.hmrs-sheet-table tbody tr:nth-child(even) td{background:#f9fbfd}
+.hmrs-sheet-table tbody tr:hover td{background:#f0faf8}
+.hmrs-sheet-table .hmrs-sheet-sticky{position:sticky;z-index:2;border-right:1px solid #d1e0e5}
+.hmrs-sheet-table th.hmrs-sheet-sticky{z-index:3;background:#e5f2f0}
+.hmrs-sheet-table .hmrs-sheet-serial{left:0;min-width:59px;width:59px}
+.hmrs-sheet-table .hmrs-sheet-roll{left:59px;min-width:66px;width:66px}
+.hmrs-sheet-table .hmrs-sheet-name{left:125px;min-width:180px;width:180px;text-align:left;white-space:normal;font-weight:750}
+.hmrs-sheet-table td.hmrs-sheet-na{color:#bcc8ce;background:#f6f8fa}
+.hmrs-sheet-table td.hmrs-sheet-changed{background:#fff7dc!important}
+.hmrs-sheet-table td input{width:90px;height:35px;min-height:35px;padding:4px 7px;text-align:center;border:1px solid #d8e3e7;border-radius:6px;background:#fff;outline:0;font-size:12px}
+.hmrs-sheet-table td input:focus{border-color:#137e75;box-shadow:0 0 0 2px #137e7525}
+.hmrs-sheet-table td input:disabled{background:#edf1f3;color:#647a80}
+.hmrs-sheet-table td input::placeholder{color:#a9b8bf;font-size:10px}
+.hmrs-sheet-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.hmrs-sheet-bottom>span{font-size:12px;color:#627b86}
+.hmrs-accounts-toolbar{display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:14px;margin:18px 0 14px}
+.hmrs-accounts-toolbar h2{margin:0 0 5px}
+.hmrs-accounts-toolbar .field{min-width:min(300px,100%)}
+.hmrs-account-active{display:flex;align-items:center;gap:9px;margin-top:18px;font-size:12px;font-weight:700}
+.hmrs-account-active input{width:17px;height:17px}
+.hmrs-accounts .record-modal .pin-grid{max-width:310px}
+.hmrs-accounts .record-modal .pin-cell{height:48px;min-height:46px;font-size:17px}
+.hmrs-accounts .record-modal .form-grid>.field{min-width:0}
+@media(max-width:780px){
+ .hmrs-sheet{padding:15px!important}
+ .hmrs-sheet-heading{flex-direction:column;align-items:stretch}
+ .hmrs-sheet-heading .btn{width:100%}
+ .hmrs-sheet-filters{grid-template-columns:1fr 1fr}
+ .hmrs-sheet-filters .field:first-child{grid-column:span 2}
+ .hmrs-sheet-table .hmrs-sheet-name{width:155px;min-width:155px}
+ .hmrs-sheet-table td input{width:77px}
+}
+@media(max-width:480px){
+ .hmrs-marks-mode .btn{flex:1;padding:9px 6px;font-size:10px}
+ .hmrs-sheet-table .hmrs-sheet-name{min-width:130px;width:130px}
+ .hmrs-sheet-bottom .btn{flex:1}
+ .hmrs-accounts-toolbar .field{width:100%}
+ .hmrs-sheet-filters{grid-template-columns:1fr 1fr;gap:8px}
+}
