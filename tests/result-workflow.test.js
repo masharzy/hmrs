@@ -42,9 +42,13 @@ test("result sheet supports grade, subject and all-subject mode with Bengali ser
  assert.match(api,/validateMarkForStudent\(student,subjectId,scores\)/);
  assert.match(api,/batch\.commit\(\)/);
 });
-test("principal user management edits all roles, hashes PIN and asks before delete",()=>{
+test("principal teacher management edits roles, hashes PIN and asks before delete",()=>{
  assert.match(portal,/<AccountManager users=\{data.users\|\|\[\]\}/);
  assert.match(accounts,/role="dialog"/);
+ assert.match(accounts,/staff.accounts/);
+ assert.match(accounts,/শিক্ষক যুক্ত করুন/);
+ assert.match(accounts,/assignedClasses/);
+ assert.match(accounts,/teachingSubjects/);
  assert.match(accounts,/role="alertdialog"/);
  assert.match(accounts,/confirmed:true/);
  assert.match(api,/action === "account.update"/);
