@@ -7,7 +7,8 @@ const links={
  students:{label:"Student Management",desc:"Student records and search",Icon:Users},
  admissions:{label:"Admissions",desc:"Review pending applications",Icon:ClipboardCheck},
  attendance:{label:"Daily Attendance",desc:"Attendance and parent notifications",Icon:CalendarCheck2},
- marks:{label:"Exams & Results",desc:"Marks, reports and publishing",Icon:FilePenLine},
+ exams:{label:"Exams",desc:"Create or manage exams",Icon:GraduationCap},
+ marks:{label:"Marks",desc:"Enter marks and publish results",Icon:FilePenLine},
  finance:{label:"Finance",desc:"Accounts and student dues",Icon:Wallet}
 };
 const metrics=[
@@ -18,7 +19,7 @@ const metrics=[
 ];
 export default function DashboardOverview({actor,summary={},routes=[]}){
  const keys=new Set(routes.map(([key])=>key));
- const shortcutKeys=["students","admissions","attendance","marks","finance"].filter(key=>keys.has(key));
+ const shortcutKeys=["students","admissions","attendance","exams","marks","finance"].filter(key=>keys.has(key));
  const isPrincipal=actor?.role==="principal";
  return <div className="hmrs-overview">
   <section className="hmrs-overview-hero">
