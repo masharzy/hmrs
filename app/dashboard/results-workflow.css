@@ -147,3 +147,33 @@
 .hmrs-import-done{display:flex;gap:9px;margin-top:12px;padding:11px;background:#e5f6ed;color:#155a40;border-radius:7px;font-size:12px}
 .hmrs-import-done p{margin:4px 0 0;font-size:11px}
 @media(max-width:600px){.hmrs-student-filters{width:100%}.hmrs-student-filters .field{flex:1 1 130px}.hmrs-student-filters .dashboard-search{flex:1 1 100%}.hmrs-import{padding:12px}}
+
+
+/* Incomplete imported students: compact, accessible warnings on roster + edit panel */
+.hmrs-student-warning{border:1px solid #e6bb65;background:#fff9ea;color:#6d4d1e;
+ padding:11px 13px;margin-bottom:11px;border-radius:7px;font-size:12px}
+.hmrs-student-warning-head{display:flex;align-items:flex-start;gap:9px}
+.hmrs-student-warning-head>svg{flex:none;color:#bd7c16;margin-top:1px}
+.hmrs-student-warning-head b{font-size:13px}
+.hmrs-student-warning-head p{font-size:11px;line-height:1.6;margin:4px 0 0}
+.hmrs-student-warning details{padding-top:8px}
+.hmrs-student-warning summary{font-weight:650;cursor:pointer;font-size:11px}
+.hmrs-student-warning-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:210px;overflow:auto}
+.hmrs-student-warning-list .btn{background:white;border:1px solid #e2cfa8;color:#765323;max-width:100%;font-size:11px;white-space:normal;text-align:left}
+.hmrs-student-incomplete-icon{border:0;background:#fff3d4;color:#9c6313;cursor:pointer;
+ padding:3px 5px;border-radius:4px;display:inline-flex;gap:4px;align-items:center;
+ margin-left:6px;vertical-align:middle;font-size:10px}
+.hmrs-student-incomplete-icon:focus-visible{outline:2px solid #b7791f;outline-offset:2px}
+.hmrs-editor-incomplete{border:1px solid #edca88;background:#fffbef;
+ padding:10px 12px;margin-top:12px;border-radius:6px;font-size:11px}
+.hmrs-editor-incomplete strong{color:#956015}.hmrs-editor-incomplete p{margin:5px 0 9px;color:#745d37;line-height:1.55}
+.hmrs-editor-incomplete .field{max-width:400px}
+.hmrs-import-rolls{display:flex;justify-content:space-between;gap:12px;align-items:center;
+ border:1px solid #d8e3e9;background:#f5f9fb;border-radius:7px;padding:11px;margin:10px 0 16px}
+.hmrs-import-rolls b{font-size:12px}.hmrs-import-rolls p{font-size:11px;color:#5b7482;margin:4px 0 0}
+.hmrs-import-rolls .btn{white-space:normal;flex:none}
+.hmrs-import-review-title{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:9px}
+.hmrs-import-review summary{display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:650;font-size:11px;padding:3px 0}
+.hmrs-import-review p{line-height:1.55;margin:4px 0;border-bottom:1px dotted #e4eaef;padding-bottom:4px}
+@media(max-width:600px){.hmrs-import-rolls{align-items:stretch;flex-direction:column}.hmrs-import-rolls .btn{align-self:flex-start}
+ .hmrs-student-warning{padding:10px}.hmrs-student-warning-list{max-height:145px}}
