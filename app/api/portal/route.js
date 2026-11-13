@@ -281,6 +281,8 @@ export async function POST(req) {
       const old = await studentFor(actor, id);
       if (old.deleting) return fail("শিক্ষার্থী মুছে ফেলা হচ্ছে",409);
       const next = normalizeStudentEdit({ ...old, ...(body.values || {}) });
+      if(actor.role!=="principal"&&!visible(actor,{grade:next.grade}))
+        return fail("এই শ্রেণির শিক্ষার্থীর তথ্য পরিবর্তনের অনুমতি নেই",403);
       if (next.grade >= 9) {
         const initial = { science:"higher-math", business:"agriculture", humanities:"civics" };
         try { getSubjects(next.grade, next.group, next.elective, next.fourthSubject); }
