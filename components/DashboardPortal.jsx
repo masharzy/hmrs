@@ -472,53 +472,58 @@ export default function DashboardPortal() {
        </>}
        {tab==="marks"&&<>
         <div className="hmrs-results-page-head">
-         <div><h2>পরীক্ষা ও নম্বর</h2><p>পরীক্ষা তৈরি, শ্রেণিভিত্তিক নম্বর, শিক্ষার্থীর ফলাফল এবং প্রকাশনা</p></div>
+         <div><h2>Exams & Marks</h2><p>Create exams, enter marks and publish student results.</p></div>
          {(actor.role==="principal"||actor.role==="class_teacher")&&
-          <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> পরীক্ষা তৈরি করুন</button>}
+          <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> Create Exam</button>}
         </div>
         <div className="hmrs-marks-mode" role="group" aria-label="নম্বর দেখার পদ্ধতি">
-         <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
-         <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
+         <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>Class Marks (Excel)</button>
+         <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>Individual Result</button>
         </div>
         {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
-         students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}/>}
+         students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}
+           onDelete={async id=>{
+            const result=await mutate("exam.delete",{examId:id,confirmed:true});
+            if(result){await changeExam("");return true}
+            return false;
+           }}/> }
         {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam}
           students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
          <>
           <div className="hmrs-individual-lookup panel">
-           <div className="hmrs-individual-lookup-head"><h3>একজন শিক্ষার্থীর বিস্তারিত ফলাফল</h3>
-            <p>পরীক্ষা → শ্রেণি → বিভাগ (৯–১০) → শিক্ষার্থী</p></div>
+           <div className="hmrs-individual-lookup-head"><h3>Individual Student Result</h3>
+            <p>Exam → Class → Group (Class 9–10) → Student</p></div>
            <div className="hmrs-individual-lookup-grid">
-            <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam}
-             choices={options(exams.map(e=>[e.id,e.name+" · "+examScopeLabel(e)]),"পরীক্ষা নির্বাচন করুন")}/></Field>
-            <Field label="শ্রেণি"><Select value={individualGrade}
+            <Field label="Exam"><Select value={examId} onChange={changeExam}
+             choices={options(exams.map(e=>[e.id,e.name+" · "+(examScopeGrade(e)?enGrade(examScopeGrade(e)):"All Classes")]),"Select exam")}/></Field>
+            <Field label="Class"><Select value={individualGrade}
              onChange={v=>{setIndividualGrade(v);setIndividualGroup("");chooseStudent("");}}
-             choices={[["","শ্রেণি নির্বাচন করুন"],...gradeChoices.filter(([n])=>!examId||examAppliesToStudent(exam,{grade:Number(n)}))]}/></Field>
-            {Number(individualGrade)>=9&&<Field label="বিভাগ"><Select value={individualGroup}
+             choices={[["","Select class"],...gradeChoices.filter(([n])=>!examId||examAppliesToStudent(exam,{grade:Number(n)})).map(([n])=>[n,enGrade(n)])]}/></Field>
+            {Number(individualGrade)>=9&&<Field label="Group"><Select value={individualGroup}
              onChange={v=>{setIndividualGroup(v);chooseStudent("")}}
-             choices={[["","বিভাগ নির্বাচন করুন"],["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]]}/></Field>}
-            <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent}
-             choices={options(individualStudents.map(s=>[s.id,s.name+" · রোল "+toBanglaDigits(s.roll)]),
-              !individualGrade||Number(individualGrade)>=9&&!individualGroup?"আগে শ্রেণি ও বিভাগ নির্বাচন করুন":"শিক্ষার্থী নির্বাচন করুন")}/></Field>
+             choices={[["","Select group"],["science","Science"],["business","Business Studies"],["humanities","Humanities"]]}/></Field>}
+            <Field label="Student"><Select value={selectedStudent} onChange={chooseStudent}
+             choices={options(individualStudents.map(s=>[s.id,s.name+" · Roll "+enNumber(s.roll)]),
+              !individualGrade||Number(individualGrade)>=9&&!individualGroup?"Select class and group":"Select student")}/></Field>
            </div>
-           {exam&&<p className="hmrs-individual-context">{examScopeLabel(exam)} · {toBanglaDigits(individualStudents.length)} জন মিলেছে</p>}
+           {exam&&<p className="hmrs-individual-context">{examScopeGrade(exam)?enGrade(examScopeGrade(exam)):"All Classes"} · {enNumber(individualStudents.length)} students</p>}
           </div>
           {chosen&&exam&&individualReport&&<StudentResultCard isAdmin exam={exam}
            result={individualReport} marks={resultMap} metrics={individualMetrics} onPrint={()=>printMarksheet(exam.id)}/>}
          {chosen&&exam&&<>
           <div className="hmrs-individual-entry panel">
-           <h3>নম্বর সংশোধন</h3>
-           <p>এখান থেকে নির্দিষ্ট বিষয়ের CQ / MCQ / ব্যবহারিক নম্বর সংশোধন করা যাবে।</p>
-           <Field label="বিষয় নির্বাচন"><Select value={markSubject} onChange={chooseSubject}
-            choices={options(subjects.map(x=>[x.id,x.name+" ("+toBanglaDigits(x.max)+")"]))}/></Field>
+           <h3>Update Subject Marks</h3>
+           <p>Edit CQ, MCQ and practical marks for this student.</p>
+           <Field label="Subject"><Select value={markSubject} onChange={chooseSubject}
+            choices={options(subjects.map(x=>[x.id,enSubject(x.id,x.name)+" ("+enNumber(x.max)+")"]),"Select subject")}/></Field>
            {subject&&<><div className="form-grid hmrs-individual-score-fields">
-            {subject.parts.map(part=><Field key={part.key} label={(part.paper?part.paper+" · ":"")+part.label+" / "+toBanglaDigits(part.max)}>
+            {subject.parts.map(part=><Field key={part.key} label={enPart(part.label,part.key)+" / "+enNumber(part.max)}>
              <Input type="number" min="0" step="0.01" value={markScores[part.key]??""}
               onChange={v=>setMarkScores(o=>({...o,[part.key]:v===""?"":v}))}/></Field>)}
            </div>
            <button disabled={working||changingExam||(exam.published&&actor.role!=="principal")}
             className="btn primary mt-4" onClick={()=>mutate("marks.set",
-            {studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> নম্বর সংরক্ষণ</button></>}
+            {studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> Save Marks</button></>}
           </div>
           <Marksheet printId={"mark-print-"+exam.id} student={chosen} marks={resultMap} exam={exam} report={individualReport} metrics={individualMetrics}/>
          </>}
