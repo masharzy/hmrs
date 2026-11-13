@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Save } from "lucide-react";
 import { getSubjects } from "../lib/academic";
+import { allowedSubjects } from "../lib/staff-permissions.js";
 import { gradeLabel, toBanglaDigits, toAsciiDigits } from "../lib/bangla-numbers";
 
 const grades=[6,7,8,9,10],groupOptions=[["","সব বিভাগ"],["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
@@ -30,7 +31,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const [revision,setRevision]=useState(0),tableRef=useRef(null);
  const exam=exams.find(e=>e.id===examId);
  const rows=useMemo(()=>students.filter(s=>Number(s.grade)===Number(grade)&&(!group||s.group===group)).sort(sortStudents),[students,grade,group]);
- const subjectsByStudent=useMemo(()=>new Map(rows.map(s=>[s.id,getList(s)])),[rows]);
+ const subjectsByStudent=useMemo(()=>new Map(rows.map(s=>[s.id,allowedSubjects(actor,s)])),[rows,actor]);
  const groups=useMemo(()=>displayGroups(subjectsByStudent),[subjectsByStudent]);
  const displayed=subjectId?groups.filter(s=>s.id===subjectId):groups;
  const byKey=useMemo(()=>new Map(sheet.map(m=>[keyFor(m.studentId,m.subjectId),m.scores||{}])),[sheet]);
