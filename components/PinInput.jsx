@@ -1,6 +1,6 @@
 "use client";
 import { useRef } from "react";
-import { toAsciiDigits, toAsciiDigits } from "../lib/bangla-numbers";
+import { toAsciiDigits } from "../lib/bangla-numbers";
 
 const digits = text => toAsciiDigits(text).replace(/\D/g,"");
 
