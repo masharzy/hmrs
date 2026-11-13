@@ -339,8 +339,8 @@ export default function DashboardPortal() {
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
          <b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)} · পাওনা ৳ {toBanglaDigits(s.due||0)}</p>
          <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
-          {actor.role==="principal"&&<><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
-           <button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button></>}</div>
+          <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
+           {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button>}</></div>
         </div>)}{!filtered.length&&<div className="panel empty">শিক্ষার্থী পাওয়া যায়নি</div>}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
