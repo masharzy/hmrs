@@ -15,9 +15,10 @@ test("dashboard API authorizes students before its staff-only resource guard",()
  assert.match(data,/student:\["overview","records","results","profile"\]/);
 });
 
-test("attendance and marks use selection-specific cache keys",()=>{
+test("attendance caches by date while marks route stays mounted across exam selection",()=>{
  assert.match(portal,/section==="attendance"\?"attendance:"\+date/);
- assert.match(portal,/section==="marks"\?"marks:"\+\(examId\|\|"none"\)/);
+ assert.doesNotMatch(portal,/section==="marks"\?"marks:"\+\(examId\|\|"none"\)/);
+ assert.match(portal,/section==="attendance"\?"attendance:"\+date:section/);
  assert.match(portal,/routeCache\.current\.set\(key,\{\.\.\.current,data:/);
  assert.doesNotMatch(portal,/data\.attendance\?\.find\(a=>a\.studentId===s\.id\)/);
  assert.match(portal,/attendanceByStudent=useMemo/);
