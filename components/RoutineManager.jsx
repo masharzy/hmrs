@@ -114,7 +114,7 @@ export default function RoutineManager({items=[],working,mutate}){
       <select value={form.group} onChange={e=>change("group",e.target.value)}>{groups.map(([v,label])=><option key={v} value={v}>{label}</option>)}</select>
      </label>}
     </div>
-    <div className="routine-uploader-block"><div className="routine-uploader-head"><strong>Routine Image</strong><small>JPG, PNG বা WebP · সর্বোচ্চ ৫ MB</small></div>
+    <div className="routine-uploader-block"><div className="routine-uploader-head"><strong>Routine Image</strong><small>JPG, PNG or WebP · Max 5 MB</small></div>
      <div className={"routine-dropzone"+(filePreview?" has-file":"")} role="button" tabIndex={0} aria-label="Choose routine image"
       onClick={()=>inputRef.current?.click()}
       onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();inputRef.current?.click()}}}
@@ -143,7 +143,7 @@ export default function RoutineManager({items=[],working,mutate}){
    </div>
   </section>
   <section className="routine-list-area">
-   <div className="routine-list-head"><div><h2>Saved Routines</h2><p>Manage titles, images and publication status</p></div><span className="chip">{toAsciiDigits(items.length)}টি</span></div>
+   <div className="routine-list-head"><div><h2>Saved Routines</h2><p>Manage titles, images and publication status</p></div><span className="chip">{toAsciiDigits(items.length)} routines</span></div>
    {!items.length?<div className="panel routine-empty-list"><FileImage size={29}/><b>No routines saved</b><p>Add a routine using the form above.</p></div>:
     <div className="routine-cards">{items.map(item=><article className="panel routine-admin-card" key={item.id}>
      <button type="button" className="routine-card-thumb" onClick={()=>setFullImage(item.imageUrl)} aria-label={item.title+" View full size"}>
@@ -155,8 +155,8 @@ export default function RoutineManager({items=[],working,mutate}){
      </div>
     </article>)}</div>}
   </section>
-  {fullImage&&<div className="routine-full-backdrop" onClick={()=>setFullImage("")} role="presentation"><div className="routine-full-modal" role="dialog" aria-modal="true" aria-label="রুটিনের সম্পূর্ণ image" onClick={e=>e.stopPropagation()}>
-   <button type="button" className="routine-full-close" onClick={()=>setFullImage("")} aria-label="ছবি বন্ধ করুন"><X size={20}/></button><img src={fullImage} alt="সম্পূর্ণ রুটিন"/>
+  {fullImage&&<div className="routine-full-backdrop" onClick={()=>setFullImage("")} role="presentation"><div className="routine-full-modal" role="dialog" aria-modal="true" aria-label="Full Routine Image" onClick={e=>e.stopPropagation()}>
+   <button type="button" className="routine-full-close" onClick={()=>setFullImage("")} aria-label="Close Image"><X size={20}/></button><img src={fullImage} alt="Full Routine"/>
   </div></div>}
  </div>;
 }
