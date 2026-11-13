@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search, Check, BookOpen, Users } from "lucide-react";
 import { toAsciiDigits } from "../lib/bangla-numbers";
 import { CLASS_OPTIONS, TEACHER_SUBJECT_OPTIONS } from "../lib/teacher-subjects";
+import {enSubject} from "../lib/result-english.js";
+const EN_CLASSES=CLASS_OPTIONS.map(option=>({...option,label:"Class "+option.value}));
+const EN_SUBJECTS=TEACHER_SUBJECT_OPTIONS.map(option=>({...option,name:enSubject(option.id,option.name)}));
 import PinInput from "./PinInput";
 
 const roles={teacher:"Teacher",class_teacher:"Class Teacher"};
@@ -87,8 +90,8 @@ export default function AccountManager({actor,request,mutate,working,error}){
    {!loading&&items.map((u,i)=><tr key={u.id}><td>{toAsciiDigits((page-1)*20+i+1)}</td>
     <td className="font-bold">{u.name}{u.active===false&&<span className="chip gray ml-2">Inactive</span>}</td>
     <td>{toAsciiDigits(u.phone||"—")}</td><td>{(u.roles||[u.role]).map(r=>roles[r]).filter(Boolean).join(" + ")}</td>
-    <td>{[...new Set([...(u.teachingClasses||[]),...(u.classTeacherClasses||[]),...(u.assignedClasses||[])])].map(toBanglaDigits).join(", ")||"—"}</td>
-    <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name||id).join(", ")||"—"}</td>
+    <td>{[...new Set([...(u.teachingClasses||[]),...(u.classTeacherClasses||[]),...(u.assignedClasses||[])])].map(toAsciiDigits).join(", ")||"—"}</td>
+    <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>enSubject(id,TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name)||id).join(", ")||"—"}</td>
     <td><div className="inline-actions"><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> Edit</button>
      <button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> Delete</button></div></td>
    </tr>)}
@@ -121,14 +124,14 @@ export default function AccountManager({actor,request,mutate,working,error}){
      </div>
      <div className="hmrs-teacher-grade-pickers">
        {values.roles.includes("teacher")&&<Choices kind="classes" label="Teaching Classes"
-        description="Select multiple classes" options={CLASS_OPTIONS}
+        description="Select multiple classes" options={EN_CLASSES}
         values={values.teachingClasses} onChange={v=>changed("teachingClasses",v)}/>}
        {values.roles.includes("class_teacher")&&<Choices kind="classes" label="Homeroom Classes"
-        description="Choose responsible classes" options={CLASS_OPTIONS}
+        description="Choose responsible classes" options={EN_CLASSES}
         values={values.classTeacherClasses} onChange={v=>changed("classTeacherClasses",v)}/>}
      </div>
      <Choices kind="subjects" label="Teaching Subjects" description="Only selected subjects appear for marks entry"
-      searchable options={TEACHER_SUBJECT_OPTIONS} values={values.teachingSubjects}
+      searchable options={EN_SUBJECTS} values={values.teachingSubjects}
       onChange={v=>changed("teachingSubjects",v)}/>
      {modal.kind==="edit"&&<button type="button" role="switch" aria-checked={values.active}
       className={"hmrs-teacher-account-switch "+(values.active?"is-on":"")} onClick={()=>changed("active",!values.active)}>
