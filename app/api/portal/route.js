@@ -7,6 +7,7 @@ import { getSubjects } from "../../../lib/academic";
 import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
 import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
+import { sameStudentRoll } from "../../../lib/school-identity.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -200,7 +201,7 @@ async function removeStudentRecords(actor,id,store,action){
         const mapping=await store.collection("loginPhones").doc(phone).get();
         if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
       }
-      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
+      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll,student.group));
       const ownedRoll=await rollRef.get();
       if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
       const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
@@ -295,15 +296,16 @@ export async function POST(req) {
         if (!subjects.some(x => x.id === next.optionalId) || !allowedOptional.includes(next.optionalId))
           next.optionalId = allowedOptional[0];
       }
-      const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll;
+      const isNewRoll = Number(old.grade) !== next.grade || Number(old.roll) !== next.roll || (Number(next.grade)>=9 && old.group!==next.group);
       if (isNewRoll) {
         const sameGrade = await store.collection("students").where("grade", "==", next.grade).limit(950).get();
-        if (sameGrade.docs.some(d => d.id !== id && Number(d.data().roll) === next.roll))
-          return fail("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর", 409);
+        if (sameGrade.docs.some(d => d.id !== id && sameStudentRoll(d.data(),next)))
+          return fail("এই শ্রেণি ও বিভাগে রোলটি অন্য শিক্ষার্থীর", 409);
       }
       const studentRef=store.collection("students").doc(id);
-      const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll));
-      const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll));
+      const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll,next.group));
+      const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll,old.group));
+      const legacyRollRef=Number(old.grade)>=9?store.collection("studentRolls").doc(studentKey(old.grade,old.roll)):null;
       const newPhoneRef=store.collection("loginPhones").doc(next.phone);
       const prevPhone=normalizePhone(old.phone || "");
       const oldPhoneRef=prevPhone ? store.collection("loginPhones").doc(prevPhone) : null;
@@ -319,19 +321,21 @@ export async function POST(req) {
       ]):[{docs:[]},{docs:[]}];
       if(historicMarks.size+historicAttendance.size>380)return fail("অনেক পুরোনো রেকর্ড আছে; নিরাপদভাবে পরিবর্তনের জন্য প্রশাসকের সহায়তা প্রয়োজন",409);
       await store.runTransaction(async tx=>{
-        const [current,newRoll,oldRoll,newPhone,oldPhone,credential,application]=await Promise.all([
+        const [current,newRoll,oldRoll,newPhone,oldPhone,credential,application,legacyRoll]=await Promise.all([
           tx.get(studentRef),tx.get(newRollRef),rollChanged?tx.get(oldRollRef):null,
           phoneChanged && old.uid ? tx.get(newPhoneRef):null,
           phoneChanged && oldPhoneRef ? tx.get(oldPhoneRef):null,
           phoneChanged && credRef ? tx.get(credRef):null,
-          applicationRef ? tx.get(applicationRef):null
+          applicationRef ? tx.get(applicationRef):null,
+          legacyRollRef?tx.get(legacyRollRef):null
         ]);
         if(!current.exists||current.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
         if(isNewRoll && newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
         if(newPhone?.exists && newPhone.data()?.uid!==old.uid)throw Object.assign(Error("লগইন মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
         tx.update(studentRef,{...next,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
-        if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,roll:next.roll},{merge:true});
+        if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,group:next.group,roll:next.roll},{merge:true});
         if(rollChanged&&oldRoll?.exists&&oldRoll.data()?.studentId===id)tx.delete(oldRollRef);
+        if(legacyRoll?.exists&&legacyRoll.data()?.studentId===id&&legacyRollRef.id!==newRollRef.id)tx.delete(legacyRollRef);
         if(userRef)tx.set(userRef,{name:next.name,phone:next.phone},{merge:true});
         if(phoneChanged&&old.uid) {
           tx.set(newPhoneRef,{uid:old.uid,createdAt:iso()});
@@ -528,8 +532,8 @@ export async function POST(req) {
       const studentRef = store.collection("students").doc();
       const idStudent = studentRef.id;
       const duplicateRoll = await store.collection("students").where("grade", "==", Number(application.grade)).limit(950).get();
-      if (duplicateRoll.docs.some(d => Number(d.data().roll) === Number(roll))) return fail("এই শ্রেণিতে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
-      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll));
+      if (duplicateRoll.docs.some(d => sameStudentRoll(d.data(),{grade:application.grade,group:application.group,roll:Number(roll)}))) return fail("এই শ্রেণি ও বিভাগে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
+      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll,application.group));
       if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
       const user = await adminAuth().createUser({ displayName: application.studentName });
       createdUid = user.uid;
@@ -553,7 +557,7 @@ export async function POST(req) {
         if (existing.exists || existingRoll.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
         if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
         t.create(studentRef, student);
-        t.create(rollRef, { studentId: idStudent, grade: student.grade, roll: student.roll });
+        t.create(rollRef, { studentId: idStudent, grade: student.grade, group: student.group, roll: student.roll });
         t.create(phoneRef, { uid: user.uid, createdAt: iso() });
         t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
         t.set(store.collection("users").doc(user.uid), { role: "student", name: student.name, active: true,
