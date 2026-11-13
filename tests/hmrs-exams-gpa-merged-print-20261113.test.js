@@ -98,5 +98,5 @@ test("student must choose a published exam before its result is shown",()=>{
  assert.match(portal,/selectedPublishedExam/);
  assert.match(portal,/setSelectedPublishedExam\(ex.id\)/);
  assert.match(portal,/profile.results.filter\(x=>x.exam.id===selectedPublishedExam\)/);
- assert.match(portal,/setSelectedPublishedExam\(""""\)/); // updated below
+ assert.match(portal,/setSelectedPublishedExam\(""\)/);
 });
