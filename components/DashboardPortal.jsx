@@ -17,6 +17,8 @@ import DashboardStudentHome from "./DashboardStudentHome";
 const RoutineManager=dynamic(()=>import("./RoutineManager"),{ssr:false});
 const NoticeManager=dynamic(()=>import("./NoticeManager"),{ssr:false});
 const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
+const ResultEntryGrid=dynamic(()=>import("./ResultEntryGrid"),{ssr:false});
+const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
@@ -57,6 +59,7 @@ export default function DashboardPortal() {
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
+ const [markMode,setMarkMode]=useState("grid");
  const [newExam,setNewExam]=useState(""),[login,setLogin]=useState({role:"teacher",name:"",phone:"",pin:"",assignedClasses:"6"});
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
@@ -167,6 +170,19 @@ export default function DashboardPortal() {
     const items=[...(current?.data?.marks||data.marks||[]).filter(v=>!(v.studentId===params.studentId&&v.subjectId===params.subjectId)),record];
     setData(old=>({...old,marks:items}));
     if(current)routeCache.current.set(key,{...current,data:{...current.data,marks:items}});
+    return r;
+   }
+   if(action==="marks.batch"){
+    const key=routeKey("marks",date,params.examId);
+    const current=routeCache.current.get(key);
+    const existing=[...(current?.data?.marks||data.marks||[])];
+    for(const entry of params.entries||[]){
+     const index=existing.findIndex(x=>x.studentId===entry.studentId&&x.subjectId===entry.subjectId);
+     const row={studentId:entry.studentId,subjectId:entry.subjectId,examId:params.examId,scores:entry.scores};
+     if(index>=0)existing[index]=row;else existing.push(row);
+    }
+    setData(old=>({...old,marks:existing}));
+    if(current)routeCache.current.set(key,{...current,data:{...current.data,marks:existing}});
     return r;
    }
    if(action==="pin.change")return r;
@@ -353,7 +369,12 @@ export default function DashboardPortal() {
         })}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="marks"&&<><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
+       {tab==="marks"&&<><div className="hmrs-marks-mode" role="group" aria-label="নম্বর দেখার পদ্ধতি">
+    <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
+    <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
+   </div>
+   {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
+   <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
          <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
@@ -373,7 +394,7 @@ export default function DashboardPortal() {
          </div>}
          <div className="table-wrap mt-5"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত নম্বর</th><th>গ্রেড</th><th>অবস্থা</th></tr></thead><tbody>{evaluateTranscript(chosen,resultMap).rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}{r.subjectId===chosen.optionalId?" (৪র্থ)":""}</td><td>{toBanglaDigits(r.received??"—")} / {toBanglaDigits(r.subject.max)}</td><td>{r.letter||"—"}</td><td>{r.status==="complete"?(r.passed?"পাস":"ফেল"):"অসম্পূর্ণ"}</td></tr>)}</tbody></table></div>
         </div><Marksheet student={chosen} marks={resultMap} exam={exam}/></>}
-       </>}
+       </>}</>}
        {tab==="finance"&&<><h2 className="section-title">আর্থিক সারসংক্ষেপ</h2><div className="grid grid-cols-2 gap-4">{[["income","আয়"],["expense","ব্যয়"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>৳ {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("bn-BD")}</strong></div>)}</div>
         <div className="panel p-5"><h3 className="font-bold mb-4">নতুন হিসাব যুক্ত করুন</h3><div className="form-grid">
          <Field label="ধরন"><Select value={ledgerForm.type} onChange={v=>setLedgerForm(o=>({...o,type:v}))} choices={[["income","আয়"],["expense","ব্যয়"]]}/></Field>
