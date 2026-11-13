@@ -38,7 +38,7 @@ test("student deletion requires explicit boolean confirmation but no name typing
  const ui=readFileSync("components/PrincipalRecordEditor.jsx","utf8");
  assert.match(source,/body\.confirmed!==true/);
  assert.doesNotMatch(source,/body\.confirmName/);
- assert.match(ui,/হ্যাঁ, ডিলিট করুন/);
+ assert.match(ui,/Yes, Delete/);
  assert.doesNotMatch(ui,/নিশ্চিত করতে পুরো নাম লিখুন/);
 });
 
