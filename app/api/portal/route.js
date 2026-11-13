@@ -7,7 +7,7 @@ import { getSubjects } from "../../../lib/academic";
 import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
 import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
-import { evaluateTranscript, validateMarkForStudent } from "../../../lib/academic";
+import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
 import { registerPhoneCredential } from "../../../lib/phone-accounts";
@@ -133,8 +133,8 @@ export async function GET(req) {
       const scoped=!!gradeValue;
       const grade=scoped?parseBanglaNumber(gradeValue):null;
       const query=store.collection("marks").where("examId","==",examId);
-      const snap=await (scoped?query.where("grade","==",grade).limit(5000):query.limit(3000)).get();
-      return json({ items: asDocs(snap).filter(m => actor.role==="class_teacher"||visible(actor,m)) });
+      const snap=await query.limit(5000).get();
+      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&(actor.role==="class_teacher"||visible(actor,m))) });
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -615,9 +615,8 @@ export async function POST(req) {
         const key=examId+"_"+student.id+"_"+subjectId;
         if(used.has(key))return fail("একই বিষয়ের নম্বর একাধিকবার পাঠানো হয়েছে");
         used.add(key);
-        const scores=Object.fromEntries(subject.parts.map(part=>[part.key,parseBanglaNumber(entry.scores?.[part.key])]));
-        validateMarkForStudent(student,subjectId,scores);
-        batch.set(store.collection("marks").doc(key),{examId,studentId:student.id,subjectId,scores,grade:student.grade,updatedBy:actor.uid,updatedAt:now});
+        const scores=validatePartialMarkForStudent(student,subjectId,entry.scores);
+        batch.set(store.collection("marks").doc(key),{examId,studentId:student.id,subjectId,scores,grade:student.grade,updatedBy:actor.uid,updatedAt:now},{merge:true});
       }
       await batch.commit();
       await audit(actor,action,examId+" ("+entries.length+")");
