@@ -1,19 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, ClipboardList, FileText, GraduationCap, School, ShieldCheck, UserRound, UsersRound, UserCog, Sparkles, CalendarDays, BadgeCheck } from "lucide-react";
+import { ArrowRight, BookOpenCheck, FileText, GraduationCap, ShieldCheck, Sparkles, BadgeCheck } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import NoticeBoard from "../components/NoticeBoard";
 import RoutineBoard from "../components/RoutineBoard";
 import SchoolPhoto from "../components/SchoolPhoto";
 import "./home.css";
-
-const quick = [
- { label:"ভর্তির আবেদন",desc:"অনলাইনে সহজে আবেদন করুন",icon:ClipboardList,href:"/admission" },
- { label:"শিক্ষার্থী লগইন",desc:"ফলাফল, হাজিরা ও পাওনা",icon:GraduationCap,href:"/login/student" },
- { label:"শিক্ষক লগইন",desc:"হাজিরা ও নম্বর প্রদান",icon:UserRound,href:"/login/teacher" },
- { label:"শ্রেণি শিক্ষক",desc:"শ্রেণি ব্যবস্থাপনা",icon:UsersRound,href:"/login/class_teacher" },
- { label:"প্রতিষ্ঠান প্রধান",desc:"প্রশাসনিক ড্যাশবোর্ড",icon:UserCog,href:"/login/principal" }
-];
 
 export default function Home(){
  return <><SiteHeader/><main className="hmrs-home">
@@ -35,20 +27,8 @@ export default function Home(){
     </div>
     <div className="hmrs-home-visual">
      <div className="hmrs-home-photo"><SchoolPhoto/></div>
-     <div className="hmrs-home-school-badge"><span className="hmrs-home-school-icon"><School size={20}/></span>
-      <span><strong>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</strong><small>সোনারগাঁ, নারায়ণগঞ্জ · EIIN ১১২৩৫৯</small></span></div>
      <span className="hmrs-home-visual-orbit" aria-hidden="true"><GraduationCap size={28}/></span>
     </div>
-   </div>
-  </section>
-  <section className="container hmrs-home-services" id="quick-access">
-   <div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">DIGITAL SERVICES</span>
-    <h2 className="section-title">আপনার প্রয়োজনীয় সেবাসমূহ</h2><p>প্রয়োজনীয় সব সেবায় দ্রুত প্রবেশ করুন</p></div></div>
-   <div className="hmrs-home-quick-grid">
-    {quick.map((item,index)=><Link key={item.href} href={item.href} className={"hmrs-home-quick-card hmrs-home-quick-"+index}>
-     <div className="hmrs-home-quick-top"><span className="hmrs-home-quick-icon"><item.icon size={23}/></span><ArrowRight size={18} className="hmrs-home-quick-arrow"/></div>
-     <strong>{item.label}</strong><small>{item.desc}</small>
-    </Link>)}
    </div>
   </section>
   <section className="container hmrs-home-notices" id="notices">
@@ -56,12 +36,5 @@ export default function Home(){
    <NoticeBoard/>
   </section>
   <div className="hmrs-home-routines"><RoutineBoard/></div>
-  <section className="container hmrs-home-final">
-   <div className="hmrs-home-final-card">
-    <div className="hmrs-home-final-icon"><CalendarDays size={28}/></div>
-    <div><span className="hmrs-home-final-kicker">ADMISSIONS</span><h2>নতুন শিক্ষার্থী ভর্তির আবেদন</h2><p>শিক্ষার্থীর তথ্য দিয়ে সহজেই অনলাইনে আবেদন সম্পন্ন করুন।</p></div>
-    <Link href="/admission" className="btn hmrs-home-final-button">আবেদন ফর্ম <ArrowRight size={16}/></Link>
-   </div>
-  </section>
  </main><SiteFooter/></>;
 }

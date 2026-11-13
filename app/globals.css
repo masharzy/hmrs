@@ -381,3 +381,9 @@ tr:last-child td{border-bottom:none}
 .home-routine-empty svg{color:#137668;flex:none}
 .home-routine-empty p{margin:0;font-size:12px}
 @media(max-width:600px){.home-routine-empty{padding:23px 15px;text-align:center;flex-direction:column}}
+
+/* One continuous, correctly spelled school title across public pages. */
+.hmrs-site-brand-text{display:flex;flex-direction:column;min-width:0;max-width:410px}
+.hmrs-site-brand-text strong{display:block;font-size:clamp(11px,1.2vw,15px);font-weight:800;line-height:1.35;white-space:nowrap;letter-spacing:-.3px;color:#203747}
+.hmrs-site-brand-text small{font-size:10px;color:#66788b;margin-top:3px}
+@media(max-width:550px){.hmrs-site-brand-text strong{font-size:clamp(9px,2.65vw,12px)}.site-header .container{gap:8px!important}.site-header .container>a:first-child{gap:7px}}

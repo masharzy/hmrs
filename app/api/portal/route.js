@@ -21,6 +21,14 @@ const asDocs = snap => snap.docs.map(d => { const { section, editTokenHash, ...d
 const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
 
+async function studentForMarks(actor,id){
+  needRole(actor,allowedStaff);
+  const snap=await db().collection("students").doc(id).get();
+  if(!snap.exists||snap.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+  const {section,...value}=snap.data();
+  return {id:snap.id,...value};
+}
+
 async function studentFor(actor, id) {
   const snap = await db().collection("students").doc(id).get();
   if (!snap.exists) throw Error("শিক্ষার্থী পাওয়া যায়নি");
@@ -104,7 +112,7 @@ export async function GET(req) {
     }
     if (resource === "users") {
       needRole(actor, ["principal"]);
-      const snap = await store.collection("users").limit(200).get();
+      const snap = await store.collection("users").limit(1000).get();
       return json({ items: asDocs(snap) });
     }
     if (resource === "attendance") {
@@ -120,8 +128,13 @@ export async function GET(req) {
     if (resource === "marks") {
       const examId = u.searchParams.get("examId");
       if (!examId || examId.length > 150) return fail("পরীক্ষা নির্বাচন করুন");
-      const snap = await store.collection("marks").where("examId", "==", examId).limit(3000).get();
-      return json({ items: asDocs(snap).filter(m => visible(actor, m)) });
+      const gradeValue=u.searchParams.get("grade");
+      if(gradeValue && !validGrade(gradeValue))return fail("সঠিক শ্রেণি নির্বাচন করুন");
+      const scoped=!!gradeValue;
+      const grade=scoped?parseBanglaNumber(gradeValue):null;
+      const query=store.collection("marks").where("examId","==",examId);
+      const snap=await (scoped?query.where("grade","==",grade).limit(5000):query.limit(3000)).get();
+      return json({ items: asDocs(snap).filter(m => actor.role==="class_teacher"||visible(actor,m)) });
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -134,6 +147,58 @@ export async function GET(req) {
     }
     return fail("অজানা রিসোর্স");
   } catch (e) { return handleError(e); }
+}
+
+// Shared student removal path for student records and principal account management.
+async function removeStudentRecords(actor,id,store,action){
+ const student=await studentFor(actor,id);
+      const studentRef=store.collection("students").doc(id);
+      // Revoking access before deleting school records prevents further account sign-in.
+      await store.runTransaction(async tx=>{
+        const userRef=student.uid?store.collection("users").doc(student.uid):null;
+        const [current,account]=await Promise.all([tx.get(studentRef),userRef?tx.get(userRef):null]);
+        if(!current.exists)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+        tx.update(studentRef,{deleting:true});
+        if(account?.exists)tx.update(userRef,{active:false});
+      });
+      if(student.uid) {
+        try {await adminAuth().deleteUser(student.uid);}
+        catch(e){if(e.code!=="auth/user-not-found")throw e;}
+      }
+      const [marks,attendance,recognitions]=await Promise.all([
+        store.collection("marks").where("studentId","==",id).get(),
+        store.collection("attendance").where("studentId","==",id).get(),
+        student.uid?store.collection("deviceRecognitions").where("uid","==",student.uid).get():Promise.resolve({docs:[]})
+      ]);
+      // Delete linked records first; keep the disabled student record until cleanup finishes,
+      // so an interrupted deletion can be retried by the principal.
+      const refs=[...marks.docs,...attendance.docs,...recognitions.docs].map(d=>d.ref);
+      if(student.uid){
+        refs.push(store.collection("users").doc(student.uid),
+          store.collection("loginCredentials").doc(student.uid),
+          store.collection("loginSecurity").doc(student.uid));
+      }
+      const phone=normalizePhone(student.phone||"");
+      if(phone&&student.uid){
+        const mapping=await store.collection("loginPhones").doc(phone).get();
+        if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
+      }
+      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
+      const ownedRoll=await rollRef.get();
+      if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
+      const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
+      for(let i=0;i<unique.length;i+=400){
+        const batch=store.batch();
+        for(const ref of unique.slice(i,i+400))batch.delete(ref);
+        await batch.commit();
+      }
+      if(student.applicationId){
+        const linked=store.collection("admissions").doc(student.applicationId);
+        if((await linked.get()).exists)await linked.update({status:"student_deleted",studentId:FieldValue.delete(),deletedAt:iso(),deletedBy:actor.uid});
+      }
+      await studentRef.delete();
+      await audit(actor,action,id);return json({ok:true});
+
 }
 
 export async function POST(req) {
@@ -270,55 +335,9 @@ export async function POST(req) {
       await audit(actor, action, id); return json({ok:true});
     }
     if (action === "student.delete") {
-      needRole(actor, ["principal"]);
-      const id=cleanText(body.studentId,120),student=await studentFor(actor,id);
-      if(body.confirmed!==true) return fail("শিক্ষার্থী মুছে ফেলার আগে নিশ্চিত করুন");
-      const studentRef=store.collection("students").doc(id);
-      // Revoking access before deleting school records prevents further account sign-in.
-      await store.runTransaction(async tx=>{
-        const userRef=student.uid?store.collection("users").doc(student.uid):null;
-        const [current,account]=await Promise.all([tx.get(studentRef),userRef?tx.get(userRef):null]);
-        if(!current.exists)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
-        tx.update(studentRef,{deleting:true});
-        if(account?.exists)tx.update(userRef,{active:false});
-      });
-      if(student.uid) {
-        try {await adminAuth().deleteUser(student.uid);}
-        catch(e){if(e.code!=="auth/user-not-found")throw e;}
-      }
-      const [marks,attendance,recognitions]=await Promise.all([
-        store.collection("marks").where("studentId","==",id).get(),
-        store.collection("attendance").where("studentId","==",id).get(),
-        student.uid?store.collection("deviceRecognitions").where("uid","==",student.uid).get():Promise.resolve({docs:[]})
-      ]);
-      // Delete linked records first; keep the disabled student record until cleanup finishes,
-      // so an interrupted deletion can be retried by the principal.
-      const refs=[...marks.docs,...attendance.docs,...recognitions.docs].map(d=>d.ref);
-      if(student.uid){
-        refs.push(store.collection("users").doc(student.uid),
-          store.collection("loginCredentials").doc(student.uid),
-          store.collection("loginSecurity").doc(student.uid));
-      }
-      const phone=normalizePhone(student.phone||"");
-      if(phone&&student.uid){
-        const mapping=await store.collection("loginPhones").doc(phone).get();
-        if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
-      }
-      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
-      const ownedRoll=await rollRef.get();
-      if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
-      const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
-      for(let i=0;i<unique.length;i+=400){
-        const batch=store.batch();
-        for(const ref of unique.slice(i,i+400))batch.delete(ref);
-        await batch.commit();
-      }
-      if(student.applicationId){
-        const linked=store.collection("admissions").doc(student.applicationId);
-        if((await linked.get()).exists)await linked.update({status:"student_deleted",studentId:FieldValue.delete(),deletedAt:iso(),deletedBy:actor.uid});
-      }
-      await studentRef.delete();
-      await audit(actor,action,id);return json({ok:true});
+      needRole(actor,["principal"]);
+      if(body.confirmed!==true)return fail("শিক্ষার্থী মুছে ফেলার আগে নিশ্চিত করুন");
+      return removeStudentRecords(actor,cleanText(body.studentId,120),store,action);
     }
     if (action === "routine.save") {
       needRole(actor, ["principal"]);
@@ -388,6 +407,90 @@ export async function POST(req) {
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });
+    }
+    if (action === "account.update") {
+      needRole(actor,["principal"]);
+      const uid=cleanText(body.uid,128),values=body.values||{};
+      if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
+      const userRef=store.collection("users").doc(uid),current=await userRef.get();
+      if(!current.exists)return fail("অ্যাকাউন্ট পাওয়া যায়নি",404);
+      const before=current.data(),name=cleanText(values.name,120);
+      const role=values.role,active=values.active===true;
+      if(!name)return fail("ব্যবহারকারীর নাম লিখুন");
+      if(before.role==="student" && role!=="student")return fail("শিক্ষার্থীর ভূমিকা পরিবর্তন করা যাবে না");
+      if(before.role!=="student" && !["teacher","class_teacher","principal"].includes(role))return fail("ভূমিকা সঠিক নয়");
+      if(uid===actor.uid && (role!=="principal"||!active))return fail("নিজের প্রধান শিক্ষক অধিকার বা অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না",403);
+      const oldPhone=normalizePhone(before.phone||"");
+      const suppliedPhone=cleanText(values.phone,30);
+      const phone=suppliedPhone?normalizePhone(suppliedPhone):oldPhone;
+      if(suppliedPhone&&!phone)return fail("সঠিক লগইন মোবাইল নম্বর দিন");
+      if(oldPhone&&!phone)return fail("লগইন নম্বর ফাঁকা করা যাবে না");
+      const pinText=cleanText(values.pin,10),pin=pinText?normalizePin(pinText):null;
+      if(pinText&&!pin)return fail("PIN অবশ্যই পাঁচ সংখ্যার হতে হবে");
+      if(pin&&!phone)return fail("PIN সেট করতে আগে লগইন মোবাইল দিন");
+      const assignedClasses=role==="class_teacher"&&Array.isArray(values.assignedClasses)
+        ?[...new Set(values.assignedClasses.map(v=>toAsciiDigits(cleanText(v,20)).split("-")[0]).filter(v=>/^(6|7|8|9|10)$/.test(v)))].slice(0,5):[];
+      if(role==="class_teacher"&&!assignedClasses.length)return fail("শ্রেণি শিক্ষককে অন্তত একটি শ্রেণি দিন");
+      const phoneChanged=phone!==oldPhone;
+      const credential=pin?makePinCredential(pin):null,now=iso();
+      const credentialRef=store.collection("loginCredentials").doc(uid);
+      const studentRef=before.role==="student"&&before.studentId?store.collection("students").doc(before.studentId):null;
+      const oldMapping=oldPhone?store.collection("loginPhones").doc(oldPhone):null;
+      const newMapping=phone?store.collection("loginPhones").doc(phone):null;
+      await store.runTransaction(async tx=>{
+        const [latest,oldMap,newMap,existingCredential,studentSnap]=await Promise.all([
+          tx.get(userRef),oldMapping?tx.get(oldMapping):null,
+          newMapping?tx.get(newMapping):null,
+          tx.get(credentialRef),studentRef?tx.get(studentRef):null
+        ]);
+        if(!latest.exists)throw Object.assign(Error("অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
+        if(latest.data().phone!==before.phone||latest.data().role!==before.role)
+          throw Object.assign(Error("অ্যাকাউন্টের তথ্য পরিবর্তিত হয়েছে, আবার খুলুন"),{status:409});
+        if(newMap?.exists&&newMap.data()?.uid!==uid)
+          throw Object.assign(Error("এই লগইন নম্বর অন্য অ্যাকাউন্টে ব্যবহার হচ্ছে"),{status:409});
+        if(studentRef&&(!studentSnap?.exists||studentSnap.data()?.deleting))
+          throw Object.assign(Error("শিক্ষার্থীর অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
+        tx.set(userRef,{name,phone:phone||"",role,active,
+          assignedClasses,pinEnabled:!!(existingCredential.exists||pin),updatedAt:now,updatedBy:actor.uid},{merge:true});
+        if(newMapping&&(phoneChanged||!newMap?.exists))tx.set(newMapping,{uid,createdAt:now});
+        if(phoneChanged&&oldMap?.exists&&oldMap.data()?.uid===uid)tx.delete(oldMapping);
+        if(credential)tx.set(credentialRef,{...credential,phone,updatedAt:now},{merge:true});
+        else if(phoneChanged&&existingCredential.exists)tx.update(credentialRef,{phone});
+        if(studentRef)tx.update(studentRef,{name,phone:phone||"",updatedAt:now,updatedBy:actor.uid});
+      });
+      if(pin||!active){try{await adminAuth().revokeRefreshTokens(uid)}catch(e){if(e.code!=="auth/user-not-found")throw e}}
+      await audit(actor,action,uid);
+      return json({ok:true,relogin:uid===actor.uid&&!!pin});
+    }
+    if (action === "account.delete") {
+      needRole(actor,["principal"]);
+      const uid=cleanText(body.uid,128);
+      if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
+      if(uid===actor.uid)return fail("নিজের অ্যাকাউন্ট ডিলিট করা যাবে না",403);
+      if(body.confirmed!==true)return fail("ডিলিট করার আগে নিশ্চিত করুন");
+      const userRef=store.collection("users").doc(uid),snap=await userRef.get();
+      if(!snap.exists)return fail("অ্যাকাউন্ট পাওয়া যায়নি",404);
+      const user=snap.data();
+      if(user.role==="student"){
+        if(!user.studentId)return fail("শিক্ষার্থীর রেকর্ড খুঁজে পাওয়া যাচ্ছে না",409);
+        return removeStudentRecords(actor,user.studentId,store,action);
+      }
+      await userRef.update({active:false,deleting:true,updatedAt:iso()});
+      try{await adminAuth().deleteUser(uid)}
+      catch(e){if(e.code!=="auth/user-not-found")throw e}
+      const related=await store.collection("deviceRecognitions").where("uid","==",uid).get();
+      const refs=[userRef,store.collection("loginCredentials").doc(uid),
+        store.collection("loginSecurity").doc(uid),...related.docs.map(d=>d.ref)];
+      const phone=normalizePhone(user.phone||"");
+      if(phone){
+        const phoneRef=store.collection("loginPhones").doc(phone);
+        const mapping=await phoneRef.get();
+        if(mapping.exists&&mapping.data()?.uid===uid)refs.push(phoneRef);
+      }
+      const batch=store.batch();
+      for(const ref of refs)batch.delete(ref);
+      await batch.commit();
+      await audit(actor,action,uid);return json({ok:true});
     }
     if (action === "application.approve") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -477,7 +580,7 @@ export async function POST(req) {
     }
     if (action === "marks.set") {
       needRole(actor, allowedStaff);
-      const student = await studentFor(actor, cleanText(body.studentId, 120));
+      const student = await studentForMarks(actor, cleanText(body.studentId, 120));
       const examId = cleanText(body.examId, 150), subjectId = cleanText(body.subjectId, 80);
       const exam = await store.collection("exams").doc(examId).get();
       if (!exam.exists) return fail("পরীক্ষা পাওয়া যায়নি");
@@ -490,6 +593,35 @@ export async function POST(req) {
         updatedBy: actor.uid, updatedAt: iso()
       });
       await audit(actor, action, key); return json({ ok: true });
+    }
+    if (action === "marks.batch") {
+      needRole(actor,allowedStaff);
+      const examId=cleanText(body.examId,150),entries=body.entries;
+      if(!Array.isArray(entries)||!entries.length||entries.length>50)return fail("সর্বোচ্চ ৫০টি নম্বর রেকর্ড একবারে সংরক্ষণ করা যাবে");
+      const examSnap=await store.collection("exams").doc(examId).get();
+      if(!examSnap.exists)return fail("পরীক্ষা পাওয়া যায়নি",404);
+      if(examSnap.data().published&&actor.role!=="principal")return fail("প্রকাশিত পরীক্ষার নম্বর শুধু প্রধান শিক্ষক বদলাতে পারবেন",403);
+      const ids=[...new Set(entries.map(e=>cleanText(e?.studentId,120)))];
+      if(ids.some(id=>!id||id.includes("/")))return fail("শিক্ষার্থী সঠিক নয়");
+      const snaps=await store.getAll(...ids.map(id=>store.collection("students").doc(id)));
+      const studentMap=new Map(snaps.filter(s=>s.exists&&!s.data()?.deleting).map(s=>[s.id,{id:s.id,...s.data()}]));
+      const batch=store.batch(),used=new Set(),now=iso();
+      for(const entry of entries){
+        const student=studentMap.get(cleanText(entry?.studentId,120));
+        const subjectId=cleanText(entry?.subjectId,80);
+        if(!student)return fail("নম্বর দেওয়ার জন্য শিক্ষার্থী পাওয়া যায়নি",404);
+        const subject=getSubjects(student.grade,student.group,student.elective,student.fourthSubject).find(s=>s.id===subjectId);
+        if(!subject)return fail(student.name+" এর জন্য বিষয়টি প্রযোজ্য নয়");
+        const key=examId+"_"+student.id+"_"+subjectId;
+        if(used.has(key))return fail("একই বিষয়ের নম্বর একাধিকবার পাঠানো হয়েছে");
+        used.add(key);
+        const scores=Object.fromEntries(subject.parts.map(part=>[part.key,parseBanglaNumber(entry.scores?.[part.key])]));
+        validateMarkForStudent(student,subjectId,scores);
+        batch.set(store.collection("marks").doc(key),{examId,studentId:student.id,subjectId,scores,grade:student.grade,updatedBy:actor.uid,updatedAt:now});
+      }
+      await batch.commit();
+      await audit(actor,action,examId+" ("+entries.length+")");
+      return json({ok:true,count:entries.length});
     }
     if (action === "ledger.add") {
       needRole(actor, ["principal", "class_teacher"]);
