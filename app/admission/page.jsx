@@ -224,7 +224,7 @@ export default function Admission(){
         <AdmissionField label="মাতার নাম" name="motherName" value={form.motherName} onChange={change} error={errors.motherName} placeholder="মাতার পূর্ণ নাম" maxLength={110}/>
         <AdmissionField label="মাতার মোবাইল নম্বর" name="motherPhone" type="tel" value={form.motherPhone} onChange={change} error={errors.motherPhone} placeholder="০১৭১২৩৪৫৬৭৮ বা +৮৮০..." inputMode="tel" maxLength={20}/>
         <AdmissionField label="শিক্ষার্থীর লগইন মোবাইল নম্বর" name="studentPhone" type="tel" value={form.studentPhone} onChange={change} error={errors.studentPhone} placeholder="০১৭১২৩৪৫৬৭৮ বা +৮৮০১৭..." inputMode="tel" maxLength={20} wide/>
-        <div className="admission-helper admission-wide"><ShieldCheck size={17}/> একটি নম্বর একটি লগইন অ্যাকাউন্টের জন্য ব্যবহার করা যাবে। প্রয়োজন হলে অভিভাবকের নম্বর দিন।</div>
+        <div className="admission-helper admission-wide"><ShieldCheck size={17}/> পিতা-মাতার একই মোবাইল নম্বর একাধিক শিক্ষার্থীর আবেদনেও দেওয়া যাবে। শুধু শিক্ষার্থীর লগইন নম্বরটি প্রতিটি অ্যাকাউন্টের জন্য আলাদা হতে হবে।</div>
         <AdmissionField label="বর্তমান ঠিকানা" name="guardianAddress" value={form.guardianAddress} onChange={change} error={errors.guardianAddress} placeholder="গ্রাম, ডাকঘর, উপজেলা, জেলা" maxLength={350} wide/>
        </div>}
        {step===2&&<div className="admission-fields">
