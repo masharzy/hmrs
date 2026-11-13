@@ -32,7 +32,7 @@ test("legacy combined Bengali marks are preserved without fabricated paper break
 test("partial sheet marks validate independently without losing other paper cells",()=>{
  const student={grade:9,group:"science",elective:"higher-math"};
  assert.deepEqual(validatePartialMarkForStudent(student,"bangla",{firstCq:"৬০",firstMcq:"৩০"}),{firstCq:60,firstMcq:30});
- assert.throws(()=>validatePartialMarkForStudent(student,"bangla",{secondMcq:40}),/নম্বর/);
+ assert.throws(()=>validatePartialMarkForStudent(student,"bangla",{secondMcq:40}),/between 0 and 30/);
  assert.throws(()=>validatePartialMarkForStudent(student,"bangla",{unexpected:3}),/বিষয়ের অংশ/);
  assert.match(api,/validatePartialMarkForStudent\(student,subjectId,entry.scores\)/);
  assert.match(api,/merge:true/);
@@ -65,8 +65,8 @@ test("accounts only return teachers and are paginated on server",()=>{
  assert.match(api,/where\("role","in",\["teacher","class_teacher"\]\)/);
  assert.match(api,/items:users.slice\(\(page-1\)\*size,page\*size\)/);
  assert.match(accounts,/request\("staff.accounts"/);
- assert.match(accounts,/নতুন PIN/);
- assert.match(accounts,/ভূমিকা/);
+ assert.match(accounts,/New PIN/);
+ assert.match(accounts,/Teacher Roles/);
  assert.match(portal,/<AccountManager actor=\{actor\} request=\{request\}/);
 });
 test("teacher can edit student and admissions offer grade/group filter",()=>{
