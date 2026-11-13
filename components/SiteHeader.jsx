@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { BookOpen, GraduationCap, LayoutDashboard, Menu, X } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 
-const items=[["হোম","/"],["নোটিশ","/notices"],["রুটিন","/#routines"],["ফলাফল","/login/student"]];
+const items=[["হোম","/"],["নোটিশ","/notices"],["ফলাফল","/login/student"]];
 export default function SiteHeader(){
  const [open,setOpen]=useState(false);
  const [signedIn,setSignedIn]=useState(null);
