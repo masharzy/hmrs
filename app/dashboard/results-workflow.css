@@ -427,3 +427,19 @@
  body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target .hmrs-mark-table tr{break-inside:avoid!important}
  body.hmrs-print-sheet .hmrs-sheet{page:hmrs-sheet-print}
 }
+
+/* Paperwise eight-column report: marks are directly visible, no "Marks Components" column */
+.hmrs-mark-table th:nth-child(1){width:24%}
+.hmrs-mark-table th:nth-child(2){width:11%}
+.hmrs-mark-table th:nth-child(3),.hmrs-mark-table th:nth-child(4){width:9%}
+.hmrs-mark-table th:nth-child(5){width:16%}
+.hmrs-mark-table th:nth-child(6){width:12%}
+.hmrs-mark-table th:nth-child(7){width:9%}
+.hmrs-mark-table th:nth-child(8){width:10%}
+.hmrs-mark-table th:nth-child(n+2),.hmrs-mark-table td:nth-child(n+2){text-align:center}
+.hmrs-mark-table td{font-variant-numeric:tabular-nums}
+.hmrs-student-parts-table{min-width:720px}
+.hmrs-student-parts-table th:nth-child(n+2),.hmrs-student-parts-table td:nth-child(n+2){text-align:center}
+.hmrs-result-mark-cell{white-space:nowrap;font-weight:650;font-variant-numeric:tabular-nums}
+@media print{body.hmrs-print-mark .hmrs-mark-table th,
+ body.hmrs-print-mark .hmrs-mark-table td{font-size:9px!important;padding:4px 3px!important}}
