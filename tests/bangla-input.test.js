@@ -50,6 +50,6 @@ test("no sections are required; groups are required only for grades 9 and 10", (
  for (const grade of ["৯","১০"]) {
   const errors=validateAdmission({...lower,grade});
   assert.ok(errors.group);
-  assert.deepEqual(validateAdmission({...lower,grade,group:"science"}),{});
+  assert.deepEqual(validateAdmission({...lower,grade,group:"science",optionalSubject:"biology"}),{});
  }
 });
