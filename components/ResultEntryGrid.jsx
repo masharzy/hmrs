@@ -60,6 +60,14 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   setEdits(old=>({...old,[key]:{...old[key],[part.key]:toAsciiDigits(value)}}));
   setError("");setSaved("");
  }
+ function printCompactSheet(){
+  if(!rows.length||!examId||loading)return;
+  if(entries.length && !window.confirm("সংরক্ষণ না করা নম্বর PDF-এ নাও আসতে পারে। এগোবেন?"))return;
+  document.body.classList.add("hmrs-print-sheet");
+  const restore=()=>{document.body.classList.remove("hmrs-print-sheet");window.removeEventListener("afterprint",restore)};
+  window.addEventListener("afterprint",restore);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
+ }
  function moveCell(event,row,col){
   if(!["Enter","ArrowDown","ArrowUp"].includes(event.key))return;
   if(event.key==="Enter"||event.key==="ArrowDown")row++;
@@ -99,6 +107,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  }
  return <section className="hmrs-sheet panel" aria-label="Excel ধরনের নম্বর এন্ট্রি">
   <div className="hmrs-sheet-heading"><strong>নম্বর এন্ট্রি শিট</strong><span>{toBanglaDigits(rows.length)} জন · {toBanglaDigits(entries.length)}টি পরিবর্তন</span>
+   <button className="btn sm" type="button" disabled={!rows.length||!examId||loading} onClick={printCompactSheet}>PDF / প্রিন্ট</button>
    <button className="btn primary sm" type="button" disabled={!entries.length||!examId||loading||working||sending||locked} onClick={save}><Save size={14}/>{sending?"সংরক্ষণ হচ্ছে...":"সংরক্ষণ"}</button></div>
   <div className="hmrs-sheet-filters">
    <label className="field">পরীক্ষা<select value={examId} onChange={e=>{if(changeGuard())onExamChange(e.target.value)}}>
