@@ -69,7 +69,7 @@ test("result import API has principal-only preview and never overwrites existing
  const portal=source("components/DashboardPortal.jsx");
  assert.match(portal,/studentGrade/);
  assert.match(portal,/studentGroup/);
- assert.match(portal,/<SelectionImportPanel/);
+ assert.doesNotMatch(portal,/<SelectionImportPanel/);
  const accounts=source("components/AccountManager.jsx");
  assert.match(accounts,/teachingClasses/);assert.match(accounts,/classTeacherClasses/);
  assert.match(accounts,/roles:\["teacher"\]/);
