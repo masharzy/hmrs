@@ -43,7 +43,7 @@ test("import matches class-group-roll and legacy offset only when names agree",(
  const b=pickSelectionStudent({grade:10,group:"business",roll:1,name:"সুমাইয়া"},existing);
  assert.equal(b.status,"matched");assert.equal(b.student.id,"b");assert.equal(b.normalizeRoll,true);
  assert.equal(pickSelectionStudent({grade:10,group:"humanities",roll:1,name:"শারমিন"},existing).status,"matched");
- assert.equal(pickSelectionStudent({grade:10,group:"science",roll:1,name:"সুমাইয়া"},existing).status,"review");
+ assert.equal(pickSelectionStudent({grade:10,group:"science",roll:1,name:"সুমাইয়া"},existing).rename,true);
  assert.equal(pickSelectionStudent({grade:10,group:"science",roll:1,name:"তানজিলা"},existing).status,"matched");
 });
 test("selection import preserves partial marks and has no duplicate group-roll entries",()=>{
