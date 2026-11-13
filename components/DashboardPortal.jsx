@@ -249,7 +249,7 @@ export default function DashboardPortal() {
  ),[admissions,admissionGrade,admissionGroup]);
  const admissionsCurrentPage=Math.min(admissionsPage,Math.max(1,Math.ceil(filteredAdmissions.length/20)));
  const exam=exams.find(e=>e.id===examId);
- const individualStudents=students.filter(s=>examAppliesToStudent(exam,s)&&
+ const individualStudents=students.filter(s=>!!exam&&examAppliesToStudent(exam,s)&&
    !!individualGrade&&Number(s.grade)===Number(individualGrade)&&
    (Number(individualGrade)<9||!!individualGroup&&s.group===individualGroup))
    .sort((a,b)=>Number(a.roll)-Number(b.roll)||a.name.localeCompare(b.name,"bn"));
@@ -574,6 +574,8 @@ export default function DashboardPortal() {
      const result=await mutate("exam.create",values);
      if(!result)return false;
      await changeExam(result.examId);
+     setIndividualGrade(values.scopeGrade==="all"?"":String(values.scopeGrade));
+     setIndividualGroup("");
      return true;
     }}/>}
   {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} canResetPin={actor.role==="principal"} onSave={async (values,loginPin,resetPin)=>{
