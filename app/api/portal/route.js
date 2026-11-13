@@ -21,6 +21,14 @@ const asDocs = snap => snap.docs.map(d => { const { section, editTokenHash, ...d
 const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
 
+async function studentForMarks(actor,id){
+  needRole(actor,allowedStaff);
+  const snap=await db().collection("students").doc(id).get();
+  if(!snap.exists||snap.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+  const {section,...value}=snap.data();
+  return {id:snap.id,...value};
+}
+
 async function studentFor(actor, id) {
   const snap = await db().collection("students").doc(id).get();
   if (!snap.exists) throw Error("শিক্ষার্থী পাওয়া যায়নি");
@@ -120,8 +128,13 @@ export async function GET(req) {
     if (resource === "marks") {
       const examId = u.searchParams.get("examId");
       if (!examId || examId.length > 150) return fail("পরীক্ষা নির্বাচন করুন");
-      const snap = await store.collection("marks").where("examId", "==", examId).limit(3000).get();
-      return json({ items: asDocs(snap).filter(m => visible(actor, m)) });
+      const gradeValue=u.searchParams.get("grade");
+      if(gradeValue && !validGrade(gradeValue))return fail("সঠিক শ্রেণি নির্বাচন করুন");
+      const scoped=!!gradeValue;
+      const grade=scoped?parseBanglaNumber(gradeValue):null;
+      const query=store.collection("marks").where("examId","==",examId);
+      const snap=await (scoped?query.where("grade","==",grade).limit(5000):query.limit(3000)).get();
+      return json({ items: asDocs(snap).filter(m => actor.role==="class_teacher"||visible(actor,m)) });
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -477,7 +490,7 @@ export async function POST(req) {
     }
     if (action === "marks.set") {
       needRole(actor, allowedStaff);
-      const student = await studentFor(actor, cleanText(body.studentId, 120));
+      const student = await studentForMarks(actor, cleanText(body.studentId, 120));
       const examId = cleanText(body.examId, 150), subjectId = cleanText(body.subjectId, 80);
       const exam = await store.collection("exams").doc(examId).get();
       if (!exam.exists) return fail("পরীক্ষা পাওয়া যায়নি");
@@ -490,6 +503,35 @@ export async function POST(req) {
         updatedBy: actor.uid, updatedAt: iso()
       });
       await audit(actor, action, key); return json({ ok: true });
+    }
+    if (action === "marks.batch") {
+      needRole(actor,allowedStaff);
+      const examId=cleanText(body.examId,150),entries=body.entries;
+      if(!Array.isArray(entries)||!entries.length||entries.length>50)return fail("সর্বোচ্চ ৫০টি নম্বর রেকর্ড একবারে সংরক্ষণ করা যাবে");
+      const examSnap=await store.collection("exams").doc(examId).get();
+      if(!examSnap.exists)return fail("পরীক্ষা পাওয়া যায়নি",404);
+      if(examSnap.data().published&&actor.role!=="principal")return fail("প্রকাশিত পরীক্ষার নম্বর শুধু প্রধান শিক্ষক বদলাতে পারবেন",403);
+      const ids=[...new Set(entries.map(e=>cleanText(e?.studentId,120)))];
+      if(ids.some(id=>!id||id.includes("/")))return fail("শিক্ষার্থী সঠিক নয়");
+      const snaps=await store.getAll(...ids.map(id=>store.collection("students").doc(id)));
+      const studentMap=new Map(snaps.filter(s=>s.exists&&!s.data()?.deleting).map(s=>[s.id,{id:s.id,...s.data()}]));
+      const batch=store.batch(),used=new Set(),now=iso();
+      for(const entry of entries){
+        const student=studentMap.get(cleanText(entry?.studentId,120));
+        const subjectId=cleanText(entry?.subjectId,80);
+        if(!student)return fail("নম্বর দেওয়ার জন্য শিক্ষার্থী পাওয়া যায়নি",404);
+        const subject=getSubjects(student.grade,student.group,student.elective,student.fourthSubject).find(s=>s.id===subjectId);
+        if(!subject)return fail(student.name+" এর জন্য বিষয়টি প্রযোজ্য নয়");
+        const key=examId+"_"+student.id+"_"+subjectId;
+        if(used.has(key))return fail("একই বিষয়ের নম্বর একাধিকবার পাঠানো হয়েছে");
+        used.add(key);
+        const scores=Object.fromEntries(subject.parts.map(part=>[part.key,parseBanglaNumber(entry.scores?.[part.key])]));
+        validateMarkForStudent(student,subjectId,scores);
+        batch.set(store.collection("marks").doc(key),{examId,studentId:student.id,subjectId,scores,grade:student.grade,updatedBy:actor.uid,updatedAt:now});
+      }
+      await batch.commit();
+      await audit(actor,action,examId+" ("+entries.length+")");
+      return json({ok:true,count:entries.length});
     }
     if (action === "ledger.add") {
       needRole(actor, ["principal", "class_teacher"]);
