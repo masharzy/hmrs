@@ -25,7 +25,7 @@ test("shared parent phones are valid even across distinct pupils",()=>{
  assert.equal(normalizeAdmissionData(base).fatherPhone,normalizeAdmissionData(sameContact).fatherPhone);
 });
 test("class teacher sees all students in marks but remains scoped elsewhere",()=>{
- assert.match(data,/actor.role==="class_teacher" && section!=="marks"/);
+ assert.match(data,/actor.role==="class_teacher"&&section!=="marks"/);
  assert.match(data,/section==="marks"&&actor.role==="class_teacher"/);
  assert.match(api,/async function studentForMarks/);
  assert.match(api,/const student = await studentForMarks\(actor/);
@@ -39,12 +39,16 @@ test("result sheet supports grade, subject and all-subject mode with Bengali ser
  assert.match(sheet,/getSubjects/);
  assert.match(sheet,/marks\.batch/);
  assert.match(api,/action === "marks.batch"/);
- assert.match(api,/validateMarkForStudent\(student,subjectId,scores\)/);
+ assert.match(api,/validatePartialMarkForStudent\(student,subjectId,entry.scores\)/);
  assert.match(api,/batch\.commit\(\)/);
 });
-test("principal user management edits all roles, hashes PIN and asks before delete",()=>{
- assert.match(portal,/<AccountManager users=\{data.users\|\|\[\]\}/);
+test("principal teacher management edits roles, hashes PIN and asks before delete",()=>{
+ assert.match(portal,/<AccountManager actor=\{actor\} request=\{request\}/);
  assert.match(accounts,/role="dialog"/);
+ assert.match(accounts,/staff.accounts/);
+ assert.match(accounts,/শিক্ষক যুক্ত করুন/);
+ assert.match(accounts,/assignedClasses/);
+ assert.match(accounts,/teachingSubjects/);
  assert.match(accounts,/role="alertdialog"/);
  assert.match(accounts,/confirmed:true/);
  assert.match(api,/action === "account.update"/);

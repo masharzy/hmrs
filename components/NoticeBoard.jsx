@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronRight, CalendarDays, X, FileDown, Image as ImageIcon } from "lucide-react";
+import { toBanglaDigits } from "../lib/bangla-numbers";
 import { loadPublicData } from "../lib/public-client";
 
-export default function NoticeBoard({compact=false}){
+export default function NoticeBoard({compact=false,full=false}){
  const [notices,setNotices]=useState([]);
  const [loading,setLoading]=useState(true);
  const [selected,setSelected]=useState(null);
@@ -31,8 +32,8 @@ export default function NoticeBoard({compact=false}){
   <div className="notice-board-list">
    {loading?<p className="empty">নোটিশ লোড হচ্ছে...</p>
     :!notices.length?<p className="empty">এই মুহূর্তে কোনো প্রকাশিত নোটিশ নেই।</p>
-    :notices.slice(0,compact?4:12).map((notice,index)=><button type="button" className="notice-title-row" key={notice.id} onClick={()=>setSelected(notice)}>
-     <span className="notice-row-index">{String(index+1).padStart(2,"0")}</span>
+    :(full?notices:notices.slice(0,compact?4:12)).map((notice,index)=><button type="button" className="notice-title-row" key={notice.id} onClick={()=>setSelected(notice)}>
+     <span className="notice-row-index">{toBanglaDigits(index+1)}</span>
      <span className="notice-row-title">{notice.title}</span>
      <span className="notice-open-icon" aria-hidden="true"><ChevronRight size={17}/></span>
     </button>)}

@@ -1,0 +1,7 @@
+.hmrs-notices-page{min-height:75dvh;padding:42px 0 70px;background:linear-gradient(135deg,#f0f7f8,#f9fbfc)}
+.hmrs-notices-page .container{max-width:980px}
+.hmrs-notices-heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:22px}
+.hmrs-notices-heading span{display:inline-flex;align-items:center;gap:7px;color:#147868;font-weight:800;font-size:12px}
+.hmrs-notices-heading h1{font-weight:850;font-size:clamp(24px,4vw,34px);margin:8px 0}
+.hmrs-notices-heading p{color:#647782;font-size:13px;margin:0}
+@media(max-width:600px){.hmrs-notices-page{padding:23px 0 50px}.hmrs-notices-heading{align-items:start;flex-direction:column}}

@@ -1,83 +1,106 @@
 "use client";
-import { useMemo, useState } from "react";
-import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
-import { toBanglaDigits, toAsciiDigits } from "../lib/bangla-numbers";
+import { useEffect, useState } from "react";
+import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search } from "lucide-react";
+import { toBanglaDigits } from "../lib/bangla-numbers";
+import { CLASS_OPTIONS, TEACHER_SUBJECT_OPTIONS } from "../lib/teacher-subjects";
 import PinInput from "./PinInput";
 
-const roles={principal:"প্রধান শিক্ষক",teacher:"শিক্ষক",class_teacher:"শ্রেণি শিক্ষক",student:"শিক্ষার্থী"};
-const display=u=>roles[u.role]||u.role;
-const classList=v=>(v||[]).map(x=>String(x).split("-")[0]).join(", ");
-export default function AccountManager({users=[],actor,mutate,working,error}){
- const [search,setSearch]=useState(""),[page,setPage]=useState(1),[editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
- const [values,setValues]=useState({}),[localError,setLocalError]=useState("");
- const filtered=useMemo(()=>{
-  const q=toAsciiDigits(search).trim().toLowerCase();
-  return [...users].filter(u=>(u.name+" "+u.phone+" "+display(u)).toLowerCase().includes(q)).sort((a,b)=>String(a.name).localeCompare(String(b.name),"bn"));
- },[users,search]);
- const size=20,maxPage=Math.max(1,Math.ceil(filtered.length/size));
- const current=Math.min(page,maxPage);
- const visible=filtered.slice((current-1)*size,current*size);
+const roles={teacher:"শিক্ষক",class_teacher:"শ্রেণি শিক্ষক"};
+const empty=()=>({name:"",phone:"",pin:"",role:"teacher",assignedClasses:[],teachingSubjects:[],active:true});
+function Choices({label,options,values,onChange}){
+ return <fieldset className="hmrs-teacher-choices"><legend>{label}</legend><div className="hmrs-teacher-choice-grid">
+  {options.map(option=><label key={option.value||option.id} className={values.includes(option.value||option.id)?"selected":""}>
+   <input type="checkbox" checked={values.includes(option.value||option.id)}
+    onChange={e=>onChange(e.target.checked?[...values,option.value||option.id]:values.filter(v=>v!==(option.value||option.id)))}/>
+   {option.label||option.name}
+  </label>)}
+ </div></fieldset>;
+}
+export default function AccountManager({actor,request,mutate,working,error}){
+ const [search,setSearch]=useState(""),[debounced,setDebounced]=useState("");
+ const [page,setPage]=useState(1),[items,setItems]=useState([]),[total,setTotal]=useState(0);
+ const [loading,setLoading]=useState(true),[revision,setRevision]=useState(0);
+ const [modal,setModal]=useState(null),[values,setValues]=useState(empty),[localError,setLocalError]=useState("");
+ useEffect(()=>{const timer=setTimeout(()=>{setDebounced(search.trim());setPage(1)},280);return()=>clearTimeout(timer)},[search]);
+ useEffect(()=>{
+  let active=true;setLoading(true);
+  request("staff.accounts",{params:"page="+page+"&q="+encodeURIComponent(debounced)})
+   .then(response=>{if(active){setItems(response.items||[]);setTotal(response.total||0)}})
+   .catch(e=>{if(active)setLocalError(e.message)})
+   .finally(()=>{if(active)setLoading(false)});
+  return ()=>{active=false};
+ // request is a parent function; fetch only when inputs change.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[page,debounced,revision]);
+ const maxPage=Math.max(1,Math.ceil(total/20));
+ function openCreate(){setModal({kind:"create"});setValues(empty());setLocalError("")}
  function openEdit(user){
-  setEditing(user);setDeleting(null);setLocalError("");
-  setValues({name:user.name||"",phone:user.phone||"",role:user.role,assignedClasses:classList(user.assignedClasses),pin:"",active:user.active!==false});
+  setModal({kind:"edit",user});setLocalError("");
+  setValues({name:user.name||"",phone:user.phone||"",pin:"",role:user.role,
+   assignedClasses:(user.assignedClasses||[]).map(String),teachingSubjects:(user.teachingSubjects||[]).map(String),active:user.active!==false});
  }
- function close(){if(working)return;setEditing(null);setDeleting(null);setLocalError("")}
- async function save(e){
-  e.preventDefault();
-  if(!editing||working)return;
-  setLocalError("");
-  if(values.pin&& !/^\d{5}$/.test(toAsciiDigits(values.pin))){setLocalError("PIN অবশ্যই পাঁচ সংখ্যার হতে হবে");return}
-  if(editing.id===actor.uid&&(values.role!=="principal"||!values.active)){setLocalError("নিজের প্রধান শিক্ষক অধিকার বা অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না");return}
-  const r=await mutate("account.update",{uid:editing.id,values:{...values,assignedClasses:values.assignedClasses.split(",").map(s=>s.trim())}});
-  if(r)setEditing(null);
+ function close(){if(working)return;setModal(null);setLocalError("")}
+ function changed(key,value){setValues(v=>({...v,[key]:value}));setLocalError("")}
+ async function submit(e){
+  e.preventDefault();if(working)return;setLocalError("");
+  if(!values.name.trim()||!values.phone.trim()){setLocalError("শিক্ষকের নাম ও মোবাইল নম্বর দিন");return}
+  if(values.assignedClasses.length===0){setLocalError("অন্তত একটি শ্রেণি নির্বাচন করুন");return}
+  if(values.teachingSubjects.length===0){setLocalError("শিক্ষকের অন্তত একটি বিষয় নির্বাচন করুন");return}
+  if(modal.kind==="create"&&!/^\d{5}$/.test(values.pin)){setLocalError("পাঁচ সংখ্যার PIN দিন");return}
+  if(modal.kind==="edit"&&values.pin&&!/^\d{5}$/.test(values.pin)){setLocalError("পাঁচ সংখ্যার PIN দিন");return}
+  const r=modal.kind==="create"
+   ?await mutate("account.create",values)
+   :await mutate("account.update",{uid:modal.user.id,values});
+  if(r){setModal(null);setRevision(n=>n+1)}
  }
  async function remove(){
-  if(!deleting||working)return;
-  setLocalError("");
-  const r=await mutate("account.delete",{uid:deleting.id,confirmed:true});
-  if(r)setDeleting(null);
+  if(working)return;
+  const r=await mutate("account.delete",{uid:modal.user.id,confirmed:true});
+  if(r){setModal(null);setPage(1);setRevision(n=>n+1)}
  }
  return <section className="hmrs-accounts">
-  <div className="hmrs-accounts-toolbar"><div><h2 className="section-title">সব ব্যবহারকারী</h2><p className="muted text-xs">শিক্ষার্থীসহ সব অ্যাকাউন্টের তথ্য, ভূমিকা এবং PIN পরিবর্তন করা যাবে।</p></div>
-   <label className="field">ব্যবহারকারী খুঁজুন<input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="নাম, মোবাইল বা ভূমিকা"/></label>
+  <div className="hmrs-accounts-toolbar">
+   <div><h2 className="section-title">শিক্ষক ব্যবস্থাপনা</h2><p className="muted text-xs">শুধু শিক্ষক ও শ্রেণি শিক্ষক; শিক্ষার্থীরা শিক্ষার্থী বিভাগে থাকবে।</p></div>
+   <div className="hmrs-accounts-actions"><label className="field"><span className="sr-only">শিক্ষক খুঁজুন</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="নাম বা মোবাইল দিয়ে খুঁজুন"/></label>
+    <button className="btn primary" type="button" onClick={openCreate}><UserPlus size={16}/> শিক্ষক যুক্ত করুন</button></div>
   </div>
-  <div className="panel table-wrap"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>মোবাইল</th><th>ভূমিকা</th><th>অবস্থা</th><th>ব্যবস্থা</th></tr></thead><tbody>
-   {visible.map((user,i)=><tr key={user.id}><td>{toBanglaDigits((current-1)*size+i+1)}</td><td className="font-bold">{user.name}</td>
-    <td>{toBanglaDigits(user.phone||"—")}</td><td>{display(user)}</td><td>{user.active===false?"নিষ্ক্রিয়":"সক্রিয়"}</td>
-    <td><div className="inline-actions">
-     <button className="btn sm" type="button" onClick={()=>openEdit(user)}><Pencil size={15}/> এডিট</button>
-     <button className="btn sm danger" type="button" disabled={user.id===actor.uid} title={user.id===actor.uid?"নিজের অ্যাকাউন্ট মুছতে পারবেন না":undefined} onClick={()=>{setEditing(null);setLocalError("");setDeleting(user)}}><Trash2 size={15}/> ডিলিট</button>
-    </div></td>
+  <div className="panel table-wrap"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>মোবাইল</th><th>ভূমিকা</th><th>শ্রেণি</th><th>বিষয়</th><th>ব্যবস্থা</th></tr></thead><tbody>
+   {!loading&&items.map((u,i)=><tr key={u.id}><td>{toBanglaDigits((page-1)*20+i+1)}</td>
+    <td className="font-bold">{u.name}{u.active===false&&<span className="chip gray ml-2">নিষ্ক্রিয়</span>}</td>
+    <td>{toBanglaDigits(u.phone||"—")}</td><td>{roles[u.role]}</td>
+    <td>{(u.assignedClasses||[]).map(toBanglaDigits).join(", ")||"—"}</td>
+    <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name||id).join(", ")||"—"}</td>
+    <td><div className="inline-actions"><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> এডিট</button>
+     <button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> ডিলিট</button></div></td>
    </tr>)}
-  </tbody></table>{!filtered.length&&<p className="empty">কোনো ব্যবহারকারী পাওয়া যায়নি।</p>}</div>
-  {maxPage>1&&<div className="hmrs-sheet-bottom"><span>{toBanglaDigits(filtered.length)} জন · পৃষ্ঠা {toBanglaDigits(current)} / {toBanglaDigits(maxPage)}</span><div className="inline-actions">
-   <button className="btn sm" type="button" disabled={current===1} onClick={()=>setPage(p=>p-1)}>আগের</button>
-   <button className="btn sm" type="button" disabled={current===maxPage} onClick={()=>setPage(p=>p+1)}>পরের</button>
-  </div></div>}
-  {editing&&<div className="record-modal-backdrop"><section className="record-modal" role="dialog" aria-modal="true" aria-labelledby="hmrs-account-title">
-    <div className="record-modal-head"><div><h2 id="hmrs-account-title"><Pencil size={18}/> অ্যাকাউন্ট এডিট</h2><p className="muted text-xs">{editing.name} · {display(editing)}</p></div>
-     <button type="button" className="btn sm" disabled={working} onClick={close} aria-label="বন্ধ করুন"><X size={18}/></button></div>
-    <form onSubmit={save}><div className="record-modal-body">
+  </tbody></table>{loading?<p className="empty">শিক্ষকদের তথ্য লোড হচ্ছে...</p>:!items.length&&<p className="empty">কোনো শিক্ষক পাওয়া যায়নি।</p>}</div>
+  <div className="hmrs-sheet-bottom"><span>{toBanglaDigits(total)} জন শিক্ষক · পৃষ্ঠা {toBanglaDigits(page)} / {toBanglaDigits(maxPage)}</span>
+   <div className="inline-actions"><button className="btn sm" disabled={page<=1||loading} onClick={()=>setPage(p=>p-1)}>আগের</button>
+    <button className="btn sm" disabled={page>=maxPage||loading} onClick={()=>setPage(p=>p+1)}>পরের</button></div>
+  </div>
+  {modal&&<div className="record-modal-backdrop">
+   {modal.kind==="delete"?<section className="record-modal record-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="teacher-delete-title">
+    <div className="record-modal-head"><h2 id="teacher-delete-title"><AlertTriangle size={19}/> শিক্ষক ডিলিট করবেন?</h2><button className="btn sm" type="button" onClick={close} disabled={working}><X size={17}/></button></div>
+    <div className="record-modal-body"><p><b>{modal.user.name}</b>-এর শিক্ষক অ্যাকাউন্ট স্থায়ীভাবে ডিলিট হবে।</p>{(localError||error)&&<p className="alert error">{localError||error}</p>}</div>
+    <div className="record-modal-actions"><button className="btn" type="button" disabled={working} onClick={close}>বাতিল</button>
+     <button className="btn danger" type="button" disabled={working} onClick={remove}>{working?"ডিলিট হচ্ছে...":"নিশ্চিত, ডিলিট করুন"}</button></div>
+   </section>:<section className="record-modal hmrs-teacher-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-modal-title">
+    <div className="record-modal-head"><div><h2 id="teacher-modal-title">{modal.kind==="create"?"শিক্ষক যুক্ত করুন":"শিক্ষকের তথ্য এডিট"}</h2><p className="muted text-xs">ভূমিকা, একাধিক শ্রেণি ও বিষয় নির্বাচন করুন</p></div>
+     <button type="button" className="btn sm" onClick={close} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
+    <form onSubmit={submit}><div className="record-modal-body">
      {(localError||error)&&<p role="alert" className="alert error">{localError||error}</p>}
      <div className="form-grid">
-      <label className="field">নাম<input value={values.name} required maxLength={120} onChange={e=>setValues(v=>({...v,name:e.target.value}))}/></label>
-      <label className="field">লগইন মোবাইল<input type="tel" value={values.phone} placeholder="01XXXXXXXXX" onChange={e=>setValues(v=>({...v,phone:e.target.value}))}/></label>
-      <label className="field">ভূমিকা<select value={values.role} disabled={editing.role==="student"||editing.id===actor.uid} onChange={e=>setValues(v=>({...v,role:e.target.value}))}>
-       {(editing.role==="student"?["student"]:["teacher","class_teacher","principal"]).map(r=><option key={r} value={r}>{roles[r]}</option>)}
-      </select></label>
-      {values.role==="class_teacher"&&<label className="field">নির্ধারিত শ্রেণি (যেমন ৬,৭,৯)<input value={values.assignedClasses} onChange={e=>setValues(v=>({...v,assignedClasses:e.target.value}))}/></label>}
-      <div className="field"><PinInput label="নতুন PIN (খালি রাখলে পুরোনোটিই থাকবে)" value={values.pin} onChange={pin=>setValues(v=>({...v,pin}))}/></div>
+      <label className="field">শিক্ষকের নাম<input value={values.name} onChange={e=>changed("name",e.target.value)} required maxLength={120}/></label>
+      <label className="field">লগইন মোবাইল<input type="tel" value={values.phone} onChange={e=>changed("phone",e.target.value)} required/></label>
+      <label className="field">ভূমিকা<select value={values.role} onChange={e=>changed("role",e.target.value)}><option value="teacher">শিক্ষক</option><option value="class_teacher">শ্রেণি শিক্ষক</option></select></label>
+      <div className="field"><PinInput label={modal.kind==="create"?"পাঁচ সংখ্যার PIN":"নতুন PIN (পরিবর্তন না হলে খালি রাখুন)"} value={values.pin} onChange={v=>changed("pin",v)}/></div>
      </div>
-     <label className="hmrs-account-active"><input type="checkbox" checked={!!values.active} disabled={editing.id===actor.uid} onChange={e=>setValues(v=>({...v,active:e.target.checked}))}/> অ্যাকাউন্ট সক্রিয় রাখুন</label>
-     <p className="muted text-xs">PIN নিরাপদ hash হিসেবে সংরক্ষিত হবে; PIN পরিবর্তন হলে আগের সেশন বাতিল হবে। লগইন মোবাইল প্রতিটি অ্যাকাউন্টের জন্য আলাদা, তবে অভিভাবকের নম্বর একাধিক শিক্ষার্থীর রেকর্ডে থাকতে পারবে।</p>
-    </div><div className="record-modal-actions"><button className="btn" type="button" disabled={working} onClick={close}>বাতিল</button><button className="btn primary" type="submit" disabled={working}>{working?"সংরক্ষণ হচ্ছে...":"সংরক্ষণ করুন"}</button></div></form>
-   </section></div>}
-  {deleting&&<div className="record-modal-backdrop"><section className="record-modal record-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="hmrs-account-delete" aria-describedby="hmrs-account-delete-description">
-    <div className="record-modal-head"><h2 id="hmrs-account-delete"><AlertTriangle size={20}/> অ্যাকাউন্ট ডিলিট করবেন?</h2>
-     <button className="btn sm" type="button" onClick={close} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
-    <div className="record-modal-body"><p id="hmrs-account-delete-description"><b>{deleting.name}</b> ({display(deleting)})-এর অ্যাকাউন্ট স্থায়ীভাবে ডিলিট হবে।{deleting.role==="student"?" শিক্ষার্থীর হাজিরা, নম্বর এবং লগইন রেকর্ডও মুছে যাবে।":""} এই কাজ ফিরিয়ে আনা যাবে না।</p>
-     {(localError||error)&&<p className="alert error" role="alert">{localError||error}</p>}</div>
-    <div className="record-modal-actions"><button className="btn" type="button" onClick={close} disabled={working}>বাতিল</button><button className="btn danger" type="button" onClick={remove} disabled={working}><Trash2 size={15}/> {working?"ডিলিট হচ্ছে...":"নিশ্চিত, ডিলিট করুন"}</button></div>
-   </section></div>}
+     <Choices label="যে যে শ্রেণিতে পাঠদান করবেন" options={CLASS_OPTIONS} values={values.assignedClasses} onChange={v=>changed("assignedClasses",v)}/>
+     <Choices label="যে যে বিষয়ের শিক্ষক" options={TEACHER_SUBJECT_OPTIONS} values={values.teachingSubjects} onChange={v=>changed("teachingSubjects",v)}/>
+     {modal.kind==="edit"&&<label className="hmrs-account-active"><input type="checkbox" checked={values.active} onChange={e=>changed("active",e.target.checked)}/> অ্যাকাউন্ট সক্রিয়</label>}
+    </div><div className="record-modal-actions"><button type="button" className="btn" disabled={working} onClick={close}>বাতিল</button>
+     <button className="btn primary" disabled={working} type="submit">{working?"সংরক্ষণ হচ্ছে...":modal.kind==="create"?"শিক্ষক যুক্ত করুন":"পরিবর্তন সংরক্ষণ"}</button></div></form>
+   </section>}
+  </div>}
  </section>;
 }
