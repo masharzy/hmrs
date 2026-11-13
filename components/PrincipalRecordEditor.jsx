@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { X, Pencil, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
-import { toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
+import { toAsciiDigits } from "../lib/bangla-numbers";
+import {enGrade} from "../lib/result-english.js";
 import { groupNames } from "../lib/student-admin";
 import {FOURTH_SUBJECT_OPTIONS,fourthSubjectSelection,selectedFourthSubject} from "../lib/academic.js";
 
@@ -141,7 +142,7 @@ export function DeleteStudentModal({student,working,error,onClose,onDelete}){
    <div className="record-modal-head"><h2 id="student-delete-title"><AlertTriangle size={20}/> Delete Student?</h2>
     <button type="button" className="btn sm" onClick={onClose} disabled={working} aria-label="Close"><X size={18}/></button></div>
    <div className="record-modal-body">
-    <p id="student-delete-description"><b>{student.name}</b> (Class {gradeLabel(student.grade)}, Roll {toAsciiDigits(student.roll)})'s account, attendance and marks will be permanently removed. This cannot be undone.</p>
+    <p id="student-delete-description"><b>{student.name}</b> (Class {enGrade(student.grade)}, Roll {toAsciiDigits(student.roll)})'s account, attendance and marks will be permanently removed. This cannot be undone.</p>
     {error&&<p role="alert" className="alert error mt-3">{error}</p>}
    </div>
    <div className="record-modal-actions"><button type="button" className="btn" onClick={onClose} disabled={working}>Cancel</button>
