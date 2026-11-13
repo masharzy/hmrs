@@ -40,8 +40,8 @@ test("partial sheet marks validate independently without losing other paper cell
 test("Excel grid is dense and offers group & separate subject/paper filters",()=>{
  const css=source("app/dashboard/results-workflow.css");
  assert.match(sheet,/paper\|\|/);
- assert.match(sheet,/বাংলা ১ম পত্র/);
- assert.match(sheet,/বাংলা ২য় পত্র/);
+ assert.match(source("lib/academic.js"),/বাংলা ১ম পত্র/);
+ assert.match(source("lib/academic.js"),/বাংলা ২য় পত্র/);
  assert.match(sheet,/ব্যবসায় শিক্ষা/);
  assert.match(sheet,/মানবিক/);
  assert.match(sheet,/toBanglaDigits\(index\+1\)/);
