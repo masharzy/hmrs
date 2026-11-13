@@ -467,14 +467,13 @@ export default function DashboardPortal() {
    </div>
    {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
      students={students} request={request} mutate={mutate} working={working}/>}
-   {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>
-     }</>:
+   {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/></>:
    <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
          <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+(Number(s.grade)>=9?" "+(groupNames[s.group]||""):"")+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
         </div><div className="flex flex-wrap gap-2 items-end mt-4"><Field label="নতুন পরীক্ষার নাম"><Input value={newExam} onChange={setNewExam} placeholder="যেমন: বার্ষিক পরীক্ষা"/></Field><button disabled={working||!newExam.trim()} className="btn sm" onClick={async()=>{const r=await mutate("exam.create",{name:newExam});if(r){setNewExam("");await changeExam(r.examId)}}}><Plus size={14}/> পরীক্ষা তৈরি</button>
-         {actor.role==="principal"&&exam&&<button className="btn sm" disabled={working} onClick={()=>mutate("exam.publish",{examId:exam.id,published:!exam.published})}>{exam.published?"ফলাফল অপ্রকাশ করুন":"ফলাফল প্রকাশ করুন"}</button>}</div></div>
+         </div></div>
         {chosen&&Number(chosen.grade)>=9&&<div className="panel p-5"><h3 className="font-extrabold mb-3">বিভাগ, নৈর্বাচনিক ও ৪র্থ বিষয়</h3><div className="form-grid">
          <Field label="বিভাগ"><Select value={studentSubject.group} onChange={v=>setStudentSubject(s=>({...s,group:v,elective:v==="science"?"higher-math":v==="business"?"agriculture":"civics",optionalId:v==="science"?"biology":"agriculture",fourthSubject:"agriculture"}))} choices={[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]]}/></Field>
          <Field label="নৈর্বাচনিক বিষয়"><Select value={studentSubject.elective} onChange={v=>setStudentSubject(s=>({...s,elective:v,optionalId:s.group==="business"?v:s.optionalId}))} choices={studentSubject.group==="science"?[["higher-math","উচ্চতর গণিত"],["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]]:studentSubject.group==="business"?[["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]]:[["civics","পৌরনীতি"],["economics","অর্থনীতি"]]}/></Field>
@@ -523,7 +522,7 @@ export default function DashboardPortal() {
      if(editing.type==="student"&&!editing.item.uid&&loginPin){
       if(await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))setEditing(null);
      }else if(editing.type==="student"&&editing.item.uid&&resetPin){
-      if(!/^\\d{5}$/.test(resetPin)){setError("নতুন PIN পাঁচ সংখ্যার হতে হবে");return}
+      if(!/^[0-9]{5}$/.test(resetPin)){setError("নতুন PIN পাঁচ সংখ্যার হতে হবে");return}
       if(await mutate("student.pin.reset",{studentId:editing.item.id,pin:resetPin}))setEditing(null);
      }else setEditing(null);
     }
