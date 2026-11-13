@@ -8,6 +8,7 @@ import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-da
 import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { sameStudentRoll } from "../../../lib/school-identity.js";
+import {incompleteStudentFields} from "../../../lib/selection-import.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -284,7 +285,7 @@ export async function POST(req) {
       const id = cleanText(body.studentId, 120);
       const old = await studentFor(actor, id);
       if (old.deleting) return fail("শিক্ষার্থী মুছে ফেলা হচ্ছে",409);
-      const next = normalizeStudentEdit({ ...old, ...(body.values || {}) });
+      const next = normalizeStudentEdit({ ...old, ...(body.values || {}) },{allowMissingPhone:!old.uid||old.importIncomplete===true});
       if(actor.role!=="principal"&&!visible(actor,{grade:next.grade}))
         return fail("এই শ্রেণির শিক্ষার্থীর তথ্য পরিবর্তনের অনুমতি নেই",403);
       if (next.grade >= 9) {
@@ -335,7 +336,9 @@ export async function POST(req) {
         if(!current.exists||current.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
         if(isNewRoll && newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
         if(newPhone?.exists && newPhone.data()?.uid!==old.uid)throw Object.assign(Error("লগইন মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
-        tx.update(studentRef,{...next,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
+        const missingFields=incompleteStudentFields({...next,uid:old.uid});
+        tx.update(studentRef,{...next,importIncomplete:missingFields.length>0,
+         missingFields,loginPending:!old.uid,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
         if(isNewRoll || !newRoll.exists)tx.set(newRollRef,{studentId:id,grade:next.grade,group:next.group,roll:next.roll},{merge:true});
         if(rollChanged&&oldRoll?.exists&&oldRoll.data()?.studentId===id)tx.delete(oldRollRef);
         if(legacyRoll?.exists&&legacyRoll.data()?.studentId===id&&legacyRollRef.id!==newRollRef.id)tx.delete(legacyRollRef);
@@ -359,6 +362,39 @@ export async function POST(req) {
         });
       });
       await audit(actor, action, id); return json({ok:true});
+    }
+    if (action === "student.activate") {
+      needRole(actor,["principal"]);
+      const id=cleanText(body.studentId,120),pin=normalizePin(body.pin);
+      if(!id||id.includes("/")||!pin)return fail("শিক্ষার্থী ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
+      const studentRef=store.collection("students").doc(id),snap=await studentRef.get();
+      if(!snap.exists||snap.data()?.deleting)return fail("শিক্ষার্থী পাওয়া যায়নি",404);
+      const student=snap.data();
+      if(student.uid)return fail("এই শিক্ষার্থীর লগইন অ্যাকাউন্ট আগে থেকেই আছে",409);
+      const phone=normalizePhone(student.phone||"");
+      const remaining=incompleteStudentFields({...student,phone,uid:"pending"});
+      if(remaining.length)return fail("অ্যাকাউন্ট চালুর আগে তথ্য দিন: "+remaining.join(", "),409);
+      const user=await adminAuth().createUser({displayName:student.name});
+      createdUid=user.uid;
+      const phoneRef=store.collection("loginPhones").doc(phone);
+      const userRef=store.collection("users").doc(user.uid);
+      const credentialRef=store.collection("loginCredentials").doc(user.uid);
+      await store.runTransaction(async tx=>{
+       const [latest,mapping]=await Promise.all([tx.get(studentRef),tx.get(phoneRef)]);
+       if(!latest.exists||latest.data()?.uid||latest.data()?.deleting)
+         throw Object.assign(Error("শিক্ষার্থীর তথ্য পরিবর্তিত হয়েছে"),{status:409});
+       const missing=incompleteStudentFields({...latest.data(),uid:"pending"});
+       if(missing.length)throw Object.assign(Error("সব তথ্য পূরণ না হওয়ায় অ্যাকাউন্ট চালু করা যায়নি"),{status:409});
+       if(mapping.exists)throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত"),{status:409});
+       const now=iso();
+       tx.create(phoneRef,{uid:user.uid,createdAt:now});
+       tx.create(credentialRef,{...makePinCredential(pin),phone,createdAt:now});
+       tx.create(userRef,{role:"student",name:student.name,phone,active:true,pinEnabled:true,studentId:id,createdAt:now});
+       tx.update(studentRef,{uid:user.uid,loginPending:false,importIncomplete:false,missingFields:[],updatedAt:now,updatedBy:actor.uid});
+      });
+      createdUid=null;
+      await audit(actor,action,id);
+      return json({ok:true});
     }
     if (action === "student.delete") {
       needRole(actor,["principal"]);
