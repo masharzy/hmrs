@@ -185,6 +185,7 @@ export default function DashboardPortal() {
     if(current)routeCache.current.set(key,{...current,data:{...current.data,marks:existing}});
     return r;
    }
+   if(action==="account.update"&&r.relogin){await signOut(firebaseAuth());router.replace("/login/principal");return r;}
    if(action==="pin.change")return r;
    if(action==="routine.save"||action==="routine.delete"||action==="notice.save"||action==="notice.delete"){
     const section=action.startsWith("routine.")?"routines":"notices";
