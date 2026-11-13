@@ -6,7 +6,7 @@ import { CLASS_OPTIONS, TEACHER_SUBJECT_OPTIONS } from "../lib/teacher-subjects"
 import PinInput from "./PinInput";
 
 const roles={teacher:"শিক্ষক",class_teacher:"শ্রেণি শিক্ষক"};
-const empty=()=>({name:"",phone:"",pin:"",role:"teacher",assignedClasses:[],teachingSubjects:[],active:true});
+const empty=()=>({name:"",phone:"",pin:"",roles:["teacher"],teachingClasses:[],classTeacherClasses:[],teachingSubjects:[],active:true});
 function Choices({label,options,values,onChange}){
  return <fieldset className="hmrs-teacher-choices"><legend>{label}</legend><div className="hmrs-teacher-choice-grid">
   {options.map(option=><label key={option.value||option.id} className={values.includes(option.value||option.id)?"selected":""}>
@@ -36,15 +36,20 @@ export default function AccountManager({actor,request,mutate,working,error}){
  function openCreate(){setModal({kind:"create"});setValues(empty());setLocalError("")}
  function openEdit(user){
   setModal({kind:"edit",user});setLocalError("");
-  setValues({name:user.name||"",phone:user.phone||"",pin:"",role:user.role,
-   assignedClasses:(user.assignedClasses||[]).map(String),teachingSubjects:(user.teachingSubjects||[]).map(String),active:user.active!==false});
+  const roles=user.roles||[user.role];
+  setValues({name:user.name||"",phone:user.phone||"",pin:"",roles,
+   teachingClasses:roles.includes("teacher")?(user.teachingClasses||user.assignedClasses||[]).map(String):[],
+   classTeacherClasses:roles.includes("class_teacher")?(user.classTeacherClasses||user.assignedClasses||[]).map(String):[],
+   teachingSubjects:(user.teachingSubjects||[]).map(String),active:user.active!==false});
  }
  function close(){if(working)return;setModal(null);setLocalError("")}
  function changed(key,value){setValues(v=>({...v,[key]:value}));setLocalError("")}
  async function submit(e){
   e.preventDefault();if(working)return;setLocalError("");
   if(!values.name.trim()||!values.phone.trim()){setLocalError("শিক্ষকের নাম ও মোবাইল নম্বর দিন");return}
-  if(values.assignedClasses.length===0){setLocalError("অন্তত একটি শ্রেণি নির্বাচন করুন");return}
+  if(!values.roles.length){setLocalError("অন্তত একটি ভূমিকা নির্বাচন করুন");return}
+  if(values.roles.includes("teacher")&&!values.teachingClasses.length){setLocalError("যে শ্রেণিতে পড়ান নির্বাচন করুন");return}
+  if(values.roles.includes("class_teacher")&&!values.classTeacherClasses.length){setLocalError("শ্রেণি শিক্ষক হিসেবে শ্রেণি নির্বাচন করুন");return}
   if(values.teachingSubjects.length===0){setLocalError("শিক্ষকের অন্তত একটি বিষয় নির্বাচন করুন");return}
   if(modal.kind==="create"&&!/^\d{5}$/.test(values.pin)){setLocalError("পাঁচ সংখ্যার PIN দিন");return}
   if(modal.kind==="edit"&&values.pin&&!/^\d{5}$/.test(values.pin)){setLocalError("পাঁচ সংখ্যার PIN দিন");return}
@@ -67,8 +72,8 @@ export default function AccountManager({actor,request,mutate,working,error}){
   <div className="panel table-wrap"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>মোবাইল</th><th>ভূমিকা</th><th>শ্রেণি</th><th>বিষয়</th><th>ব্যবস্থা</th></tr></thead><tbody>
    {!loading&&items.map((u,i)=><tr key={u.id}><td>{toBanglaDigits((page-1)*20+i+1)}</td>
     <td className="font-bold">{u.name}{u.active===false&&<span className="chip gray ml-2">নিষ্ক্রিয়</span>}</td>
-    <td>{toBanglaDigits(u.phone||"—")}</td><td>{roles[u.role]}</td>
-    <td>{(u.assignedClasses||[]).map(toBanglaDigits).join(", ")||"—"}</td>
+    <td>{toBanglaDigits(u.phone||"—")}</td><td>{(u.roles||[u.role]).map(r=>roles[r]).filter(Boolean).join(" + ")}</td>
+    <td>{[...new Set([...(u.teachingClasses||[]),...(u.classTeacherClasses||[]),...(u.assignedClasses||[])])].map(toBanglaDigits).join(", ")||"—"}</td>
     <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name||id).join(", ")||"—"}</td>
     <td><div className="inline-actions"><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> এডিট</button>
      <button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> ডিলিট</button></div></td>
@@ -85,17 +90,21 @@ export default function AccountManager({actor,request,mutate,working,error}){
     <div className="record-modal-actions"><button className="btn" type="button" disabled={working} onClick={close}>বাতিল</button>
      <button className="btn danger" type="button" disabled={working} onClick={remove}>{working?"ডিলিট হচ্ছে...":"নিশ্চিত, ডিলিট করুন"}</button></div>
    </section>:<section className="record-modal hmrs-teacher-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-modal-title">
-    <div className="record-modal-head"><div><h2 id="teacher-modal-title">{modal.kind==="create"?"শিক্ষক যুক্ত করুন":"শিক্ষকের তথ্য এডিট"}</h2><p className="muted text-xs">ভূমিকা, একাধিক শ্রেণি ও বিষয় নির্বাচন করুন</p></div>
+    <div className="record-modal-head"><div><h2 id="teacher-modal-title">{modal.kind==="create"?"শিক্ষক যুক্ত করুন":"শিক্ষকের তথ্য এডিট"}</h2><p className="muted text-xs">শিক্ষক ও শ্রেণি শিক্ষক—এক বা দুই ভূমিকা, আলাদা শ্রেণি ও পাঠদানের বিষয় নির্বাচন করুন</p></div>
      <button type="button" className="btn sm" onClick={close} disabled={working} aria-label="বন্ধ করুন"><X size={18}/></button></div>
     <form onSubmit={submit}><div className="record-modal-body">
      {(localError||error)&&<p role="alert" className="alert error">{localError||error}</p>}
      <div className="form-grid">
       <label className="field">শিক্ষকের নাম<input value={values.name} onChange={e=>changed("name",e.target.value)} required maxLength={120}/></label>
       <label className="field">লগইন মোবাইল<input type="tel" value={values.phone} onChange={e=>changed("phone",e.target.value)} required/></label>
-      <label className="field">ভূমিকা<select value={values.role} onChange={e=>changed("role",e.target.value)}><option value="teacher">শিক্ষক</option><option value="class_teacher">শ্রেণি শিক্ষক</option></select></label>
+      <div className="field"><span>ভূমিকা</span><Choices label="একাধিক ভূমিকা নির্বাচন করতে পারবেন" options={[{value:"teacher",label:"শিক্ষক"},{value:"class_teacher",label:"শ্রেণি শিক্ষক"}]}
+         values={values.roles} onChange={v=>changed("roles",v)}/></div>
       <div className="field"><PinInput label={modal.kind==="create"?"পাঁচ সংখ্যার PIN":"নতুন PIN (পরিবর্তন না হলে খালি রাখুন)"} value={values.pin} onChange={v=>changed("pin",v)}/></div>
      </div>
-     <Choices label="যে যে শ্রেণিতে পাঠদান করবেন" options={CLASS_OPTIONS} values={values.assignedClasses} onChange={v=>changed("assignedClasses",v)}/>
+     {values.roles.includes("teacher")&&<Choices label="শিক্ষক হিসেবে যে শ্রেণিগুলোতে পড়ান" options={CLASS_OPTIONS}
+       values={values.teachingClasses} onChange={v=>changed("teachingClasses",v)}/>}
+     {values.roles.includes("class_teacher")&&<Choices label="যে শ্রেণিগুলোর শ্রেণি শিক্ষক" options={CLASS_OPTIONS}
+       values={values.classTeacherClasses} onChange={v=>changed("classTeacherClasses",v)}/>} 
      <Choices label="যে যে বিষয়ের শিক্ষক" options={TEACHER_SUBJECT_OPTIONS} values={values.teachingSubjects} onChange={v=>changed("teachingSubjects",v)}/>
      {modal.kind==="edit"&&<label className="hmrs-account-active"><input type="checkbox" checked={values.active} onChange={e=>changed("active",e.target.checked)}/> অ্যাকাউন্ট সক্রিয়</label>}
     </div><div className="record-modal-actions"><button type="button" className="btn" disabled={working} onClick={close}>বাতিল</button>
