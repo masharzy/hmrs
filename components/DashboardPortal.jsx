@@ -19,7 +19,7 @@ const NoticeManager=dynamic(()=>import("./NoticeManager"),{ssr:false});
 const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
 const ResultEntryGrid=dynamic(()=>import("./ResultEntryGrid"),{ssr:false});
 const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
-const SelectionImportPanel=dynamic(()=>import("./SelectionImportPanel"),{ssr:false});
+
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import { formatClass, groupNames } from "../lib/student-admin";
@@ -424,14 +424,7 @@ export default function DashboardPortal() {
     <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
    </div>
    {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>
-     {actor.role==="principal"&&<SelectionImportPanel onImported={async(importedExamId)=>{
-       routeCache.current.delete("students");loadedRoutes.current.delete("students");
-       routeCache.current.delete(routeKey("marks",date,importedExamId));await changeExam(importedExamId);
-       await refresh(actor,date,importedExamId,"marks",true);
-      }} onRollChanged={async()=>{
-       routeCache.current.delete("students");loadedRoutes.current.delete("students");
-       routeCache.current.delete(routeKey("marks",date,examId));await refresh(actor,date,examId,"marks",true);
-      }}/>}</>:
+     }</>:
    <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
