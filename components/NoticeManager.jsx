@@ -68,7 +68,7 @@ export default function NoticeManager({items=[],working,mutate}){
    <div className="hmrs-notice-files">
     <label className="field"><span className="flex items-center gap-2"><ImagePlus size={16}/> Image (optional)</span>
      <input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>pick("image",e.target.files?.[0])}/>
-     <small>JPG, PNG বা WebP · Max 3 MB</small></label>
+     <small>JPG, PNG or WebP · Max 3 MB</small></label>
     <label className="field"><span className="flex items-center gap-2"><FileDown size={16}/> PDF (optional)</span>
      <input ref={pdfInput} type="file" accept=".pdf,application/pdf" onChange={e=>pick("pdf",e.target.files?.[0])}/>
      <small>PDF · Max 4 MB · Cloudflare R2</small></label>
