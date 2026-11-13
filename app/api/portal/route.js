@@ -13,6 +13,7 @@ import {incompleteStudentFields} from "../../../lib/selection-import.js";
 import {getPublishedStudentResults} from "../../../lib/published-student-results.js";
 import {publicationKey} from "../../../lib/result-publication.js";
 import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
+import {auditExamScores} from "../../../lib/result-audit.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -104,6 +105,18 @@ export async function GET(req) {
     if (resource === "notices") {
       const snap = await store.collection("notices").orderBy("createdAt", "desc").limit(100).get();
       return json({ items: asDocs(snap) });
+    }
+    if(resource==="result.audit"){
+      needRole(actor,["principal"]);
+      const examId=cleanText(u.searchParams.get("examId"),150);
+      if(!examId||examId.includes("/"))return fail("পরীক্ষা নির্বাচন করুন");
+      const [ex,studentsSnap,marksSnap]=await Promise.all([
+       store.collection("exams").doc(examId).get(),
+       store.collection("students").limit(950).get(),
+       store.collection("marks").where("examId","==",examId).limit(5000).get()
+      ]);
+      if(!ex.exists)return fail("পরীক্ষা পাওয়া যায়নি",404);
+      return json({examId,audit:auditExamScores(asDocs(studentsSnap).filter(x=>!x.deleting),asDocs(marksSnap))});
     }
     if (resource === "staff.accounts") {
       needRole(actor,["principal"]);
@@ -679,6 +692,12 @@ export async function POST(req) {
       ]);
       if(!examSnap.exists||!studentSnap.exists||studentSnap.data()?.deleting)return fail("পরীক্ষা বা শিক্ষার্থী পাওয়া যায়নি",404);
       const published=body.published===true;
+      if(published&&!body.allowIncomplete){
+       const subjects=await store.collection("marks").where("examId","==",examId).limit(5000).get();
+       const own=asDocs(subjects).filter(x=>x.studentId===studentId);
+       const audit=auditExamScores([{id:studentId,...studentSnap.data()}],own);
+       if(audit.incompleteCount)return json({error:"এই শিক্ষার্থীর কিছু বিষয়ের নম্বর দেওয়া হয়নি",audit},409);
+      }
       const ref=store.collection("resultPublications").doc(publicationKey(examId,studentId));
       await ref.set({examId,studentId,published,updatedAt:iso(),updatedBy:actor.uid},{merge:true});
       await audit(actor,action,ref.id);
@@ -688,6 +707,14 @@ export async function POST(req) {
       needRole(actor, ["principal"]);
       const ref = store.collection("exams").doc(cleanText(body.examId, 150));
       if (!(await ref.get()).exists) return fail("পরীক্ষা পাওয়া যায়নি");
+      if(body.published===true&&!body.allowIncomplete){
+       const [rosterSnap,marksSnap]=await Promise.all([
+        store.collection("students").limit(950).get(),
+        store.collection("marks").where("examId","==",ref.id).limit(5000).get()
+       ]);
+       const audit=auditExamScores(asDocs(rosterSnap).filter(x=>!x.deleting),asDocs(marksSnap));
+       if(audit.incompleteCount)return json({error:"কিছু শিক্ষার্থীর নম্বর অসম্পূর্ণ; আগে Preview দেখুন",audit},409);
+      }
       await ref.update({ published: !!body.published, updatedAt: iso() });
       await audit(actor, action, ref.id); return json({ ok: true });
     }
