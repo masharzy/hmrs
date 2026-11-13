@@ -381,7 +381,7 @@ export async function POST(req) {
       const credentialRef=store.collection("loginCredentials").doc(user.uid);
       await store.runTransaction(async tx=>{
        const [latest,mapping]=await Promise.all([tx.get(studentRef),tx.get(phoneRef)]);
-       if(!latest.exists||latest.data()?.uid||latest.data()?.deleting)
+       if(!latest.exists||latest.data()?.uid||latest.data()?.deleting||normalizePhone(latest.data()?.phone||"")!==phone)
          throw Object.assign(Error("শিক্ষার্থীর তথ্য পরিবর্তিত হয়েছে"),{status:409});
        const missing=incompleteStudentFields({...latest.data(),uid:"pending"});
        if(missing.length)throw Object.assign(Error("সব তথ্য পূরণ না হওয়ায় অ্যাকাউন্ট চালু করা যায়নি"),{status:409});
