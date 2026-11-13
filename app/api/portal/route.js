@@ -11,7 +11,7 @@ import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json
 import { sameStudentRoll } from "../../../lib/school-identity.js";
 import {incompleteStudentFields} from "../../../lib/selection-import.js";
 import {getPublishedStudentResults} from "../../../lib/published-student-results.js";
-import {publicationKey} from "../../../lib/result-publication.js";
+import {publicationKey,resultIsPublished} from "../../../lib/result-publication.js";
 import {examAppliesToStudent,examStudents} from "../../../lib/exam-scope.js";
 import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
 import {auditExamScores} from "../../../lib/result-audit.js";
@@ -107,6 +107,18 @@ export async function GET(req) {
       const snap = await store.collection("notices").orderBy("createdAt", "desc").limit(100).get();
       return json({ items: asDocs(snap) });
     }
+    if(resource==="result.publication"){
+      needRole(actor,["principal"]);
+      const examId=cleanText(u.searchParams.get("examId"),150);
+      const studentId=cleanText(u.searchParams.get("studentId"),150);
+      if(!examId||!studentId||examId.includes("/")||studentId.includes("/"))return fail("Select exam and student",400);
+      const [ex,publication]=await Promise.all([
+       store.collection("exams").doc(examId).get(),
+       store.collection("resultPublications").doc(publicationKey(examId,studentId)).get()
+      ]);
+      if(!ex.exists||ex.data()?.deleted)return fail("Exam not found",404);
+      return json({published:resultIsPublished(ex.data(),publication.exists?publication.data():null)});
+    }
     if(resource==="result.audit"){
       needRole(actor,["principal"]);
       const examId=cleanText(u.searchParams.get("examId"),150);
@@ -116,7 +128,7 @@ export async function GET(req) {
        store.collection("students").limit(950).get(),
        store.collection("marks").where("examId","==",examId).limit(5000).get()
       ]);
-      if(!ex.exists)return fail("পরীক্ষা পাওয়া যায়নি",404);
+      if(!ex.exists||ex.data()?.deleted)return fail("Exam not found",404);
       return json({examId,audit:auditExamScores(examStudents(ex.data(),asDocs(studentsSnap)),asDocs(marksSnap))});
     }
     if (resource === "staff.accounts") {
@@ -145,7 +157,7 @@ export async function GET(req) {
     }
     if (resource === "exams") {
       const snap = await store.collection("exams").orderBy("createdAt", "desc").limit(60).get();
-      return json({ items: asDocs(snap) });
+      return json({ items: asDocs(snap).filter(e=>!e.deleted) });
     }
     if (resource === "marks") {
       const examId = u.searchParams.get("examId");
@@ -688,6 +700,21 @@ export async function POST(req) {
       await audit(actor,action,ref.id);
       return json({ok:true,examId:ref.id,scopeGrade});
     }
+    if(action==="exam.delete"){
+      needRole(actor,["principal"]);
+      const id=cleanText(body.examId,150);
+      if(!id||id.includes("/")||body.confirmed!==true)return fail("Select and confirm an exam to remove",400);
+      const ref=store.collection("exams").doc(id);
+      await store.runTransaction(async tx=>{
+       const old=await tx.get(ref);
+       if(!old.exists||old.data()?.deleted)throw Object.assign(Error("Exam not found"),{status:404});
+       tx.update(ref,{deleted:true,published:false,deletedAt:iso(),deletedBy:actor.uid,
+        publicationVersion:FieldValue.increment(1),updatedAt:iso()});
+      });
+      // Archive instead of physically erasing marks, for accidental-deletion recovery.
+      await audit(actor,action,id);
+      return json({ok:true,examId:id,archived:true});
+    }
     if(action==="result.publish"){
       needRole(actor,["principal"]);
       const examId=cleanText(body.examId,150),studentId=cleanText(body.studentId,150);
@@ -696,7 +723,7 @@ export async function POST(req) {
       const [examSnap,studentSnap]=await Promise.all([
        store.collection("exams").doc(examId).get(),store.collection("students").doc(studentId).get()
       ]);
-      if(!examSnap.exists||!studentSnap.exists||studentSnap.data()?.deleting)return fail("পরীক্ষা বা শিক্ষার্থী পাওয়া যায়নি",404);
+      if(!examSnap.exists||examSnap.data()?.deleted||!studentSnap.exists||studentSnap.data()?.deleting)return fail("Exam or student not found",404);
       if(!examAppliesToStudent(examSnap.data(),studentSnap.data()))return fail("এই পরীক্ষা শিক্ষার্থীর শ্রেণির জন্য নয়",409);
       const published=body.published===true;
       if(published&&!body.allowIncomplete){
@@ -715,7 +742,7 @@ export async function POST(req) {
       needRole(actor, ["principal"]);
       const ref = store.collection("exams").doc(cleanText(body.examId, 150));
       const examSnap=await ref.get();
-      if(!examSnap.exists)return fail("পরীক্ষা পাওয়া যায়নি");
+      if(!examSnap.exists||examSnap.data()?.deleted)return fail("Exam not found",404);
       if(body.published===true&&!body.allowIncomplete){
        const [rosterSnap,marksSnap]=await Promise.all([
         store.collection("students").limit(950).get(),
@@ -735,7 +762,7 @@ export async function POST(req) {
       if(!canManageSubject(actor,student,subjectId))return fail("এই বিষয় বা শ্রেণির নম্বর দেওয়ার অনুমতি নেই",403);
       
       const exam = await store.collection("exams").doc(examId).get();
-      if (!exam.exists) return fail("পরীক্ষা পাওয়া যায়নি");
+      if (!exam.exists||exam.data()?.deleted) return fail("Exam not found",404);
       if(!examAppliesToStudent(exam.data(),student))return fail("এই পরীক্ষা শিক্ষার্থীর শ্রেণির জন্য নয়",409);
       if (exam.data().published && actor.role !== "principal") return fail("প্রকাশিত ফল প্রধান শিক্ষক ছাড়া পরিবর্তন করতে পারবেন না");
       const scores = Object.fromEntries(Object.entries(body.scores||{}).map(([part,value])=>[part,parseBanglaNumber(value)]));
@@ -752,7 +779,7 @@ export async function POST(req) {
       const examId=cleanText(body.examId,150),entries=body.entries;
       if(!Array.isArray(entries)||!entries.length||entries.length>50)return fail("সর্বোচ্চ ৫০টি নম্বর রেকর্ড একবারে সংরক্ষণ করা যাবে");
       const examSnap=await store.collection("exams").doc(examId).get();
-      if(!examSnap.exists)return fail("পরীক্ষা পাওয়া যায়নি",404);
+      if(!examSnap.exists||examSnap.data()?.deleted)return fail("Exam not found",404);
       if(examSnap.data().published&&actor.role!=="principal")return fail("প্রকাশিত পরীক্ষার নম্বর শুধু প্রধান শিক্ষক বদলাতে পারবেন",403);
       const ids=[...new Set(entries.map(e=>cleanText(e?.studentId,120)))];
       if(ids.some(id=>!id||id.includes("/")))return fail("শিক্ষার্থী সঠিক নয়");
