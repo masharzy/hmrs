@@ -87,7 +87,7 @@ test("exam creation global, class/stream filtered individual, and paper-by-paper
  const api=src("app/api/portal/route.js");
  const studentCard=src("components/StudentResultCard.jsx");
  const print=src("components/Marksheet.jsx");
- assert.match(portal,/Create Exam/);
+ assert.match(src("components/ExamManager.jsx"),/Create Exam/);
  assert.match(modal,/All Classes/);
  assert.match(portal,/individualGrade/);
  assert.match(portal,/individualGroup/);
@@ -97,6 +97,6 @@ test("exam creation global, class/stream filtered individual, and paper-by-paper
  assert.match(api,/scopeGrade:.*published:false|published:false,publicationVersion:0/);
  assert.match(api,/examAppliesToStudent/);
  assert.match(api,/publicationVersion:FieldValue.increment\(1\)/);
- assert.match(studentCard,/reportPaperRows/);
- assert.match(print,/reportPaperRows/);
+ assert.match(studentCard,/reportSubjectRows/);
+ assert.match(print,/reportSubjectRows/);
 });

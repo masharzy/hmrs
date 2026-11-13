@@ -168,7 +168,27 @@ export async function GET(req) {
       const grade=scoped?parseBanglaNumber(gradeValue):null;
       const query=store.collection("marks").where("examId","==",examId);
       const snap=await query.limit(5000).get();
-      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&canViewGrade(actor,m.grade)&&(!Array.isArray(actor.teachingSubjects)||actor.teachingSubjects.includes(m.subjectId))) });
+      const allMarks=asDocs(snap).filter(m=>!scoped||Number(m.grade)===grade);
+      const permitted=allMarks.filter(m=>canViewGrade(actor,m.grade)&&
+       (!Array.isArray(actor.teachingSubjects)||actor.teachingSubjects.includes(m.subjectId)));
+      // GPA is computed using all actual subject marks, even when a teacher only
+      // has permission to edit some subjects; no other subject scores are exposed.
+      let gpaByStudent={};
+      if(scoped){
+       const roster=await store.collection("students").where("grade","==",grade).limit(950).get();
+       const subjectMap=new Map();
+       for(const mark of allMarks){
+        if(!subjectMap.has(mark.studentId))subjectMap.set(mark.studentId,{});
+        subjectMap.get(mark.studentId)[mark.subjectId]=mark.scores||{};
+       }
+       for(const student of asDocs(roster).filter(x=>!x.deleting&&studentVisibleForTeaching(actor,x))){
+        try{
+         const result=evaluateTranscript(student,subjectMap.get(student.id)||{});
+         gpaByStudent[student.id]={gpa:result.gpa,withoutFourthGpa:result.withoutFourthGpa,complete:result.complete};
+        }catch{}
+       }
+      }
+      return json({items:permitted,gpaByStudent});
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -699,6 +719,26 @@ export async function POST(req) {
        published:false,publicationVersion:0,createdAt:iso(),createdBy:actor.uid});
       await audit(actor,action,ref.id);
       return json({ok:true,examId:ref.id,scopeGrade});
+    }
+    if(action==="exam.update"){
+      needRole(actor,["principal","class_teacher"]);
+      const id=cleanText(body.examId,150),name=cleanText(body.name,130);
+      if(!id||id.includes("/")||!name)return fail("Select an exam and enter its name",400);
+      const raw=body.scopeGrade??"all";
+      const scopeGrade=raw==="all"||raw===""?null:parseBanglaNumber(raw);
+      if(scopeGrade!==null&&![6,7,8,9,10].includes(scopeGrade))return fail("Invalid class",400);
+      const ref=store.collection("exams").doc(id);
+      const snap=await ref.get();
+      if(!snap.exists||snap.data().deleted)return fail("Exam not found",404);
+      if(actor.role!=="principal"&&(snap.data().createdBy!==actor.uid||scopeGrade===null||
+        !canManageHomeroom(actor,scopeGrade)))return fail("Not permitted to edit this exam",403);
+      if((snap.data().scopeGrade??null)!==scopeGrade){
+       const existing=await store.collection("marks").where("examId","==",id).limit(1).get();
+       if(!existing.empty)return fail("Cannot change exam class after marks have been entered. You can still rename it.",409);
+      }
+      await ref.update({name,scopeGrade,updatedAt:iso(),updatedBy:actor.uid});
+      await audit(actor,action,id);
+      return json({ok:true,examId:id});
     }
     if(action==="exam.delete"){
       needRole(actor,["principal"]);

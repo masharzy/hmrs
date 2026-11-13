@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, RefreshCw } from "lucide-react";
-import { getStudentSubjects } from "../lib/academic";
+import { getStudentSubjects,evaluateTranscript } from "../lib/academic";
 import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { toAsciiDigits } from "../lib/bangla-numbers";
-import {enGrade,enStream,enNumber,enPaper,enPart,enSubject} from "../lib/result-english.js";
+import {enGrade,enStream,enNumber,enPart} from "../lib/result-english.js";
 import {pendingMarkBatch,clearSavedMarkEdits} from "../lib/marks-autosave.js";
 
 const grades=[6,7,8,9,10],groupOptions=[["","All groups"],["science","Science"],["business","Business Studies"],["humanities","Humanities"]];
@@ -18,7 +18,7 @@ function displayGroups(specs){
  for(const subjects of specs.values())for(const subject of subjects){
   for(const part of subject.parts){
    const paper=part.paper||(part.key==="first"?"১ম পত্র":part.key==="second"?"২য় পত্র":"");
-   const name=paper?enPaper(subject.id,paper):enSubject(subject.id,subject.name);
+   const name=paper?(paper.startsWith(subject.name)?paper:subject.name+" "+paper):subject.name;
    const id=subject.id+"::"+(paper||"all");
    if(!map.has(id))map.set(id,{id,subjectId:subject.id,name,parts:new Map()});
    const shortLabel=enPart(part.label,part.key);
@@ -29,7 +29,7 @@ function displayGroups(specs){
 }
 export default function ResultEntryGrid({exams,examId,onExamChange,students,actor,request,mutate,working}){
  const [grade,setGrade]=useState("6"),[group,setGroup]=useState(""),[subjectId,setSubjectId]=useState("");
- const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({});
+ const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({}),[serverGpa,setServerGpa]=useState({});
  const [loading,setLoading]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState("");
  const [attempt,setAttempt]=useState(0);
  const savingRef=useRef(false),tableRef=useRef(null);
@@ -41,12 +41,23 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const groups=useMemo(()=>displayGroups(subjectsByStudent),[subjectsByStudent]);
  const displayed=subjectId?groups.filter(s=>s.id===subjectId):groups;
  const byKey=useMemo(()=>new Map(sheet.map(m=>[keyFor(m.studentId,m.subjectId),m.scores||{}])),[sheet]);
- useEffect(()=>{setSubjectId("");setEdits({});setError("");setSaved("")},[grade,group,examId]);
+ const studentGpas=useMemo(()=>new Map(rows.map(student=>{
+  const markMap={};
+  for(const mark of sheet.filter(m=>m.studentId===student.id))markMap[mark.subjectId]={...(mark.scores||{})};
+  for(const [key,scores] of Object.entries(edits)){
+   const i=key.indexOf("|");if(key.slice(0,i)!==student.id)continue;
+   const subjectId=key.slice(i+1);
+   markMap[subjectId]={...(markMap[subjectId]||{}),...scores};
+  }
+  try{return [student.id,evaluateTranscript(student,markMap)]}
+  catch{return [student.id,null]}
+ })),[rows,sheet,edits]);
+ useEffect(()=>{setSubjectId("");setEdits({});setError("");setSaved("")},[grade,group]);
  useEffect(()=>{
-  let live=true;setSheet([]);setLoading(!!examId);setError("");setSaved("");
+  let live=true;setLoading(!!examId);setError("");setSaved("");
   if(!examId){setLoading(false);return;}
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
-   .then(result=>{if(live)setSheet(result.items||[])})
+   .then(result=>{if(live){setSheet(result.items||[]);setServerGpa(result.gpaByStudent||{})}})
    .catch(e=>{if(live)setError(e.message)})
    .finally(()=>{if(live)setLoading(false)});
   return ()=>{live=false};
@@ -56,6 +67,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   const i=key.indexOf("|");return {studentId:key.slice(0,i),subjectId:key.slice(i+1),scores};
  }),[edits]);
  const locked=!!exam?.published&&actor?.role!=="principal";
+ const printColumns=displayed.reduce((total,g)=>total+g.parts.length,3);
  useEffect(()=>{
   if(!entries.length&&!sending)return;
   const warn=event=>{event.preventDefault();event.returnValue=""};
@@ -130,7 +142,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   return()=>clearTimeout(timer);
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[edits,examId,grade,group,locked,loading,attempt]);
- return <section className="hmrs-sheet panel" aria-label="Excel score entry">
+ return <section className="hmrs-sheet panel" aria-label="Excel score entry"
+  style={{"--hmrs-print-font":Math.max(5.5,Math.min(9.5,Math.floor(235/Math.max(1,printColumns)) ))+"px"}}>
   <div className="hmrs-sheet-heading"><strong>Marks Entry Sheet</strong>
    <span className="hmrs-autosave-status" role="status" aria-live="polite">
     {sending?"Saving…":error&&entries.length?"Auto-save needs attention":entries.length?"Unsaved changes · saving automatically…":saved||"Auto-save enabled"}
@@ -150,12 +163,14 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   {error&&<p className="alert error" role="alert">{error}</p>}
   {saved&&<p className="alert" role="status"><Check size={14}/> {saved}</p>}
   
-  {!examId?<p className="empty">Select an exam</p>:loading?<p role="status" className="empty">Loading marks...</p>:!rows.length?<p className="empty">No students in this class or group.</p>:<>
-   <div className="hmrs-sheet-scroll" role="region" tabIndex={0} aria-label="Marks spreadsheet" ref={tableRef}>
+  {!examId?<p className="empty">Select an exam</p>:!rows.length?<p className="empty">No students in this class or group.</p>:<>
+   <div className="hmrs-sheet-scroll" role="region" tabIndex={0} aria-label="Marks spreadsheet" aria-busy={loading} ref={tableRef}>
+    {loading&&<div className="hmrs-grid-refresh" role="status">Loading marks for selected exam…</div>}
     <table className="hmrs-sheet-table"><thead><tr>
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-roll">Roll</th>
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-name">Student</th>
       {displayed.map(g=><th colSpan={g.parts.length} key={g.id}>{g.name}</th>)}
+      <th rowSpan={2} className="hmrs-sheet-gpa">GPA</th>
      </tr><tr>{displayed.flatMap(g=>g.parts.map(part=><th key={g.id+":"+part.key}>{part.label}</th>))}</tr></thead>
      <tbody>{rows.map((student,index)=>{
        const own=subjectsByStudent.get(student.id)||[];
@@ -171,10 +186,14 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
          return <td key={g.id+":"+part.key} className={touched?"hmrs-sheet-changed":""}>
           <input data-sheet-row={index} data-sheet-col={column} aria-label={student.name+" — "+g.name+" — "+part.label}
            value={scoreFor(student,g,part)} onChange={e=>put(student,g,part,e.target.value)}
-           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked}
+           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked||loading}
            maxLength={6} title={"Maximum "+enNumber(valid.max)} placeholder="—"/>
          </td>;
-        }))}</tr>;
+        }))}
+        <td className="hmrs-sheet-gpa" title={"GPA (without 4th): "+Number(studentGpas.get(student.id)?.withoutFourthGpa??0).toFixed(2)}>
+         <strong>{Number((actor?.role==="principal"?studentGpas.get(student.id)?.gpa:serverGpa[student.id]?.gpa)??studentGpas.get(student.id)?.gpa??0).toFixed(2)}</strong>
+         {!(actor?.role==="principal"?studentGpas.get(student.id)?.complete:serverGpa[student.id]?.complete)&&<span className="hmrs-gpa-provisional" title="Some marks are missing; counted as zero">!</span>}
+        </td></tr>;
      })}</tbody></table>
    </div>
    <div className="hmrs-sheet-bottom"><span>{enNumber(displayed.length)} subject/paper groups · All valid changes auto-save</span></div>

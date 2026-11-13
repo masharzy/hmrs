@@ -8,7 +8,8 @@ const descriptions={
  students:"Find students, review records and update details",
  admissions:"Review and approve admission applications",
  attendance:"Manage daily attendance by date",
- marks:"Create exams, enter marks and publish results",
+ exams:"Create, edit and remove examinations",
+ marks:"Enter marks and publish exam results",
  finance:"School finances and outstanding dues",
  notices:"Create and publish school notices",
  routines:"Manage class and exam timetables",
@@ -19,14 +20,14 @@ const descriptions={
  results:"Exam results and marksheets",
  profile:"Your PIN and account security"
 };
-const workRoutes=new Set(["overview","students","admissions","attendance","marks","routines","records","results"]);
+const workRoutes=new Set(["overview","students","admissions","attendance","exams","marks","records","results"]);
 const navGroups=(items)=>[
  {label:"Main Menu",items:items.filter(([key])=>workRoutes.has(key))},
  {label:"Administration & Settings",items:items.filter(([key])=>!workRoutes.has(key))}
 ].filter(group=>group.items.length);
 const mainDockKeys=["overview","students","admissions","attendance","records","results"];
 
-const dashboardPaths=new Set(["overview","students","admissions","attendance","marks","finance","notices","routines","accounts","security","settings","records","results","profile"]);
+const dashboardPaths=new Set(["overview","students","admissions","attendance","exams","marks","finance","notices","accounts","security","settings","records","results","profile"]);
 
 // Use Next.js-integrated native history to avoid an extra RSC route request.
 // Regular href remains usable for accessibility, refresh, and modified clicks.

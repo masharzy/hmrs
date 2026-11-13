@@ -3,7 +3,6 @@ import { ArrowRight, BookOpenCheck, FileText, GraduationCap, ShieldCheck, Sparkl
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import NoticeBoard from "../components/NoticeBoard";
-import RoutineBoard from "../components/RoutineBoard";
 import SchoolPhoto from "../components/SchoolPhoto";
 import "./home.css";
 
@@ -33,8 +32,7 @@ export default function Home(){
   </section>
   <section className="container hmrs-home-notices" id="notices">
    <div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">LATEST UPDATES</span><h2 className="section-title">বিদ্যালয়ের সর্বশেষ খবর</h2><p>গুরুত্বপূর্ণ নোটিশ ও বিজ্ঞপ্তি</p></div></div>
-   <NoticeBoard/>
+   <NoticeBoard full/>
   </section>
-  <div className="hmrs-home-routines"><RoutineBoard/></div>
  </main><SiteFooter/></>;
 }
