@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -556,7 +556,7 @@ export default function DashboardPortal() {
         <div className="panel p-5"><h3 className="font-bold mb-3">Update Student Dues</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
         <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Class</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toAsciiDigits(l.createdAt?.slice(0,10))}</td><td>{toAsciiDigits(l.grade)}</td><td>{l.type==="income"?"Income":"Expense"}</td><td>{l.description}</td><td>BDT  {toAsciiDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
-        {false&&null}
+        
        {tab==="accounts"&&actor.role==="principal"&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}
        {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2><div className="panel p-6 grid gap-4">
         <div className="alert">Upload a school photo to ImgBB and it will appear on the home page. Use only your school's own images.</div>
