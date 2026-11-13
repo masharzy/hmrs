@@ -29,7 +29,7 @@ function displayGroups(specs){
 }
 export default function ResultEntryGrid({exams,examId,onExamChange,students,actor,request,mutate,working}){
  const [grade,setGrade]=useState("6"),[group,setGroup]=useState(""),[subjectId,setSubjectId]=useState("");
- const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({});
+ const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({}),[serverGpa,setServerGpa]=useState({});
  const [loading,setLoading]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState("");
  const [attempt,setAttempt]=useState(0);
  const savingRef=useRef(false),tableRef=useRef(null);
@@ -57,7 +57,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   let live=true;setLoading(!!examId);setError("");setSaved("");
   if(!examId){setLoading(false);return;}
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
-   .then(result=>{if(live)setSheet(result.items||[])})
+   .then(result=>{if(live){setSheet(result.items||[]);setServerGpa(result.gpaByStudent||{})}})
    .catch(e=>{if(live)setError(e.message)})
    .finally(()=>{if(live)setLoading(false)});
   return ()=>{live=false};
@@ -67,6 +67,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   const i=key.indexOf("|");return {studentId:key.slice(0,i),subjectId:key.slice(i+1),scores};
  }),[edits]);
  const locked=!!exam?.published&&actor?.role!=="principal";
+ const printColumns=displayed.reduce((total,g)=>total+g.parts.length,3);
  useEffect(()=>{
   if(!entries.length&&!sending)return;
   const warn=event=>{event.preventDefault();event.returnValue=""};
@@ -141,7 +142,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   return()=>clearTimeout(timer);
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[edits,examId,grade,group,locked,loading,attempt]);
- return <section className="hmrs-sheet panel" aria-label="Excel score entry">
+ return <section className="hmrs-sheet panel" aria-label="Excel score entry"
+  style={{"--hmrs-print-font":Math.max(5.5,Math.min(9.5,Math.floor(235/Math.max(1,printColumns)) ))+"px"}}>
   <div className="hmrs-sheet-heading"><strong>Marks Entry Sheet</strong>
    <span className="hmrs-autosave-status" role="status" aria-live="polite">
     {sending?"Saving…":error&&entries.length?"Auto-save needs attention":entries.length?"Unsaved changes · saving automatically…":saved||"Auto-save enabled"}
@@ -188,8 +190,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
          </td>;
         }))}
         <td className="hmrs-sheet-gpa" title={"GPA (without 4th): "+Number(studentGpas.get(student.id)?.withoutFourthGpa??0).toFixed(2)}>
-         <strong>{Number(studentGpas.get(student.id)?.gpa??0).toFixed(2)}</strong>
-         {!studentGpas.get(student.id)?.complete&&<span className="hmrs-gpa-provisional" title="Some marks are missing; counted as zero">!</span>}
+         <strong>{Number((actor?.role==="principal"?studentGpas.get(student.id)?.gpa:serverGpa[student.id]?.gpa)??studentGpas.get(student.id)?.gpa??0).toFixed(2)}</strong>
+         {!(actor?.role==="principal"?studentGpas.get(student.id)?.complete:serverGpa[student.id]?.complete)&&<span className="hmrs-gpa-provisional" title="Some marks are missing; counted as zero">!</span>}
         </td></tr>;
      })}</tbody></table>
    </div>
