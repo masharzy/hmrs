@@ -161,10 +161,12 @@ export default function DashboardPortal() {
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[actor?.uid,tab]);
  async function mutate(action,params={}){
-  setWorking(true);setError("");setSuccess("");
+  // Spreadsheet auto-save is quiet: don't block navigation or flash a global banner each time.
+  const quiet=action==="marks.batch";
+  if(!quiet){setWorking(true);setError("");setSuccess("")}
   try{
    const r=await request("",{body:{action,...params}});
-   setSuccess("পরিবর্তন সংরক্ষিত হয়েছে");
+   if(!quiet)setSuccess("Changes saved successfully");
    if(action==="attendance.set"){
     const key=routeKey("attendance",params.date,examId);
     const current=routeCache.current.get(key);
@@ -226,7 +228,7 @@ export default function DashboardPortal() {
      routeCache.current.delete(key);
    await refresh(actor,date,examId,tab,true);
    return r;
-  }catch(e){setError(e.message);return null}finally{setWorking(false)}
+  }catch(e){if(!quiet)setError(e.message);return null}finally{if(!quiet)setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
  const incompleteStudents=students.filter(s=>s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0);
