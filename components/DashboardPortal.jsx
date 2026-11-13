@@ -25,6 +25,9 @@ import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers
 import { formatClass, groupNames } from "../lib/student-admin";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import StudentResultCard from "./StudentResultCard";
+import {buildClassResultMetrics} from "../lib/result-metrics.js";
+import {examAppliesToStudent,examScopeGrade,examScopeLabel} from "../lib/exam-scope.js";
+const ExamCreateModal=dynamic(()=>import("./ExamCreateModal"),{ssr:false});
 const ResultPublishControls=dynamic(()=>import("./ResultPublishControls"),{ssr:false});
 
 // Parameter-scoped keys keep attendance dates and exam results separate.
@@ -68,7 +71,8 @@ export default function DashboardPortal() {
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
  const [markMode,setMarkMode]=useState("grid");
- const [newExam,setNewExam]=useState("");
+ const [creatingExam,setCreatingExam]=useState(false);
+ const [individualGrade,setIndividualGrade]=useState(""),[individualGroup,setIndividualGroup]=useState("");
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const photoUploadInput=useRef(null);
@@ -215,7 +219,7 @@ export default function DashboardPortal() {
     :action.startsWith("routine.")?["routines"]
     :action.startsWith("account.")?["accounts","students","attendance","marks","overview"]
     :action.startsWith("settings.")?["settings"]
-    :action.startsWith("exam.")?["marks"]
+    :action.startsWith("exam.")||action.startsWith("result.")?["marks"]
     :[];
    for(const key of [...routeCache.current.keys()])
     if(affected.some(section=>key===section||key.startsWith(section+":"))&&key!==routeKey(tab,date,examId))
@@ -244,11 +248,23 @@ export default function DashboardPortal() {
   (!admissionGrade||Number(a.grade)===Number(admissionGrade))&&(!admissionGroup||a.group===admissionGroup)
  ),[admissions,admissionGrade,admissionGroup]);
  const admissionsCurrentPage=Math.min(admissionsPage,Math.max(1,Math.ceil(filteredAdmissions.length/20)));
- const chosen=students.find(s=>s.id===selectedStudent);
  const exam=exams.find(e=>e.id===examId);
+ const individualStudents=students.filter(s=>examAppliesToStudent(exam,s)&&
+   !!individualGrade&&Number(s.grade)===Number(individualGrade)&&
+   (Number(individualGrade)<9||!!individualGroup&&s.group===individualGroup))
+   .sort((a,b)=>Number(a.roll)-Number(b.roll)||a.name.localeCompare(b.name,"bn"));
+ const chosen=individualStudents.find(s=>s.id===selectedStudent);
  const subjects=chosen?allowedSubjects(actor,chosen):[];
  const subject=subjects.find(s=>s.id===markSubject);
  const resultMap=useMemo(()=>Object.fromEntries((data.marks||[]).filter(m=>m.studentId===selectedStudent).map(m=>[m.subjectId,m.scores])),[data.marks,selectedStudent]);
+ const individualReport=useMemo(()=>{
+  if(!chosen)return null;
+  try{return evaluateTranscript(chosen,resultMap)}catch{return null}
+ },[chosen,resultMap]);
+ const individualMetrics=useMemo(()=>{
+  if(!chosen||actor?.role!=="principal")return null;
+  try{return buildClassResultMetrics(chosen,students,data.marks||[])}catch{return null}
+ },[chosen,students,data.marks,actor?.role]);
  const summary=data.overview||{students:0,applications:0,present:0,absent:0};
  async function changeDate(v){
   setDate(v);
@@ -266,6 +282,9 @@ export default function DashboardPortal() {
  }
  async function changeExam(v){
   setExamId(v);
+  setSelectedStudent("");setMarkSubject("");setMarkScores({});
+  const scope=examScopeGrade(exams.find(e=>e.id===v));
+  setIndividualGrade(scope?String(scope):"");setIndividualGroup("");
   const seq=++examSequence.current;
   setChangingExam(true);
   setData(o=>({...o,marks:[]}));
@@ -461,19 +480,41 @@ export default function DashboardPortal() {
         })}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="marks"&&<><div className="hmrs-marks-mode" role="group" aria-label="নম্বর দেখার পদ্ধতি">
-    <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
-    <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
-   </div>
-   {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
-     students={students} request={request} mutate={mutate} working={working}/>}
-   {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/></>:
-   <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
-        <div className="panel p-5"><div className="form-grid">
-         <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
-         <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+(Number(s.grade)>=9?" "+(groupNames[s.group]||""):"")+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
-        </div><div className="flex flex-wrap gap-2 items-end mt-4"><Field label="নতুন পরীক্ষার নাম"><Input value={newExam} onChange={setNewExam} placeholder="যেমন: বার্ষিক পরীক্ষা"/></Field><button disabled={working||!newExam.trim()} className="btn sm" onClick={async()=>{const r=await mutate("exam.create",{name:newExam});if(r){setNewExam("");await changeExam(r.examId)}}}><Plus size={14}/> পরীক্ষা তৈরি</button>
-         </div></div>
+       {tab==="marks"&&<>
+        <div className="hmrs-results-page-head">
+         <div><h2>পরীক্ষা ও নম্বর</h2><p>পরীক্ষা তৈরি, শ্রেণিভিত্তিক নম্বর, শিক্ষার্থীর ফলাফল এবং প্রকাশনা</p></div>
+         {(actor.role==="principal"||actor.role==="class_teacher")&&
+          <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> পরীক্ষা তৈরি করুন</button>}
+        </div>
+        <div className="hmrs-marks-mode" role="group" aria-label="নম্বর দেখার পদ্ধতি">
+         <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
+         <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
+        </div>
+        {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
+         students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}/>}
+        {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam}
+          students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
+         <>
+          <div className="hmrs-individual-lookup panel">
+           <div className="hmrs-individual-lookup-head"><h3>একজন শিক্ষার্থীর বিস্তারিত ফলাফল</h3>
+            <p>পরীক্ষা → শ্রেণি → বিভাগ (৯–১০) → শিক্ষার্থী</p></div>
+           <div className="hmrs-individual-lookup-grid">
+            <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam}
+             choices={options(exams.map(e=>[e.id,e.name+" · "+examScopeLabel(e)]),"পরীক্ষা নির্বাচন করুন")}/></Field>
+            <Field label="শ্রেণি"><Select value={individualGrade}
+             onChange={v=>{setIndividualGrade(v);setIndividualGroup("");chooseStudent("");}}
+             choices={[["","শ্রেণি নির্বাচন করুন"],...gradeChoices.filter(([n])=>!examId||examAppliesToStudent(exam,{grade:Number(n)}))]}/></Field>
+            {Number(individualGrade)>=9&&<Field label="বিভাগ"><Select value={individualGroup}
+             onChange={v=>{setIndividualGroup(v);chooseStudent("")}}
+             choices={[["","বিভাগ নির্বাচন করুন"],["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]]}/></Field>}
+            <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent}
+             choices={options(individualStudents.map(s=>[s.id,s.name+" · রোল "+toBanglaDigits(s.roll)]),
+              !individualGrade||Number(individualGrade)>=9&&!individualGroup?"আগে শ্রেণি ও বিভাগ নির্বাচন করুন":"শিক্ষার্থী নির্বাচন করুন")}/></Field>
+           </div>
+           {exam&&<p className="hmrs-individual-context">{examScopeLabel(exam)} · {toBanglaDigits(individualStudents.length)} জন মিলেছে</p>}
+          </div>
+          {chosen&&exam&&individualReport&&<StudentResultCard isAdmin exam={exam}
+           result={individualReport} marks={resultMap} metrics={individualMetrics} onPrint={print}/>}
         {chosen&&Number(chosen.grade)>=9&&<div className="panel p-5">
          <h3 className="font-extrabold mb-3">শিক্ষার্থীর ৪র্থ বিষয়</h3>
          <p className="muted text-xs mb-3">{groupNames[chosen.group]} বিভাগ · নিচের একটি ৪র্থ বিষয়ই প্রযোজ্য। বাকি বিষয় স্বয়ংক্রিয়ভাবে নির্ধারিত হবে।</p>
@@ -483,14 +524,23 @@ export default function DashboardPortal() {
           <button disabled={working} className="btn sm" onClick={()=>mutate("student.subjects",{studentId:chosen.id,group:chosen.group,optionalId:studentSubject.optionalId})}>৪র্থ বিষয় সংরক্ষণ</button>
          </div>
         </div>}
-        {chosen&&exam&&<><div className="panel p-5"><div className="flex flex-wrap justify-between gap-3 mb-4"><div><b>{chosen.name}</b><p className="muted text-xs">শ্রেণি {toBanglaDigits(chosen.grade)} · রোল {toBanglaDigits(chosen.roll)}</p></div><button className="btn sm" onClick={print}><Printer size={15}/> নম্বরপত্র প্রিন্ট</button></div>
-         <Field label="বিষয় নির্বাচন"><Select value={markSubject} onChange={chooseSubject} choices={options(subjects.map(s=>[s.id,s.name+" ("+toBanglaDigits(s.max)+")"]))}/></Field>
-         {subject&&<div className="mt-5">
-          <div className="form-grid">{subject.parts.map(part=><Field key={part.key} label={part.label+" / "+toBanglaDigits(part.max)+(part.pass!==undefined?" (পাস "+toBanglaDigits(part.pass)+")":"")}><Input type="number" min="0" step="0.01" value={markScores[part.key]??""} onChange={v=>setMarkScores(o=>({...o,[part.key]:v===""?"":v}))}/></Field>)}</div>
-          <button disabled={working||changingExam||(exam.published&&actor.role!=="principal")} className="btn primary mt-4" onClick={()=>mutate("marks.set",{studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> নম্বর সংরক্ষণ</button>
-         </div>}
-         <div className="table-wrap mt-5"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত নম্বর</th><th>গ্রেড</th><th>অবস্থা</th></tr></thead><tbody>{evaluateTranscript(chosen,resultMap).rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}{r.subjectId===chosen.optionalId?" (৪র্থ)":""}</td><td>{toBanglaDigits(r.received??"—")} / {toBanglaDigits(r.subject.max)}</td><td>{r.letter||"—"}</td><td>{r.status==="complete"?(r.passed?"পাস":"ফেল"):"অসম্পূর্ণ"}</td></tr>)}</tbody></table></div>
-        </div><Marksheet student={chosen} marks={resultMap} exam={exam}/></>}
+         {chosen&&exam&&<>
+          <div className="hmrs-individual-entry panel">
+           <h3>নম্বর সংশোধন</h3>
+           <p>এখান থেকে নির্দিষ্ট বিষয়ের CQ / MCQ / ব্যবহারিক নম্বর সংশোধন করা যাবে।</p>
+           <Field label="বিষয় নির্বাচন"><Select value={markSubject} onChange={chooseSubject}
+            choices={options(subjects.map(x=>[x.id,x.name+" ("+toBanglaDigits(x.max)+")"]))}/></Field>
+           {subject&&<><div className="form-grid hmrs-individual-score-fields">
+            {subject.parts.map(part=><Field key={part.key} label={(part.paper?part.paper+" · ":"")+part.label+" / "+toBanglaDigits(part.max)}>
+             <Input type="number" min="0" step="0.01" value={markScores[part.key]??""}
+              onChange={v=>setMarkScores(o=>({...o,[part.key]:v===""?"":v}))}/></Field>)}
+           </div>
+           <button disabled={working||changingExam||(exam.published&&actor.role!=="principal")}
+            className="btn primary mt-4" onClick={()=>mutate("marks.set",
+            {studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> নম্বর সংরক্ষণ</button></>}
+          </div>
+          <Marksheet student={chosen} marks={resultMap} exam={exam} report={individualReport} metrics={individualMetrics}/>
+         </>}
        </>}</>}
        {tab==="finance"&&<><h2 className="section-title">আর্থিক সারসংক্ষেপ</h2><div className="grid grid-cols-2 gap-4">{[["income","আয়"],["expense","ব্যয়"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>৳ {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("bn-BD")}</strong></div>)}</div>
         <div className="panel p-5"><h3 className="font-bold mb-4">নতুন হিসাব যুক্ত করুন</h3><div className="form-grid">
@@ -518,6 +568,14 @@ export default function DashboardPortal() {
     </>}
    </section>
   </DashboardShell>
+  {creatingExam&&<ExamCreateModal actor={actor} working={working}
+    onClose={()=>setCreatingExam(false)}
+    onCreate={async values=>{
+     const result=await mutate("exam.create",values);
+     if(!result)return false;
+     await changeExam(result.examId);
+     return true;
+    }}/>}
   {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} canResetPin={actor.role==="principal"} onSave={async (values,loginPin,resetPin)=>{
    const action=editing.type==="student"?"student.update":"application.update";
    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
