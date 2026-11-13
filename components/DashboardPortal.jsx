@@ -14,7 +14,7 @@ const SecurityCenter=dynamic(()=>import("./SecurityCenter"),{ssr:false});
 import DashboardShell, { DashboardSkeleton } from "./DashboardShell";
 import DashboardOverview from "./DashboardOverview";
 import DashboardStudentHome from "./DashboardStudentHome";
-const RoutineManager=dynamic(()=>import("./RoutineManager"),{ssr:false});
+const ExamManager=dynamic(()=>import("./ExamManager"),{ssr:false});
 const NoticeManager=dynamic(()=>import("./NoticeManager"),{ssr:false});
 const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
 const ResultEntryGrid=dynamic(()=>import("./ResultEntryGrid"),{ssr:false});
@@ -33,15 +33,15 @@ const ExamCreateModal=dynamic(()=>import("./ExamCreateModal"),{ssr:false});
 const ResultPublishControls=dynamic(()=>import("./ResultPublishControls"),{ssr:false});
 
 // Parameter-scoped keys keep attendance dates and exam results separate.
-const routeKey=(section,date,examId)=>section==="attendance"?"attendance:"+date:section==="marks"?"marks:"+(examId||"none"):section;
+const routeKey=(section,date,examId)=>section==="attendance"?"attendance:"+date:section;
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const roleNames={principal:"Head Teacher",class_teacher:"Class Teacher",teacher:"Teacher",student:"Student"};
 const statusNames={present:"Present",absent:"Absent",left_early:"Left Early"};
 const roles={
  student: [["overview","My Dashboard",LayoutDashboard],["records","Attendance & Dues",CalendarCheck2],["results","Results & Marksheet",GraduationCap],["profile","My PIN",LockKeyhole]],
- teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["profile","My PIN",LockKeyhole]],
- class_teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","Class Accounts",Wallet],["profile","My PIN",LockKeyhole]],
- principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["routines","Routines",CalendarCheck2],["accounts","Staff Accounts",ShieldCheck],["security","Login Security",LockKeyhole],["settings","Website Settings",Settings],["profile","My PIN",LockKeyhole]]
+ teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["marks","Marks",FilePenLine],["profile","My PIN",LockKeyhole]],
+ class_teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Class Accounts",Wallet],["profile","My PIN",LockKeyhole]],
+ principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["accounts","Staff Accounts",ShieldCheck],["security","Login Security",LockKeyhole],["settings","Website Settings",Settings],["profile","My PIN",LockKeyhole]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
@@ -72,7 +72,8 @@ export default function DashboardPortal() {
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
  const [markMode,setMarkMode]=useState("grid");
- const [creatingExam,setCreatingExam]=useState(false);
+ const [creatingExam,setCreatingExam]=useState(false),[editingExam,setEditingExam]=useState(null);
+ const [selectedPublishedExam,setSelectedPublishedExam]=useState("");
  const [individualGrade,setIndividualGrade]=useState(""),[individualGroup,setIndividualGroup]=useState("");
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
@@ -222,7 +223,7 @@ export default function DashboardPortal() {
     :action.startsWith("routine.")?["routines"]
     :action.startsWith("account.")?["accounts","students","attendance","marks","overview"]
     :action.startsWith("settings.")?["settings"]
-    :action.startsWith("exam.")||action.startsWith("result.")?["marks"]
+    :action.startsWith("exam.")||action.startsWith("result.")?["exams","marks"]
     :[];
    for(const key of [...routeCache.current.keys()])
     if(affected.some(section=>key===section||key.startsWith(section+":"))&&key!==routeKey(tab,date,examId))
@@ -340,7 +341,7 @@ export default function DashboardPortal() {
    roleName={roleNames[actor.role]}
    routes={roles[actor.role]||[]}
    active={tab}
-   loading={loadingSection||changingDate||changingExam}
+   loading={loadingSection||changingDate}
    onNavigate={()=>{setError("");setSuccess("")}}
    onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>{if(e?.name!=="AbortError")setError(e.message)})}
    onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
