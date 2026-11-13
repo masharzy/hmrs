@@ -63,8 +63,8 @@ export default function ResultPublishControls({exams,examId,students,selectedStu
     setLoading(true);try{await loadAudit()}catch(e){setAudit({error:e.message,incomplete:[]})}
     finally{setLoading(false)}
    }}><AlertTriangle size={14}/> Check Missing Marks</button>
-   <button type="button" className="btn sm danger" disabled={loading||working} onClick={remove}>
-    <Trash2 size={14}/> Remove Exam</button>
+   {onDelete&&<button type="button" className="btn sm danger" disabled={loading||working} onClick={remove}>
+    <Trash2 size={14}/> Remove Exam</button>}
   </div>
   {mode==="individual"&&selected&&<div className="hmrs-publish-individual">
    <div><b>{selected.name}</b><span>{enGrade(selected.grade)} {Number(selected.grade)>=9?enStream(selected.group):""} · Roll {n(selected.roll)}</span></div>
