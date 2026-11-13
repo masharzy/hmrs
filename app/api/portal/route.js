@@ -700,6 +700,26 @@ export async function POST(req) {
       await audit(actor,action,ref.id);
       return json({ok:true,examId:ref.id,scopeGrade});
     }
+    if(action==="exam.update"){
+      needRole(actor,["principal","class_teacher"]);
+      const id=cleanText(body.examId,150),name=cleanText(body.name,130);
+      if(!id||id.includes("/")||!name)return fail("Select an exam and enter its name",400);
+      const raw=body.scopeGrade??"all";
+      const scopeGrade=raw==="all"||raw===""?null:parseBanglaNumber(raw);
+      if(scopeGrade!==null&&![6,7,8,9,10].includes(scopeGrade))return fail("Invalid class",400);
+      const ref=store.collection("exams").doc(id);
+      const snap=await ref.get();
+      if(!snap.exists||snap.data().deleted)return fail("Exam not found",404);
+      if(actor.role!=="principal"&&(snap.data().createdBy!==actor.uid||scopeGrade===null||
+        !canManageHomeroom(actor,scopeGrade)))return fail("Not permitted to edit this exam",403);
+      if((snap.data().scopeGrade??null)!==scopeGrade){
+       const existing=await store.collection("marks").where("examId","==",id).limit(1).get();
+       if(!existing.empty)return fail("Cannot change exam class after marks have been entered. You can still rename it.",409);
+      }
+      await ref.update({name,scopeGrade,updatedAt:iso(),updatedBy:actor.uid});
+      await audit(actor,action,id);
+      return json({ok:true,examId:id});
+    }
     if(action==="exam.delete"){
       needRole(actor,["principal"]);
       const id=cleanText(body.examId,150);
