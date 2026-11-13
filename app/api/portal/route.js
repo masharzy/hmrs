@@ -105,12 +105,12 @@ export async function GET(req) {
     }
     if (resource === "students") {
       const snap = await store.collection("students").limit(900).get();
-      return json({ items: asDocs(snap).filter(s => visible(actor, s)) });
+      return json({ items: asDocs(snap).filter(s => studentVisibleForTeaching(actor,s)) });
     }
     if (resource === "admissions") {
       needRole(actor, ["class_teacher", "principal"]);
       const snap = await store.collection("admissions").orderBy("createdAt", "desc").limit(250).get();
-      return json({ items: asDocs(snap).filter(a => visible(actor, a)) });
+      return json({ items: asDocs(snap).filter(a => canManageHomeroom(actor,a.grade)) });
     }
     if (resource === "notices") {
       const snap = await store.collection("notices").orderBy("createdAt", "desc").limit(100).get();
@@ -153,7 +153,7 @@ export async function GET(req) {
       const grade=scoped?parseBanglaNumber(gradeValue):null;
       const query=store.collection("marks").where("examId","==",examId);
       const snap=await query.limit(5000).get();
-      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&(actor.role==="class_teacher"||visible(actor,m))) });
+      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&canViewGrade(actor,m.grade)&&(!Array.isArray(actor.teachingSubjects)||actor.teachingSubjects.includes(m.subjectId))) });
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -203,8 +203,10 @@ async function removeStudentRecords(actor,id,store,action){
         if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
       }
       const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll,student.group));
-      const ownedRoll=await rollRef.get();
+      const oldRollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
+      const [ownedRoll,ownedLegacy]=await Promise.all([rollRef.get(),oldRollRef.get()]);
       if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
+      if(oldRollRef.id!==rollRef.id&&ownedLegacy.exists&&ownedLegacy.data()?.studentId===id)refs.push(oldRollRef);
       const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
       for(let i=0;i<unique.length;i+=400){
         const batch=store.batch();
