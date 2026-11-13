@@ -112,7 +112,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   {locked&&<p className="alert">প্রকাশিত পরীক্ষার নম্বর শুধুমাত্র প্রধান শিক্ষক পরিবর্তন করতে পারবেন।</p>}
   {error&&<p className="alert error" role="alert">{error}</p>}
   {saved&&<p className="alert" role="status"><Check size={14}/> {saved}</p>}
-  {Number(grade)>=9&&<p className="hmrs-sheet-hint">বাংলা ১ম ও ২য় পত্রের CQ/MCQ আলাদাভাবে লিখুন। পুরোনো একত্রিত বাংলা নম্বর সংরক্ষিত আছে; পত্রভিত্তিক ঘরে সেগুলো অনুমান করে ভাগ করা হবে না।</p>}
+  
   {!examId?<p className="empty">পরীক্ষা নির্বাচন করুন</p>:loading?<p role="status" className="empty">নম্বর লোড হচ্ছে...</p>:!rows.length?<p className="empty">এই শ্রেণি বা বিভাগে কোনো শিক্ষার্থী নেই।</p>:<>
    <div className="hmrs-sheet-scroll" role="region" tabIndex={0} aria-label="নম্বরের শিট" ref={tableRef}>
     <table className="hmrs-sheet-table"><thead><tr>
