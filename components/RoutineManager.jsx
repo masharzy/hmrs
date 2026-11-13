@@ -148,7 +148,7 @@ export default function RoutineManager({items=[],working,mutate}){
     <div className="routine-cards">{items.map(item=><article className="panel routine-admin-card" key={item.id}>
      <button type="button" className="routine-card-thumb" onClick={()=>setFullImage(item.imageUrl)} aria-label={item.title+" View full size"}>
       <img src={item.imageUrl} alt={item.title}/><ZoomIn size={16}/></button>
-     <div className="routine-card-info"><div className="routine-card-tags"><span className={"chip "+(item.published?"":"gray")}>{item.published?"Published":"Draft"}</span><span className="chip gray">{item.kind==="exam"?"Exam":"Class"} রুটিন</span></div>
+     <div className="routine-card-info"><div className="routine-card-tags"><span className={"chip "+(item.published?"":"gray")}>{item.published?"Published":"Draft"}</span><span className="chip gray">{item.kind==="exam"?"Exam":"Class"} Routine</span></div>
       <h3>{item.title}</h3><p>{routineGradeLabel(item.grade,item.group)}</p>
       <div className="routine-card-actions"><button type="button" className="btn sm" onClick={()=>edit(item)}><Pencil size={15}/> Edit</button>
        <button type="button" className="btn sm danger" disabled={working} onClick={()=>remove(item)}><Trash2 size={15}/> Delete</button></div>
