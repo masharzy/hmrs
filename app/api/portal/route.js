@@ -149,6 +149,58 @@ export async function GET(req) {
   } catch (e) { return handleError(e); }
 }
 
+// Shared student removal path for student records and principal account management.
+async function removeStudentRecords(actor,id,store,action){
+ const student=await studentFor(actor,id);
+      const studentRef=store.collection("students").doc(id);
+      // Revoking access before deleting school records prevents further account sign-in.
+      await store.runTransaction(async tx=>{
+        const userRef=student.uid?store.collection("users").doc(student.uid):null;
+        const [current,account]=await Promise.all([tx.get(studentRef),userRef?tx.get(userRef):null]);
+        if(!current.exists)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
+        tx.update(studentRef,{deleting:true});
+        if(account?.exists)tx.update(userRef,{active:false});
+      });
+      if(student.uid) {
+        try {await adminAuth().deleteUser(student.uid);}
+        catch(e){if(e.code!=="auth/user-not-found")throw e;}
+      }
+      const [marks,attendance,recognitions]=await Promise.all([
+        store.collection("marks").where("studentId","==",id).get(),
+        store.collection("attendance").where("studentId","==",id).get(),
+        student.uid?store.collection("deviceRecognitions").where("uid","==",student.uid).get():Promise.resolve({docs:[]})
+      ]);
+      // Delete linked records first; keep the disabled student record until cleanup finishes,
+      // so an interrupted deletion can be retried by the principal.
+      const refs=[...marks.docs,...attendance.docs,...recognitions.docs].map(d=>d.ref);
+      if(student.uid){
+        refs.push(store.collection("users").doc(student.uid),
+          store.collection("loginCredentials").doc(student.uid),
+          store.collection("loginSecurity").doc(student.uid));
+      }
+      const phone=normalizePhone(student.phone||"");
+      if(phone&&student.uid){
+        const mapping=await store.collection("loginPhones").doc(phone).get();
+        if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
+      }
+      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
+      const ownedRoll=await rollRef.get();
+      if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
+      const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
+      for(let i=0;i<unique.length;i+=400){
+        const batch=store.batch();
+        for(const ref of unique.slice(i,i+400))batch.delete(ref);
+        await batch.commit();
+      }
+      if(student.applicationId){
+        const linked=store.collection("admissions").doc(student.applicationId);
+        if((await linked.get()).exists)await linked.update({status:"student_deleted",studentId:FieldValue.delete(),deletedAt:iso(),deletedBy:actor.uid});
+      }
+      await studentRef.delete();
+      await audit(actor,action,id);return json({ok:true});
+
+}
+
 export async function POST(req) {
   let createdUid = null;
   try {
@@ -283,55 +335,9 @@ export async function POST(req) {
       await audit(actor, action, id); return json({ok:true});
     }
     if (action === "student.delete") {
-      needRole(actor, ["principal"]);
-      const id=cleanText(body.studentId,120),student=await studentFor(actor,id);
-      if(body.confirmed!==true) return fail("শিক্ষার্থী মুছে ফেলার আগে নিশ্চিত করুন");
-      const studentRef=store.collection("students").doc(id);
-      // Revoking access before deleting school records prevents further account sign-in.
-      await store.runTransaction(async tx=>{
-        const userRef=student.uid?store.collection("users").doc(student.uid):null;
-        const [current,account]=await Promise.all([tx.get(studentRef),userRef?tx.get(userRef):null]);
-        if(!current.exists)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
-        tx.update(studentRef,{deleting:true});
-        if(account?.exists)tx.update(userRef,{active:false});
-      });
-      if(student.uid) {
-        try {await adminAuth().deleteUser(student.uid);}
-        catch(e){if(e.code!=="auth/user-not-found")throw e;}
-      }
-      const [marks,attendance,recognitions]=await Promise.all([
-        store.collection("marks").where("studentId","==",id).get(),
-        store.collection("attendance").where("studentId","==",id).get(),
-        student.uid?store.collection("deviceRecognitions").where("uid","==",student.uid).get():Promise.resolve({docs:[]})
-      ]);
-      // Delete linked records first; keep the disabled student record until cleanup finishes,
-      // so an interrupted deletion can be retried by the principal.
-      const refs=[...marks.docs,...attendance.docs,...recognitions.docs].map(d=>d.ref);
-      if(student.uid){
-        refs.push(store.collection("users").doc(student.uid),
-          store.collection("loginCredentials").doc(student.uid),
-          store.collection("loginSecurity").doc(student.uid));
-      }
-      const phone=normalizePhone(student.phone||"");
-      if(phone&&student.uid){
-        const mapping=await store.collection("loginPhones").doc(phone).get();
-        if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
-      }
-      const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
-      const ownedRoll=await rollRef.get();
-      if(ownedRoll.exists&&ownedRoll.data()?.studentId===id)refs.push(rollRef);
-      const unique=[...new Map(refs.map(ref=>[ref.path,ref])).values()];
-      for(let i=0;i<unique.length;i+=400){
-        const batch=store.batch();
-        for(const ref of unique.slice(i,i+400))batch.delete(ref);
-        await batch.commit();
-      }
-      if(student.applicationId){
-        const linked=store.collection("admissions").doc(student.applicationId);
-        if((await linked.get()).exists)await linked.update({status:"student_deleted",studentId:FieldValue.delete(),deletedAt:iso(),deletedBy:actor.uid});
-      }
-      await studentRef.delete();
-      await audit(actor,action,id);return json({ok:true});
+      needRole(actor,["principal"]);
+      if(body.confirmed!==true)return fail("শিক্ষার্থী মুছে ফেলার আগে নিশ্চিত করুন");
+      return removeStudentRecords(actor,cleanText(body.studentId,120),store,action);
     }
     if (action === "routine.save") {
       needRole(actor, ["principal"]);
