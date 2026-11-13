@@ -12,6 +12,7 @@ import { sameStudentRoll } from "../../../lib/school-identity.js";
 import {incompleteStudentFields} from "../../../lib/selection-import.js";
 import {getPublishedStudentResults} from "../../../lib/published-student-results.js";
 import {publicationKey} from "../../../lib/result-publication.js";
+import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -572,52 +573,71 @@ export async function POST(req) {
     }
     if (action === "application.approve") {
       needRole(actor, ["principal", "class_teacher"]);
-      const id = cleanText(body.id, 150), roll = toAsciiDigits(body.roll || ""), pin = normalizePin(body.pin);
-      const ref = store.collection("admissions").doc(id);
-      const snap = await ref.get();
-      if (!snap.exists) return fail("আবেদন পাওয়া যায়নি");
-      const application = snap.data();
-      if (!canManageHomeroom(actor,application.grade)) return fail("এই শ্রেণির ভর্তি অনুমোদনের অনুমতি নেই",403);
-      if (application.status !== "pending") return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে");
-      const phone = normalizePhone(body.phone || application.studentPhone || application.fatherPhone);
-      if (!/^[1-9][0-9]{0,3}$/.test(roll) || !pin || !phone) return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
-      const studentRef = store.collection("students").doc();
-      const idStudent = studentRef.id;
-      const duplicateRoll = await store.collection("students").where("grade", "==", Number(application.grade)).limit(950).get();
-      if (duplicateRoll.docs.some(d => sameStudentRoll(d.data(),{grade:application.grade,group:application.group,roll:Number(roll)}))) return fail("এই শ্রেণি ও বিভাগে রোল ইতিমধ্যে ব্যবহৃত হয়েছে", 409);
-      const rollRef = store.collection("studentRolls").doc(studentKey(application.grade,roll,application.group));
-      if ((await store.collection("students").doc(idStudent).get()).exists) return fail("এই রোল ইতিমধ্যে ভর্তি আছে");
-      const user = await adminAuth().createUser({ displayName: application.studentName });
-      createdUid = user.uid;
-      const student = {
-        uid: user.uid, applicationId: id, name: application.studentName, phone, grade: Number(application.grade),
-        roll: Number(roll), group: Number(application.grade) >= 9 ? application.group : "",
-        elective: application.group === "science" ? "higher-math" : application.group === "humanities" ? "civics" : "agriculture",
-        fourthSubject: "agriculture", optionalId: application.group === "science" ? "biology" : "agriculture", dob: application.dob, gender: application.gender,
-        fatherName: application.fatherName, fatherPhone: application.fatherPhone,
-        motherName: application.motherName, motherPhone: application.motherPhone,
-        guardianAddress: application.guardianAddress, birthRegistration: application.birthRegistration,
-        previousSchool: application.previousSchool, due: 0, createdAt: iso()
+      const id=cleanText(body.id,150),ref=store.collection("admissions").doc(id);
+      const snap=await ref.get();
+      if(!snap.exists)return fail("আবেদন পাওয়া যায়নি",404);
+      const application=snap.data();
+      if(!canManageHomeroom(actor,application.grade))return fail("এই শ্রেণির ভর্তি অনুমোদনের অনুমতি নেই",403);
+      if(application.status!=="pending")return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে",409);
+      const roll=toAsciiDigits(body.roll||application.requestedRoll||"");
+      const phone=normalizePhone(body.phone||application.studentPhone||application.fatherPhone);
+      const pin=normalizePin(body.pin);
+      if(!/^[1-9][0-9]{0,3}$/.test(roll)||!pin||!phone)
+        return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
+      const roster=await store.collection("students").where("grade","==",Number(application.grade)).limit(950).get();
+      const rosterStudents=asDocs(roster);
+      const found=findApplicantRosterMatch(application,rosterStudents,roll);
+      if(found.conflicts.length)return fail("রোলটি অন্য সক্রিয় শিক্ষার্থী ব্যবহার করছে; যাচাই করুন",409);
+      const studentRef=found.match?store.collection("students").doc(found.match.id):store.collection("students").doc();
+      const studentId=studentRef.id;
+      const name=found.match?.name||application.studentName;
+      const opts=admissionSubjects(application);
+      const selections=found.match&&!application.optionalSubject
+       ?{elective:found.match.elective,fourthSubject:found.match.fourthSubject,optionalId:found.match.optionalId}
+       :opts;
+      const selected={
+       uid:null,applicationId:id,name,phone,grade:Number(application.grade),roll:Number(roll),
+       group:Number(application.grade)>=9?application.group:"",...selections,
+       dob:application.dob,gender:application.gender,birthRegistration:application.birthRegistration,
+       fatherName:application.fatherName,fatherPhone:application.fatherPhone,
+       motherName:application.motherName,motherPhone:application.motherPhone,
+       guardianAddress:application.guardianAddress,previousSchool:application.previousSchool
       };
-      const phoneRef = store.collection("loginPhones").doc(phone);
-      const credentialRef = store.collection("loginCredentials").doc(user.uid);
-      const pinCredential = makePinCredential(pin);
-      await store.runTransaction(async t => {
-        const [currentApp, existing, existingPhone, existingRoll] = await Promise.all([
-          t.get(ref), t.get(studentRef), t.get(phoneRef), t.get(rollRef)
-        ]);
-        if (existing.exists || existingRoll.exists || currentApp.data()?.status !== "pending") throw Error("আবেদন/রোল ইতিমধ্যে ব্যবহৃত হয়েছে");
-        if (existingPhone.exists) throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"), { status: 409 });
-        t.create(studentRef, student);
-        t.create(rollRef, { studentId: idStudent, grade: student.grade, group: student.group, roll: student.roll });
-        t.create(phoneRef, { uid: user.uid, createdAt: iso() });
-        t.create(credentialRef, { ...pinCredential, phone, createdAt: iso() });
-        t.set(store.collection("users").doc(user.uid), { role: "student", name: student.name, active: true,
-          phone, pinEnabled: true, studentId: idStudent, createdAt: iso() });
-        t.update(ref, { status: "approved", studentId: idStudent, approvedBy: actor.uid, approvedAt: iso() });
+      const newUser=await adminAuth().createUser({displayName:name});
+      createdUid=newUser.uid;
+      const phoneRef=store.collection("loginPhones").doc(phone);
+      const credentialRef=store.collection("loginCredentials").doc(newUser.uid);
+      const userRef=store.collection("users").doc(newUser.uid);
+      const rollRef=store.collection("studentRolls").doc(studentKey(selected.grade,selected.roll,selected.group));
+      await store.runTransaction(async tx=>{
+       const [appNow,studentNow,phoneNow,rollNow]=await Promise.all([
+        tx.get(ref),tx.get(studentRef),tx.get(phoneRef),tx.get(rollRef)
+       ]);
+       if(appNow.data()?.status!=="pending")throw Object.assign(Error("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে"),{status:409});
+       if(found.match){
+        if(!studentNow.exists||studentNow.data()?.uid||studentNow.data()?.deleting||
+          Number(studentNow.data()?.roll)!==Number(roll)||studentNow.data()?.group!==selected.group)
+         throw Object.assign(Error("শিক্ষার্থীর অসম্পূর্ণ রেকর্ডটি পরিবর্তিত হয়েছে"),{status:409});
+       }else if(studentNow.exists)throw Object.assign(Error("শিক্ষার্থী আগে থেকেই আছে"),{status:409});
+       if(phoneNow.exists)throw Object.assign(Error("এই লগইন মোবাইল অন্য অ্যাকাউন্টে ব্যবহৃত"),{status:409});
+       if(rollNow.exists&&rollNow.data()?.studentId!==studentId)
+        throw Object.assign(Error("এই বিভাগে রোলটি অন্য শিক্ষার্থীর"),{status:409});
+       const at=iso(),completed={...selected,uid:newUser.uid,updatedAt:at};
+       const missing=incompleteStudentFields(completed);
+       if(found.match)tx.update(studentRef,{...selected,uid:newUser.uid,loginPending:false,
+        importIncomplete:missing.length>0,missingFields:missing,updatedAt:at,updatedBy:actor.uid});
+       else tx.create(studentRef,{...selected,uid:newUser.uid,due:0,createdAt:at,
+        loginPending:false,importIncomplete:missing.length>0,missingFields:missing});
+       tx.set(rollRef,{studentId,grade:selected.grade,group:selected.group,roll:selected.roll},{merge:true});
+       tx.create(phoneRef,{uid:newUser.uid,createdAt:at});
+       tx.create(credentialRef,{...makePinCredential(pin),phone,createdAt:at});
+       tx.create(userRef,{role:"student",name,phone,active:true,pinEnabled:true,studentId,createdAt:at});
+       tx.update(ref,{status:"approved",studentId,approvedBy:actor.uid,approvedAt:at,
+        approvedRosterName:name,requestedRoll:String(roll)});
       });
-      createdUid = null;
-      await audit(actor, action, idStudent); return json({ ok: true, studentId: idStudent });
+      createdUid=null;
+      await audit(actor,action,studentId);
+      return json({ok:true,studentId,linkedExisting:!!found.match});
     }
     if (action === "application.reject") {
       needRole(actor, ["class_teacher", "principal"]);
