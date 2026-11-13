@@ -32,21 +32,27 @@ export async function POST(req){
   const accountRef=uid?store.collection("loginSecurity").doc(uid):null;
   const userRef=uid?store.collection("users").doc(uid):null;
   const credRef=uid?store.collection("loginCredentials").doc(uid):null;
+  const previewRef=role==="student"?store.collection("studentPreviewPins").doc("current"):null;
   const label=describeDevice(req.headers.get("user-agent"));
   const info={deviceId:publicDeviceId(id),deviceLabel:label,ip:maskedIp(req),at:new Date(now).toISOString()};
   const result=await store.runTransaction(async tx=>{
-   const [ds,as,us,cs]=await Promise.all([
+   const [ds,as,us,cs,ps]=await Promise.all([
      tx.get(deviceRef), accountRef?tx.get(accountRef):null,
-     userRef?tx.get(userRef):null,credRef?tx.get(credRef):null
+     userRef?tx.get(userRef):null,credRef?tx.get(credRef):null,
+     previewRef?tx.get(previewRef):null
    ]);
    const d=ds.data()||{},a=as?.data()||{},person=us?.data(),stored=cs?.data();
    if(Number(d.lockedUntil)>now)return {kind:"device-locked",until:Number(d.lockedUntil)};
    if(a.locked===true)return {kind:"account-locked"};
    const pinMatches=stored?.phone===phone&&verifyPin(pin,stored);
-   const valid=person?.active===true&&person.role===role&&pinMatches;
+   const preview=ps?.data();
+   const previewMatches=role==="student"&&!!uid&&preview?.uid===uid&&
+      !preview?.used&&Number(preview?.expiresAt)>now&&verifyPin(pin,preview);
+   const valid=person?.active===true&&person.role===role&&(pinMatches||previewMatches);
    // A correct PIN with the wrong portal is not a wrong-PIN guess.
-   if(pinMatches&&!valid)return {kind:"incorrect"};
+   if((pinMatches||previewMatches)&&!valid)return {kind:"incorrect"};
    if(valid){
+    if(previewMatches)tx.update(previewRef,{used:true,usedAt:info.at});
     tx.set(deviceRef,{failures:0,lockedUntil:0,label,lastSuccessAt:info.at},{merge:true});
     tx.set(accountRef,{failures:0,lastSuccessAt:info.at},{merge:true});
     tx.set(store.collection("deviceRecognitions").doc(id+"_"+phone),{
