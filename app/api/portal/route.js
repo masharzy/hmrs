@@ -359,23 +359,28 @@ export async function POST(req) {
       });
       await audit(actor, action, id); return json({ok:true});
     }
-    if(action==="student.previewPin"){
+    if(action==="student.secondaryPin.set"||action==="student.secondaryPin.clear"){
       needRole(actor,["principal"]);
-      const studentId=cleanText(body.studentId,120);
-      if(!studentId||studentId.includes("/"))return fail("শিক্ষার্থী নির্বাচন করুন");
-      const snap=await store.collection("students").doc(studentId).get();
-      if(!snap.exists||!snap.data()?.uid||snap.data()?.deleting)return fail("সক্রিয় শিক্ষার্থী অ্যাকাউন্ট পাওয়া যায়নি",404);
-      const student=snap.data(),pin=String(randomInt(10000,100000)),expiresAt=Date.now()+10*60*1000;
-      const ref=store.collection("studentPreviewPins").doc("current");
+      const id=cleanText(body.studentId,120);
+      if(!id||id.includes("/"))return fail("Select a student",400);
+      const student=await store.collection("students").doc(id).get();
+      if(!student.exists||!student.data()?.uid||student.data()?.deleting)
+       return fail("The student's login account is not active",409);
+      const credentialRef=store.collection("loginCredentials").doc(student.data().uid);
+      const isSet=action==="student.secondaryPin.set";
+      const secondPin=isSet?normalizePin(body.pin):null;
+      if(isSet&&!secondPin)return fail("Secondary PIN must contain 5 digits",400);
       await store.runTransaction(async tx=>{
-       const previous=await tx.get(ref);
-       if(previous.exists&&!previous.data()?.used&&Number(previous.data()?.expiresAt)>Date.now())
-        throw Object.assign(Error("আগের test PIN-এর মেয়াদ শেষ হওয়া পর্যন্ত নতুনটি চালু করা যাবে না"),{status:409});
-       tx.set(ref,{uid:student.uid,studentId,used:false,expiresAt,
-        ...makePinCredential(pin),issuedBy:actor.uid,createdAt:iso()});
+       const snap=await tx.get(credentialRef);
+       if(!snap.exists)throw Object.assign(Error("Student credentials not found"),{status:404});
+       if(isSet&&verifyPin(secondPin,snap.data()))
+        throw Object.assign(Error("Secondary PIN must differ from the main PIN"),{status:409});
+       if(isSet)tx.update(credentialRef,{secondary:makePinCredential(secondPin),secondaryUpdatedAt:iso()});
+       else tx.update(credentialRef,{secondary:FieldValue.delete(),secondaryUpdatedAt:iso()});
       });
-      await audit(actor,action,studentId);
-      return json({ok:true,pin,expiresAt});
+      await store.collection("students").doc(id).update({secondaryPinEnabled:isSet,updatedAt:iso(),updatedBy:actor.uid});
+      await audit(actor,action,id);
+      return json({ok:true,secondaryPinEnabled:isSet});
     }
     if(action==="student.pin.reset"){
       needRole(actor,["principal"]);
