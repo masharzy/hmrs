@@ -355,7 +355,7 @@ export default function DashboardPortal() {
      {actor.role==="student"?<>
        {tab==="overview"&&<DashboardStudentHome profile={profile}/>}
        {tab==="records"&&<><h2 className="section-title">Attendance & Outstanding Dues</h2><div className="panel stat"><div className="muted">Outstanding Balance</div><strong>BDT  {toAsciiDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">Contact your class teacher if you notice any incorrect dues.</p></div>
-        <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Presentি</th><th>Notes</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toAsciiDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">No attendance records found.</p>}</div></>}
+        <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toAsciiDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">No attendance records found.</p>}</div></>}
        {tab==="results"&&<>
         <h2 className="section-title">My Results & Marksheets</h2>
         {!profile?.results?.length?<div className="panel empty">No exam results have been published for your account yet.</div>:
@@ -428,7 +428,7 @@ export default function DashboardPortal() {
        </>}
        {tab==="admissions"&&<>
         <div className="hmrs-admission-head">
-         <div><h2 className="section-title">Approve Admission</h2><p className="muted text-xs">{toAsciiDigits(filteredAdmissions.length)}টি Application</p></div>
+         <div><h2 className="section-title">Approve Admission</h2><p className="muted text-xs">{toAsciiDigits(filteredAdmissions.length)} applications</p></div>
          <div className="hmrs-admission-filters">
           <label className="field">Class<select value={admissionGrade} onChange={e=>{setAdmissionGrade(e.target.value);setAdmissionGroup("");setAdmissionsPage(1)}}>
            <option value="">All Classes</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
@@ -479,7 +479,7 @@ export default function DashboardPortal() {
          {(actor.role==="principal"||actor.role==="class_teacher")&&
           <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> Create Exam</button>}
         </div>
-        <div className="hmrs-marks-mode" role="group" aria-label="Marks দেখার পদ্ধতি">
+        <div className="hmrs-marks-mode" role="group" aria-label="Marks entry mode">
          <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>Class Marks (Excel)</button>
          <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>Individual Result</button>
         </div>
@@ -540,7 +540,7 @@ export default function DashboardPortal() {
         </div><button disabled={working} className="btn primary mt-4" onClick={async()=>{const r=await mutate("ledger.add",ledgerForm);if(r)setLedgerForm(o=>({...o,amount:"",description:""}))}}>Save Entry</button>
         </div>
         <div className="panel p-5"><h3 className="font-bold mb-3">Update Student Dues</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
-        <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Class</th><th>Type</th><th>Description</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toAsciiDigits(l.createdAt?.slice(0,10))}</td><td>{toAsciiDigits(l.grade)}</td><td>{l.type==="income"?"Income":"Expense"}</td><td>{l.description}</td><td>BDT  {toAsciiDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
+        <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Class</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toAsciiDigits(l.createdAt?.slice(0,10))}</td><td>{toAsciiDigits(l.grade)}</td><td>{l.type==="income"?"Income":"Expense"}</td><td>{l.description}</td><td>BDT  {toAsciiDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
         {tab==="routines"&&actor.role==="principal"&&<RoutineManager items={data.routines||[]} working={working} mutate={mutate}/>}
        {tab==="accounts"&&actor.role==="principal"&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}
