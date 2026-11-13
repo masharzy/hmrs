@@ -39,7 +39,7 @@ const roleNames={principal:"Head Teacher",class_teacher:"Class Teacher",teacher:
 const statusNames={present:"Present",absent:"Absent",left_early:"Left Early"};
 const roles={
  student: [["overview","My Dashboard",LayoutDashboard],["records","Attendance & Dues",CalendarCheck2],["results","Results & Marksheet",GraduationCap],["profile","My PIN",LockKeyhole]],
- teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["marks","Marks",FilePenLine],["profile","My PIN",LockKeyhole]],
+ teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["profile","My PIN",LockKeyhole]],
  class_teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Class Accounts",Wallet],["profile","My PIN",LockKeyhole]],
  principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["accounts","Staff Accounts",ShieldCheck],["security","Login Security",LockKeyhole],["settings","Website Settings",Settings],["profile","My PIN",LockKeyhole]]
 };
@@ -484,7 +484,7 @@ export default function DashboardPortal() {
         })}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="exams"&&(actor.role==="principal"||actor.role==="class_teacher")&&
+       {tab==="exams"&&actor.role!=="student"&&
         <ExamManager actor={actor} exams={exams} working={working} onCreate={()=>setCreatingExam(true)}
          onEdit={item=>setEditingExam(item)}
          onSelect={id=>{changeExam(id)}}
