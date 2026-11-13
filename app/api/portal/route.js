@@ -440,10 +440,10 @@ export async function POST(req) {
       await store.runTransaction(async tx=>{
         const [latest,oldMap,newMap,existingCredential,studentSnap]=await Promise.all([
           tx.get(userRef),oldMapping?tx.get(oldMapping):null,
-          newMapping&&phoneChanged?tx.get(newMapping):null,
+          newMapping?tx.get(newMapping):null,
           tx.get(credentialRef),studentRef?tx.get(studentRef):null
         ]);
-        if(!latest.exists)return;
+        if(!latest.exists)throw Object.assign(Error("অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
         if(latest.data().phone!==before.phone||latest.data().role!==before.role)
           throw Object.assign(Error("অ্যাকাউন্টের তথ্য পরিবর্তিত হয়েছে, আবার খুলুন"),{status:409});
         if(newMap?.exists&&newMap.data()?.uid!==uid)
@@ -452,15 +452,15 @@ export async function POST(req) {
           throw Object.assign(Error("শিক্ষার্থীর অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
         tx.set(userRef,{name,phone:phone||"",role,active,
           assignedClasses,pinEnabled:!!(existingCredential.exists||pin),updatedAt:now,updatedBy:actor.uid},{merge:true});
-        if(phoneChanged&&newMapping)tx.set(newMapping,{uid,createdAt:now});
+        if(newMapping&&(phoneChanged||!newMap?.exists))tx.set(newMapping,{uid,createdAt:now});
         if(phoneChanged&&oldMap?.exists&&oldMap.data()?.uid===uid)tx.delete(oldMapping);
         if(credential)tx.set(credentialRef,{...credential,phone,updatedAt:now},{merge:true});
         else if(phoneChanged&&existingCredential.exists)tx.update(credentialRef,{phone});
         if(studentRef)tx.update(studentRef,{name,phone:phone||"",updatedAt:now,updatedBy:actor.uid});
       });
-      if(pin||!active)await adminAuth().revokeRefreshTokens(uid);
+      if(pin||!active){try{await adminAuth().revokeRefreshTokens(uid)}catch(e){if(e.code!=="auth/user-not-found")throw e}}
       await audit(actor,action,uid);
-      return json({ok:true});
+      return json({ok:true,relogin:uid===actor.uid&&!!pin});
     }
     if (action === "account.delete") {
       needRole(actor,["principal"]);
