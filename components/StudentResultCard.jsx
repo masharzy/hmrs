@@ -1,31 +1,36 @@
 "use client";
 import {Printer,AlertTriangle} from "lucide-react";
 import {reportPaperRows} from "../lib/report-paper-rows.js";
-import {toBanglaDigits} from "../lib/bangla-numbers";
-const bn=v=>toBanglaDigits(v??"—");
+import {enNumber,enPart,enPaper} from "../lib/result-english.js";
+const n=v=>enNumber(v??0);
+const g=v=>Number(v??0).toFixed(2);
 export default function StudentResultCard({exam,result,metrics,marks,onPrint,isAdmin=false}){
  const papers=reportPaperRows(result,marks||{},metrics);
- return <section className="panel hmrs-student-result-card" aria-label={exam.name+" এর ফলাফল"}>
+ return <section className="panel hmrs-student-result-card" aria-label={exam.name+" result"}>
   <div className="hmrs-student-result-top">
-   <div><h2>{exam.name}</h2><p>{isAdmin?"নির্বাচিত শিক্ষার্থীর ফলাফল":"শুধু আপনার ব্যক্তিগত ফলাফল"} · পৃথক পত্র, CQ, MCQ ও ব্যবহারিক নম্বর</p></div>
-   <button className="btn sm" type="button" onClick={onPrint}><Printer size={14}/> PDF / প্রিন্ট</button>
+   <div><h2>{exam.name}</h2><p>{isAdmin?"Selected student's result":"Your personal result"} · Paper, CQ, MCQ and practical breakdown</p></div>
+   <button className="btn sm" type="button" onClick={onPrint}><Printer size={14}/> Save PDF / Print</button>
   </div>
   <div className="hmrs-mark-totals">
-   <div><small>সর্বমোট নম্বর</small><b>{bn(result.total)} / {bn(result.maxTotal)}</b></div>
-   <div><small>GPA (৪র্থ বিষয় ছাড়া)</small><b>{bn(result.withoutFourthGpa)}</b></div>
-   <div><small>GPA (৪র্থ বিষয়সহ)</small><b>{bn(result.withFourthGpa)}</b></div>
-   <div><small>গ্রেড</small><b>{result.letter}</b></div>
-   <div><small>মেধাক্রম (শ্রেণি/বিভাগ)</small><b>{metrics?.rank?bn(metrics.rank)+" / "+bn(metrics.rankOf):"—"}</b></div>
+   <div><small>Obtained / Full Marks</small><b>{n(result.total)} / {n(result.maxTotal)}</b></div>
+   <div><small>GPA (without 4th)</small><b>{g(result.withoutFourthGpa)}</b></div>
+   <div><small>GPA (with 4th)</small><b>{g(result.withFourthGpa)}</b></div>
+   <div><small>Grade</small><b>{result.letter}</b></div>
+   <div><small>Position (Class / Group)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"Not ranked"}</b></div>
   </div>
-  {!result.complete&&<p className="hmrs-result-not-ready"><AlertTriangle size={16}/> নম্বর অসম্পূর্ণ: {result.missingSubjects?.join(", ")}</p>}
+  {!result.complete&&<p className="hmrs-result-not-ready"><AlertTriangle size={16}/>
+    Missing entries count as 0 for GPA. This is an incomplete, provisional result: {result.missingSubjects?.join(", ")}</p>}
   <div className="table-wrap">
-   <table className="hmrs-student-parts-table"><thead><tr><th>বিষয় / পত্র</th><th>নম্বরের অংশ</th><th>প্রাপ্ত / পূর্ণ</th><th>সর্বোচ্চ</th><th>গ্রেড</th><th>GP</th></tr></thead>
+   <table className="hmrs-student-parts-table"><thead><tr><th>Subject / Paper</th><th>Mark Components</th>
+    <th>Obtained / Full</th><th>Highest</th><th>Grade</th><th>GP</th></tr></thead>
     <tbody>{papers.map(row=><tr key={row.id}>
-     <td><b>{row.paperName}</b>{row.optional&&<span className="hmrs-option-label">৪র্থ বিষয়</span>}
-      {row.legacy&&<span className="hmrs-option-label">পুরোনো একত্রিত নম্বর; পত্রভিত্তিক তথ্য নেই</span>}</td>
-     <td><div className="hmrs-student-part-group"><span>{row.parts.map(part=>part.label+" "+bn(part.received)+"/"+bn(part.max)).join(" · ")}</span></div></td>
-     <td><b>{bn(row.obtained)} / {bn(row.possible)}</b></td><td>{bn(row.highest)}</td>
-     <td>{row.subjectGrade||"—"}</td><td>{bn(row.subjectPoint)}</td>
+     <td><b>{enPaper(row.subjectId,row.paperName)}</b>{row.optional&&<span className="hmrs-option-label">4th Subject</span>}
+      {row.legacy&&<span className="hmrs-option-label">Legacy combined marks — no paper breakdown</span>}
+      {!row.complete&&<small className="hmrs-entry-missing">Missing cells = 0</small>}</td>
+     <td><div className="hmrs-student-part-group"><span>{row.parts.map(part=>
+      enPart(part.label,part.key)+" "+n(part.received)+"/"+n(part.max)).join(" · ")}</span></div></td>
+     <td><b>{n(row.obtained)} / {n(row.possible)}</b></td><td>{n(row.highest)}</td>
+     <td>{row.subjectGrade||"—"}</td><td>{row.subjectPoint===null||row.subjectPoint===undefined?"—":n(row.subjectPoint)}</td>
     </tr>)}</tbody></table>
   </div>
  </section>;
