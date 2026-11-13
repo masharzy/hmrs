@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
-import { evaluateTranscript, getSubjects } from "../lib/academic";
+import { evaluateTranscript, getSubjects,FOURTH_SUBJECT_OPTIONS,fourthSubjectSelection,selectedFourthSubject } from "../lib/academic";
 import dynamic from "next/dynamic";
 import PinInput from "./PinInput";
 const Marksheet=dynamic(()=>import("./Marksheet"),{ssr:false});
@@ -282,7 +282,7 @@ export default function DashboardPortal() {
  function chooseStudent(id){
   setSelectedStudent(id);setMarkSubject("");setMarkScores({});
   const s=students.find(t=>t.id===id);
-  if(s)setStudentSubject({group:s.group||"science",elective:s.elective||"higher-math",fourthSubject:s.fourthSubject||"agriculture",optionalId:s.optionalId||"biology"});
+  if(s&&Number(s.grade)>=9)setStudentSubject({group:s.group, ...fourthSubjectSelection(s.group,selectedFourthSubject(s))});
  }
  function chooseSubject(id){
   setMarkSubject(id);setMarkScores(resultMap[id]||{});
@@ -474,12 +474,15 @@ export default function DashboardPortal() {
          <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent} choices={options(students.map(s=>[s.id,s.name+" — "+gradeLabel(s.grade)+(Number(s.grade)>=9?" "+(groupNames[s.group]||""):"")+", রোল "+toBanglaDigits(s.roll)]))}/></Field>
         </div><div className="flex flex-wrap gap-2 items-end mt-4"><Field label="নতুন পরীক্ষার নাম"><Input value={newExam} onChange={setNewExam} placeholder="যেমন: বার্ষিক পরীক্ষা"/></Field><button disabled={working||!newExam.trim()} className="btn sm" onClick={async()=>{const r=await mutate("exam.create",{name:newExam});if(r){setNewExam("");await changeExam(r.examId)}}}><Plus size={14}/> পরীক্ষা তৈরি</button>
          </div></div>
-        {chosen&&Number(chosen.grade)>=9&&<div className="panel p-5"><h3 className="font-extrabold mb-3">বিভাগ, নৈর্বাচনিক ও ৪র্থ বিষয়</h3><div className="form-grid">
-         <Field label="বিভাগ"><Select value={studentSubject.group} onChange={v=>setStudentSubject(s=>({...s,group:v,elective:v==="science"?"higher-math":v==="business"?"agriculture":"civics",optionalId:v==="science"?"biology":"agriculture",fourthSubject:"agriculture"}))} choices={[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]]}/></Field>
-         <Field label="নৈর্বাচনিক বিষয়"><Select value={studentSubject.elective} onChange={v=>setStudentSubject(s=>({...s,elective:v,optionalId:s.group==="business"?v:s.optionalId}))} choices={studentSubject.group==="science"?[["higher-math","উচ্চতর গণিত"],["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]]:studentSubject.group==="business"?[["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]]:[["civics","পৌরনীতি"],["economics","অর্থনীতি"]]}/></Field>
-         {studentSubject.group==="humanities"&&<Field label="৪র্থ বিষয়"><Select value={studentSubject.fourthSubject} onChange={v=>setStudentSubject(s=>({...s,fourthSubject:v,optionalId:v}))} choices={[["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]]}/></Field>}
-         {studentSubject.group==="science"&&<Field label="৪র্থ বিষয়"><Select value={studentSubject.optionalId} onChange={v=>setStudentSubject(s=>({...s,optionalId:v}))} choices={[["biology","জীববিজ্ঞান"],[studentSubject.elective,studentSubject.elective==="higher-math"?"উচ্চতর গণিত":studentSubject.elective==="agriculture"?"কৃষি শিক্ষা":"গার্হস্থ্য বিজ্ঞান"]]}/></Field>}
-        </div><button disabled={working} className="btn sm mt-4" onClick={()=>mutate("student.subjects",{studentId:chosen.id,...studentSubject})}>বিষয় সংরক্ষণ</button></div>}
+        {chosen&&Number(chosen.grade)>=9&&<div className="panel p-5">
+         <h3 className="font-extrabold mb-3">শিক্ষার্থীর ৪র্থ বিষয়</h3>
+         <p className="muted text-xs mb-3">{groupNames[chosen.group]} বিভাগ · নিচের একটি ৪র্থ বিষয়ই প্রযোজ্য। বাকি বিষয় স্বয়ংক্রিয়ভাবে নির্ধারিত হবে।</p>
+         <div className="flex flex-wrap items-end gap-3">
+          <Field label="৪র্থ বিষয়"><Select value={studentSubject.optionalId} onChange={v=>setStudentSubject({group:chosen.group,...fourthSubjectSelection(chosen.group,v)})}
+           choices={(FOURTH_SUBJECT_OPTIONS[chosen.group]||[]).map(x=>[x.id,x.name])}/></Field>
+          <button disabled={working} className="btn sm" onClick={()=>mutate("student.subjects",{studentId:chosen.id,group:chosen.group,optionalId:studentSubject.optionalId})}>৪র্থ বিষয় সংরক্ষণ</button>
+         </div>
+        </div>}
         {chosen&&exam&&<><div className="panel p-5"><div className="flex flex-wrap justify-between gap-3 mb-4"><div><b>{chosen.name}</b><p className="muted text-xs">শ্রেণি {toBanglaDigits(chosen.grade)} · রোল {toBanglaDigits(chosen.roll)}</p></div><button className="btn sm" onClick={print}><Printer size={15}/> নম্বরপত্র প্রিন্ট</button></div>
          <Field label="বিষয় নির্বাচন"><Select value={markSubject} onChange={chooseSubject} choices={options(subjects.map(s=>[s.id,s.name+" ("+toBanglaDigits(s.max)+")"]))}/></Field>
          {subject&&<div className="mt-5">
