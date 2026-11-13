@@ -6,7 +6,7 @@ import { groupNames } from "../lib/student-admin";
 
 const groups=[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
 const labels={
- name:"শিক্ষার্থীর নাম",studentName:"আবেদনকারীর নাম",grade:"শ্রেণি",roll:"রোল",group:"বিভাগ",
+ name:"শিক্ষার্থীর নাম",studentName:"আবেদনকারীর নাম",grade:"শ্রেণি",roll:"রোল",group:"বিভাগ",requestedRoll:"আবেদনের রোল",optionalSubject:"চতুর্থ বিষয়",
  phone:"শিক্ষার্থীর লগইন মোবাইল",studentPhone:"শিক্ষার্থীর মোবাইল",
  dob:"জন্মতারিখ",birthRegistration:"জন্মনিবন্ধন",gender:"লিঙ্গ",
  fatherName:"পিতার নাম",fatherPhone:"পিতার মোবাইল",
@@ -20,7 +20,7 @@ const studentFields=[
  "fatherName","fatherPhone","motherName","motherPhone","guardianAddress","previousSchool"
 ];
 const applicantFields=[
- "studentName","grade","group","dob","birthRegistration","gender",
+ "studentName","grade","group","requestedRoll","optionalSubject","dob","birthRegistration","gender",
  "studentPhone","fatherName","fatherPhone","motherName","motherPhone","guardianAddress",
  "previousSchool","previousClass","previousResult","paymentMethod","paymentReference"
 ];
@@ -44,6 +44,9 @@ export function Pager({total,page,size=25,onChange}){
 function choicesFor(key,values){
  if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),gradeLabel(v)]);
  if(key==="group")return groups;
+ if(key==="optionalSubject")return [["","পরে নির্বাচন করব"],...(values.group==="science"?[
+  ["biology","জীববিজ্ঞান"],["higher-math","উচ্চতর গণিত"],["agriculture","কৃষি শিক্ষা"]
+  ]:[["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]])];
  if(key==="gender")return [["male","ছেলে"],["female","মেয়ে"],["other","অন্যান্য"]];
  if(key==="paymentMethod")return [["mobile_banking","মোবাইল ব্যাংকিং"],["online_banking","অনলাইন ব্যাংকিং"],["later","পরে পরিশোধ"]];
  if(key==="elective"){
@@ -63,7 +66,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
  const isStudent=type==="student";
  const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":""}));
  const [loginPin,setLoginPin]=useState("");
- const fields=(isStudent?studentFields:applicantFields).filter(key=>key!=="group"||Number(values.grade)>=9);
+ const fields=(isStudent?studentFields:applicantFields).filter(key=>!["group","requestedRoll","optionalSubject"].includes(key)||Number(values.grade)>=9);
  if(isStudent&&Number(values.grade)>=9)fields.push("elective","fourthSubject","optionalId");
  const change=(key,value)=>setValues(old=>{
   const next={...old,[key]:value};
