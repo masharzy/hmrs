@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 import { evaluateTranscript, getSubjects } from "../lib/academic";
 import dynamic from "next/dynamic";
@@ -221,6 +221,7 @@ export default function DashboardPortal() {
   }catch(e){setError(e.message);return null}finally{setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
+ const incompleteStudents=students.filter(s=>s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0);
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
  const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||String(a.group||"").localeCompare(String(b.group||""))||Number(a.roll)-Number(b.roll)).filter(s=>
    (tab!=="students"||(!studentGrade||Number(s.grade)===Number(studentGrade))&&(!studentGroup||s.group===studentGroup))&&
@@ -333,6 +334,15 @@ export default function DashboardPortal() {
       <>
         {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
        {tab==="students"&&<>
+        {!!incompleteStudents.length&&<section className="hmrs-student-warning" role="status">
+          <div className="hmrs-student-warning-head"><AlertTriangle size={18}/><div><b>{toBanglaDigits(incompleteStudents.length)} জন শিক্ষার্থীর তথ্য সম্পূর্ণ হয়নি</b>
+           <p>মোবাইল, জন্মনিবন্ধন, অভিভাবকের তথ্য বা লগইন PIN বাকি আছে। শিক্ষার্থীর নামের পাশে সতর্কতা আইকন দেখানো হচ্ছে।</p></div></div>
+          <details><summary>কার কার তথ্য অসম্পূর্ণ — দেখুন</summary><div className="hmrs-student-warning-list">
+           {incompleteStudents.map(s=><button type="button" className="btn sm" key={s.id} onClick={()=>setEditing({type:"student",item:s})}>
+            <AlertTriangle size={13}/> {s.name} · {formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}
+           </button>)}
+          </div></details>
+         </section>}
         <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থীর রেকর্ড</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
          <div className="hmrs-student-filters">
            <label className="field">শ্রেণি<select value={studentGrade} onChange={e=>{setStudentGrade(e.target.value);setStudentGroup("");setPage(1)}}>
@@ -342,14 +352,20 @@ export default function DashboardPortal() {
            <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
           </div></div>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toBanglaDigits((visiblePage-1)*25+i+1)}</td>
-         <td className="font-bold">{s.name}</td><td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
+         <td className="font-bold">{s.name}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
+           <button type="button" title={"তথ্য অসম্পূর্ণ: "+(s.missingFields||[]).join(", ")} className="hmrs-student-incomplete-icon" onClick={()=>setEditing({type:"student",item:s})}>
+            <AlertTriangle size={15}/><span className="sr-only">তথ্য অসম্পূর্ণ, এডিট করুন</span></button>}</td>
+         <td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
          <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
          <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button>}</></div></td>
         </tr>)}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী পাওয়া যায়নি</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
-         <b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)} · পাওনা ৳ {toBanglaDigits(s.due||0)}</p>
+         <b>{s.name}</b>{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
+           <button type="button" className="hmrs-student-incomplete-icon" title={(s.missingFields||[]).join(", ")}
+            onClick={()=>setEditing({type:"student",item:s})}><AlertTriangle size={15}/> তথ্য অসম্পূর্ণ</button>}
+           <p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)} · পাওনা ৳ {toBanglaDigits(s.due||0)}</p>
          <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button>}</></div>
@@ -408,7 +424,14 @@ export default function DashboardPortal() {
     <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
    </div>
    {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>
-     {actor.role==="principal"&&<SelectionImportPanel onImported={async(importedExamId)=>{await changeExam(importedExamId);routeCache.current.delete(routeKey("marks",date,importedExamId));await refresh(actor,date,importedExamId,"marks",true)}}/>}</>:
+     {actor.role==="principal"&&<SelectionImportPanel onImported={async(importedExamId)=>{
+       routeCache.current.delete("students");loadedRoutes.current.delete("students");
+       routeCache.current.delete(routeKey("marks",date,importedExamId));await changeExam(importedExamId);
+       await refresh(actor,date,importedExamId,"marks",true);
+      }} onRollChanged={async()=>{
+       routeCache.current.delete("students");loadedRoutes.current.delete("students");
+       routeCache.current.delete(routeKey("marks",date,examId));await refresh(actor,date,examId,"marks",true);
+      }}/>}</>:
    <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
         <div className="panel p-5"><div className="form-grid">
          <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam} choices={options(exams.map(e=>[e.id,e.name+(e.published?" (প্রকাশিত)":"")]))}/></Field>
@@ -456,10 +479,14 @@ export default function DashboardPortal() {
     </>}
    </section>
   </DashboardShell>
-  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={async values=>{
+  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={async (values,loginPin)=>{
    const action=editing.type==="student"?"student.update":"application.update";
    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
-   if(await mutate(action,payload))setEditing(null);
+   if(await mutate(action,payload)){
+     if(editing.type==="student"&&!editing.item.uid&&loginPin){
+      if(await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))setEditing(null);
+     }else setEditing(null);
+    }
   }}/>}
   {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async()=>{
    if(await mutate("student.delete",{studentId:deleting.id,confirmed:true})){
