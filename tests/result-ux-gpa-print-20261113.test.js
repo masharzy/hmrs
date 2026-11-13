@@ -66,7 +66,7 @@ test("student print action targets already mounted marksheet and CSS prints only
  assert.match(portal,/printMarksheet\(ex.id\)/);
  assert.match(portal,/hmrs-print-target/);
  assert.match(css,/body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target/);
- assert.match(report,/enPaper/);
+ assert.match(report,/reportSubjectRows/);
  assert.doesNotMatch(report,/toBanglaDigits/);
 });
 test("secondary PIN can be set for any individual student, original is not replaced",()=>{
