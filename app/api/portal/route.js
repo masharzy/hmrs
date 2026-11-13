@@ -310,7 +310,7 @@ export async function POST(req) {
       const newRollRef=store.collection("studentRolls").doc(studentKey(next.grade,next.roll,next.group));
       const oldRollRef=store.collection("studentRolls").doc(studentKey(old.grade,old.roll,old.group));
       const legacyRollRef=Number(old.grade)>=9?store.collection("studentRolls").doc(studentKey(old.grade,old.roll)):null;
-      const newPhoneRef=store.collection("loginPhones").doc(next.phone);
+      const newPhoneRef=next.phone?store.collection("loginPhones").doc(next.phone):null;
       const prevPhone=normalizePhone(old.phone || "");
       const oldPhoneRef=prevPhone ? store.collection("loginPhones").doc(prevPhone) : null;
       const phoneChanged=next.phone!==prevPhone, rollChanged=newRollRef.id!==oldRollRef.id;
