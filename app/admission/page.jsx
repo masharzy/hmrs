@@ -8,7 +8,7 @@ import { toBanglaDigits, gradeLabel } from "../../lib/bangla-numbers";
 import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep } from "../../lib/admission-validation";
 
 const initial={
- studentName:"",dob:"",gender:"male",grade:"6",group:"",
+ studentName:"",dob:"",gender:"male",grade:"6",group:"",requestedRoll:"",optionalSubject:"",
  birthRegistration:"",fatherName:"",fatherPhone:"",motherName:"",motherPhone:"",
  studentPhone:"",guardianAddress:"",previousSchool:"",previousClass:"",
  previousResult:"",paymentMethod:"later",paymentReference:"",website:""
@@ -93,7 +93,7 @@ export default function Admission(){
   setForm(f=>{
    if(name!=="grade")return {...f,[name]:value};
    const group=Number(value)>=9?(["science","business","humanities"].includes(f.group)?f.group:"science"):"";
-   return {...f,grade:value,group};
+   return {...f,grade:value,group,requestedRoll:Number(value)>=9?f.requestedRoll:"",optionalSubject:Number(value)>=9?f.optionalSubject:""};
   });
   setErrors(e=>{if(!e[name] && !(name==="grade"&&e.group))return e;const next={...e};delete next[name];if(name==="grade")delete next.group;return next});
  }
@@ -216,7 +216,19 @@ export default function Admission(){
         <AdmissionField label="লিঙ্গ" name="gender" value={form.gender} onChange={change} error={errors.gender}
           options={[["male","ছাত্র"],["female","ছাত্রী"],["other","অন্যান্য"]]}/>
         <AdmissionField label="ভর্তিচ্ছু শ্রেণি" name="grade" value={form.grade} onChange={change} error={errors.grade} options={classOptions}/>
-        {Number(form.grade)>=9&&<AdmissionField label="বিভাগ" name="group" value={form.group} onChange={change} error={errors.group} options={groupOptions}/>}
+        {Number(form.grade)>=9&&<AdmissionField label="বিভাগ" name="group" value={form.group} onChange={(name,value)=>{
+          change(name,value);setForm(f=>({...f,group:value,optionalSubject:""}));
+         }} error={errors.group} options={groupOptions}/>}
+        {Number(form.grade)>=9&&<AdmissionField label="বিদ্যালয়ের বর্তমান রোল (যদি আগে তালিকায় থাকে)"
+          name="requestedRoll" value={form.requestedRoll} onChange={change} error={errors.requestedRoll}
+          placeholder="বাংলা বা ইংরেজি সংখ্যা, যেমন ১" optional inputMode="numeric" maxLength={4}/>}
+        {Number(form.grade)>=9&&<AdmissionField label="চতুর্থ / ঐচ্ছিক বিষয়" name="optionalSubject"
+          value={form.optionalSubject} onChange={change} error={errors.optionalSubject}
+          options={[["","পরে নির্বাচন করব"],...(form.group==="science"?[
+            ["biology","জীববিজ্ঞান"],["higher-math","উচ্চতর গণিত"],["agriculture","কৃষি শিক্ষা"]
+          ]:form.group==="business"||form.group==="humanities"?[
+            ["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]
+          ]:[])]} optional/>}
        </div>}
        {step===1&&<div className="admission-fields">
         <AdmissionField label="পিতার নাম" name="fatherName" value={form.fatherName} onChange={change} error={errors.fatherName} placeholder="পিতার পূর্ণ নাম" maxLength={110}/>
