@@ -62,10 +62,11 @@ function choicesFor(key,values){
  return null;
 }
 
-export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
+export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,canResetPin=false}){
  const isStudent=type==="student";
  const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":""}));
  const [loginPin,setLoginPin]=useState("");
+ const [resetPin,setResetPin]=useState("");
  const fields=(isStudent?studentFields:applicantFields).filter(key=>!["group","requestedRoll","optionalSubject"].includes(key)||Number(values.grade)>=9);
  if(isStudent&&Number(values.grade)>=9)fields.push("elective","fourthSubject","optionalId");
  const change=(key,value)=>setValues(old=>{
@@ -83,7 +84,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
   <section className="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-edit-title">
    <div className="record-modal-head"><div><h2 id="record-edit-title"><Pencil size={18}/> {isStudent?"শিক্ষার্থীর তথ্য এডিট":"ভর্তি আবেদন এডিট"}</h2><p className="muted text-xs">{isStudent?item.name:item.studentName}</p></div>
     <button type="button" className="btn sm" aria-label="বন্ধ করুন" onClick={onClose} disabled={working}><X size={18}/></button></div>
-   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin)}}>
+   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin,resetPin)}}>
     <div className="record-modal-body">
      {error&&<p className="alert error" role="alert">{error}</p>}
      <div className="form-grid">{fields.map(key=><label className={"field "+(key==="guardianAddress"?"record-wide":"")} key={key}>
@@ -98,6 +99,14 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
           autoComplete="off" required={["name","studentName","roll","studentPhone","fatherName","motherName"].includes(key)||(key==="phone"&&!!item.uid)}/>}
      </label>)}</div>
      <p className="muted text-xs mt-4">রোল, শ্রেণি বা মোবাইল পরিবর্তন করলে পুরোনো রেকর্ড ও লগইন সংযোগ অক্ষত রাখা হবে।</p>
+     {isStudent&&item.uid&&canResetPin&&<div className="hmrs-editor-incomplete">
+       <strong>শিক্ষার্থীর PIN পরিবর্তন</strong>
+       <p>নতুন PIN দিলে আগের PIN বদলে যাবে। শুধু ফলাফল দেখার জন্য মূল PIN না বদলে Student List-এর "Test PIN" ব্যবহার করুন।</p>
+       <label className="field">নতুন ৫ সংখ্যার PIN (PIN না বদলাতে চাইলে ফাঁকা)
+        <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={5}
+         value={resetPin} onChange={e=>setResetPin(e.target.value)} placeholder="৫ সংখ্যার PIN"/>
+       </label>
+      </div>}
      {isStudent&&item.importIncomplete===true&&<div className="hmrs-editor-incomplete">
        <strong>⚠ তথ্য অসম্পূর্ণ</strong>
        <p>বাকি তথ্য: {(item.missingFields||[]).join(" · ")||"শিক্ষার্থীর পরিচয় ও লগইন যাচাই করুন"}</p>
