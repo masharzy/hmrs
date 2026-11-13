@@ -22,6 +22,7 @@ const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
 
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
+import {enNumber,enGrade,enStream,enSubject,enPart} from "../lib/result-english.js";
 import { formatClass, groupNames } from "../lib/student-admin";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import StudentResultCard from "./StudentResultCard";
@@ -36,10 +37,10 @@ const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:
 const roleNames={principal:"প্রতিষ্ঠান প্রধান",class_teacher:"শ্রেণি শিক্ষক",teacher:"শিক্ষক",student:"শিক্ষার্থী"};
 const statusNames={present:"উপস্থিত",absent:"অনুপস্থিত",left_early:"পালিয়ে গেছে"};
 const roles={
- student: [["overview","আমার ড্যাশবোর্ড",LayoutDashboard],["records","হাজিরা ও পাওনা",CalendarCheck2],["results","ফলাফল ও নম্বরপত্র",GraduationCap],["profile","আমার PIN",LockKeyhole]],
- teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["profile","আমার PIN",LockKeyhole]],
- class_teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","শ্রেণির হিসাব",Wallet],["profile","আমার PIN",LockKeyhole]],
- principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","পরীক্ষা ও নম্বর",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["routines","রুটিন",CalendarCheck2],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings],["profile","আমার PIN",LockKeyhole]]
+ student: [["overview","আমার ড্যাশবোর্ড",LayoutDashboard],["records","হাজিরা ও পাওনা",CalendarCheck2],["results","Results & Marksheet",GraduationCap],["profile","আমার PIN",LockKeyhole]],
+ teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["attendance","হাজিরা",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["profile","আমার PIN",LockKeyhole]],
+ class_teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","শ্রেণির হিসাব",Wallet],["profile","আমার PIN",LockKeyhole]],
+ principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["routines","রুটিন",CalendarCheck2],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings],["profile","আমার PIN",LockKeyhole]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
@@ -62,7 +63,6 @@ export default function DashboardPortal() {
  const [changingDate,setChangingDate]=useState(false),[changingExam,setChangingExam]=useState(false);
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [activeApplicationId,setActiveApplicationId]=useState("");
- const [previewPin,setPreviewPin]=useState(null),[printExamId,setPrintExamId]=useState("");
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState("");
  const [admissionGrade,setAdmissionGrade]=useState(""),[admissionGroup,setAdmissionGroup]=useState("");
@@ -198,7 +198,7 @@ export default function DashboardPortal() {
     return r;
    }
    if(action==="account.update"&&r.relogin){await signOut(firebaseAuth());router.replace("/login/principal");return r;}
-   if(action==="pin.change"||action==="student.previewPin"||action==="student.pin.reset"||action.startsWith("account."))return r;
+   if(action==="pin.change"||action==="student.pin.reset"||action.startsWith("account."))return r;
    if(action==="routine.save"||action==="routine.delete"||action==="notice.save"||action==="notice.delete"){
     const section=action.startsWith("routine.")?"routines":"notices";
     const current=routeCache.current.get(section);
@@ -232,10 +232,6 @@ export default function DashboardPortal() {
  const incompleteStudents=students.filter(s=>s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0);
  const pendingByStudent=useMemo(()=>new Map((data.pendingApplications||[]).map(a=>[a.matchedStudentId,a])),[data.pendingApplications]);
  const activeApplication=(data.pendingApplications||[]).find(a=>a.id===activeApplicationId);
- async function issuePreviewPin(student){
-  const result=await mutate("student.previewPin",{studentId:student.id});
-  if(result)setPreviewPin({name:student.name,studentId:student.id,pin:result.pin,expiresAt:result.expiresAt});
- }
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
  const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||String(a.group||"").localeCompare(String(b.group||""))||Number(a.roll)-Number(b.roll)).filter(s=>
    (tab!=="students"||(!studentGrade||Number(s.grade)===Number(studentGrade))&&(!studentGroup||s.group===studentGroup))&&
@@ -321,14 +317,16 @@ export default function DashboardPortal() {
    await refresh(actor,date,examId,"settings",true);
   }catch(e){setError(e.message)}finally{setWorking(false)}
  }
- const print=()=>window.print();
- useEffect(()=>{
-  if(!printExamId)return;
-  const after=()=>setPrintExamId("");
-  window.addEventListener("afterprint",after);
-  const raf=requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
-  return ()=>{cancelAnimationFrame(raf);window.removeEventListener("afterprint",after)};
- },[printExamId]);
+ function printMarksheet(id){
+  const sheet=document.getElementById("mark-print-"+id);
+  if(!sheet){setError("Printable marksheet is not ready. Please try again.");return}
+  document.querySelectorAll(".hmrs-mark-report.hmrs-print-target").forEach(el=>el.classList.remove("hmrs-print-target"));
+  sheet.classList.add("hmrs-print-target");
+  document.body.classList.add("hmrs-print-mark");
+  const clear=()=>{document.body.classList.remove("hmrs-print-mark");sheet.classList.remove("hmrs-print-target")};
+  window.addEventListener("afterprint",clear,{once:true});
+  window.print();
+ }
  if(busy)return <div className="hmrs-auth-loading" aria-busy="true" aria-label="অ্যাকাউন্ট যাচাই চলছে"><div className="hmrs-auth-icon"><School size={24}/></div><div className="hmrs-auth-lines"><span/><span/></div><div className="hmrs-auth-layout"><span/><span/><span/><span/></div></div>;
  if(!actor)return <main className="container py-16"><div className="panel p-8"><h1 className="section-title">ড্যাশবোর্ডে প্রবেশ করা যায়নি</h1><p className="alert error">{error||"অ্যাকাউন্ট পাওয়া যায়নি"}</p><Link className="btn primary mt-4" href="/login/student">পুনরায় লগইন</Link></div></main>;
  const options=(arr,place="নির্বাচন করুন")=>[["",place],...arr];
@@ -356,26 +354,19 @@ export default function DashboardPortal() {
        {tab==="records"&&<><h2 className="section-title">হাজিরা ও প্রাতিষ্ঠানিক পাওনা</h2><div className="panel stat"><div className="muted">বর্তমান বকেয়া</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">কোনো অসঙ্গতি থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।</p></div>
         <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>উপস্থিতি</th><th>মন্তব্য</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toBanglaDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">হাজিরার তথ্য নেই।</p>}</div></>}
        {tab==="results"&&<>
-        <h2 className="section-title">আমার প্রকাশিত ফলাফল ও নম্বরপত্র</h2>
-        {!profile?.results?.length?<div className="panel empty">এখনো আপনার কোনো ফলাফল প্রকাশিত হয়নি।</div>:
+        <h2 className="section-title">My Results & Marksheets</h2>
+        {!profile?.results?.length?<div className="panel empty">No exam results have been published for your account yet.</div>:
          profile.results.map(({exam:ex,result,metrics,marks})=>
           <StudentResultCard key={ex.id} exam={ex} result={result} metrics={metrics} marks={marks}
-           onPrint={()=>setPrintExamId(ex.id)}/>)}
-        {printExamId&&profile?.student&&profile.results?.filter(x=>x.exam.id===printExamId)
-          .map(({exam:ex,result,metrics,marks})=><Marksheet key={ex.id} student={profile.student}
+           onPrint={()=>printMarksheet(ex.id)}/>)}
+        {profile?.student&&(profile.results||[]).map(({exam:ex,result,metrics,marks})=>
+          <Marksheet key={ex.id} printId={"mark-print-"+ex.id} student={profile.student}
            exam={ex} report={result} metrics={metrics} marks={marks}/>)}
        </>}
       </>:
       <>
         {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
        {tab==="students"&&<>
-        {previewPin&&<div className="hmrs-preview-pin" role="status">
-         <b>{previewPin.name} — একবার ব্যবহারযোগ্য Test PIN:</b>
-         <code>{previewPin.pin}</code>
-         <span>১০ মিনিটের মধ্যে একবার লগইন করা যাবে। মূল PIN অক্ষত থাকবে।</span>
-         <button type="button" className="btn sm" onClick={()=>navigator.clipboard?.writeText(previewPin.pin)}>কপি</button>
-         <button type="button" className="btn sm" onClick={()=>setPreviewPin(null)}>বন্ধ</button>
-        </div>}
         {!!incompleteStudents.length&&<section className="hmrs-student-warning" role="status">
           <div className="hmrs-student-warning-head"><AlertTriangle size={18}/><div><b>{toBanglaDigits(incompleteStudents.length)} জন শিক্ষার্থীর তথ্য সম্পূর্ণ হয়নি</b>
            <p>মোবাইল, জন্মনিবন্ধন, অভিভাবকের তথ্য বা লগইন PIN বাকি আছে। শিক্ষার্থীর নামের পাশে সতর্কতা আইকন দেখানো হচ্ছে।</p></div></div>
@@ -418,7 +409,6 @@ export default function DashboardPortal() {
          <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
          <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
-           {actor.role==="principal"&&s.uid&&<button className="btn sm" onClick={()=>issuePreviewPin(s)}>Test PIN</button>}
            {pendingByStudent.get(s.id)&&<button className="btn sm" onClick={()=>setActiveApplicationId(pendingByStudent.get(s.id).id)}>আবেদন</button>}
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button>}</></div></td>
         </tr>)}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী পাওয়া যায়নি</p>}</div>
@@ -482,64 +472,60 @@ export default function DashboardPortal() {
        </>}
        {tab==="marks"&&<>
         <div className="hmrs-results-page-head">
-         <div><h2>পরীক্ষা ও নম্বর</h2><p>পরীক্ষা তৈরি, শ্রেণিভিত্তিক নম্বর, শিক্ষার্থীর ফলাফল এবং প্রকাশনা</p></div>
+         <div><h2>Exams & Marks</h2><p>Create exams, enter marks and publish student results.</p></div>
          {(actor.role==="principal"||actor.role==="class_teacher")&&
-          <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> পরীক্ষা তৈরি করুন</button>}
+          <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> Create Exam</button>}
         </div>
         <div className="hmrs-marks-mode" role="group" aria-label="নম্বর দেখার পদ্ধতি">
-         <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
-         <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
+         <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>Class Marks (Excel)</button>
+         <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>Individual Result</button>
         </div>
         {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
-         students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}/>}
+         students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}
+           onDelete={async id=>{
+            const result=await mutate("exam.delete",{examId:id,confirmed:true});
+            if(result){await changeExam("");return true}
+            return false;
+           }}/> }
         {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam}
           students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
          <>
           <div className="hmrs-individual-lookup panel">
-           <div className="hmrs-individual-lookup-head"><h3>একজন শিক্ষার্থীর বিস্তারিত ফলাফল</h3>
-            <p>পরীক্ষা → শ্রেণি → বিভাগ (৯–১০) → শিক্ষার্থী</p></div>
+           <div className="hmrs-individual-lookup-head"><h3>Individual Student Result</h3>
+            <p>Exam → Class → Group (Class 9–10) → Student</p></div>
            <div className="hmrs-individual-lookup-grid">
-            <Field label="পরীক্ষা"><Select value={examId} onChange={changeExam}
-             choices={options(exams.map(e=>[e.id,e.name+" · "+examScopeLabel(e)]),"পরীক্ষা নির্বাচন করুন")}/></Field>
-            <Field label="শ্রেণি"><Select value={individualGrade}
+            <Field label="Exam"><Select value={examId} onChange={changeExam}
+             choices={options(exams.map(e=>[e.id,e.name+" · "+(examScopeGrade(e)?enGrade(examScopeGrade(e)):"All Classes")]),"Select exam")}/></Field>
+            <Field label="Class"><Select value={individualGrade}
              onChange={v=>{setIndividualGrade(v);setIndividualGroup("");chooseStudent("");}}
-             choices={[["","শ্রেণি নির্বাচন করুন"],...gradeChoices.filter(([n])=>!examId||examAppliesToStudent(exam,{grade:Number(n)}))]}/></Field>
-            {Number(individualGrade)>=9&&<Field label="বিভাগ"><Select value={individualGroup}
+             choices={[["","Select class"],...gradeChoices.filter(([n])=>!examId||examAppliesToStudent(exam,{grade:Number(n)})).map(([n])=>[n,enGrade(n)])]}/></Field>
+            {Number(individualGrade)>=9&&<Field label="Group"><Select value={individualGroup}
              onChange={v=>{setIndividualGroup(v);chooseStudent("")}}
-             choices={[["","বিভাগ নির্বাচন করুন"],["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]]}/></Field>}
-            <Field label="শিক্ষার্থী"><Select value={selectedStudent} onChange={chooseStudent}
-             choices={options(individualStudents.map(s=>[s.id,s.name+" · রোল "+toBanglaDigits(s.roll)]),
-              !individualGrade||Number(individualGrade)>=9&&!individualGroup?"আগে শ্রেণি ও বিভাগ নির্বাচন করুন":"শিক্ষার্থী নির্বাচন করুন")}/></Field>
+             choices={[["","Select group"],["science","Science"],["business","Business Studies"],["humanities","Humanities"]]}/></Field>}
+            <Field label="Student"><Select value={selectedStudent} onChange={chooseStudent}
+             choices={options(individualStudents.map(s=>[s.id,s.name+" · Roll "+enNumber(s.roll)]),
+              !individualGrade||Number(individualGrade)>=9&&!individualGroup?"Select class and group":"Select student")}/></Field>
            </div>
-           {exam&&<p className="hmrs-individual-context">{examScopeLabel(exam)} · {toBanglaDigits(individualStudents.length)} জন মিলেছে</p>}
+           {exam&&<p className="hmrs-individual-context">{examScopeGrade(exam)?enGrade(examScopeGrade(exam)):"All Classes"} · {enNumber(individualStudents.length)} students</p>}
           </div>
           {chosen&&exam&&individualReport&&<StudentResultCard isAdmin exam={exam}
-           result={individualReport} marks={resultMap} metrics={individualMetrics} onPrint={print}/>}
-        {chosen&&Number(chosen.grade)>=9&&<div className="panel p-5">
-         <h3 className="font-extrabold mb-3">শিক্ষার্থীর ৪র্থ বিষয়</h3>
-         <p className="muted text-xs mb-3">{groupNames[chosen.group]} বিভাগ · নিচের একটি ৪র্থ বিষয়ই প্রযোজ্য। বাকি বিষয় স্বয়ংক্রিয়ভাবে নির্ধারিত হবে।</p>
-         <div className="flex flex-wrap items-end gap-3">
-          <Field label="৪র্থ বিষয়"><Select value={studentSubject.optionalId} onChange={v=>setStudentSubject({group:chosen.group,...fourthSubjectSelection(chosen.group,v)})}
-           choices={(FOURTH_SUBJECT_OPTIONS[chosen.group]||[]).map(x=>[x.id,x.name])}/></Field>
-          <button disabled={working} className="btn sm" onClick={()=>mutate("student.subjects",{studentId:chosen.id,group:chosen.group,optionalId:studentSubject.optionalId})}>৪র্থ বিষয় সংরক্ষণ</button>
-         </div>
-        </div>}
+           result={individualReport} marks={resultMap} metrics={individualMetrics} onPrint={()=>printMarksheet(exam.id)}/>}
          {chosen&&exam&&<>
           <div className="hmrs-individual-entry panel">
-           <h3>নম্বর সংশোধন</h3>
-           <p>এখান থেকে নির্দিষ্ট বিষয়ের CQ / MCQ / ব্যবহারিক নম্বর সংশোধন করা যাবে।</p>
-           <Field label="বিষয় নির্বাচন"><Select value={markSubject} onChange={chooseSubject}
-            choices={options(subjects.map(x=>[x.id,x.name+" ("+toBanglaDigits(x.max)+")"]))}/></Field>
+           <h3>Update Subject Marks</h3>
+           <p>Edit CQ, MCQ and practical marks for this student.</p>
+           <Field label="Subject"><Select value={markSubject} onChange={chooseSubject}
+            choices={options(subjects.map(x=>[x.id,enSubject(x.id,x.name)+" ("+enNumber(x.max)+")"]),"Select subject")}/></Field>
            {subject&&<><div className="form-grid hmrs-individual-score-fields">
-            {subject.parts.map(part=><Field key={part.key} label={(part.paper?part.paper+" · ":"")+part.label+" / "+toBanglaDigits(part.max)}>
+            {subject.parts.map(part=><Field key={part.key} label={enPart(part.label,part.key)+" / "+enNumber(part.max)}>
              <Input type="number" min="0" step="0.01" value={markScores[part.key]??""}
               onChange={v=>setMarkScores(o=>({...o,[part.key]:v===""?"":v}))}/></Field>)}
            </div>
            <button disabled={working||changingExam||(exam.published&&actor.role!=="principal")}
             className="btn primary mt-4" onClick={()=>mutate("marks.set",
-            {studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> নম্বর সংরক্ষণ</button></>}
+            {studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> Save Marks</button></>}
           </div>
-          <Marksheet student={chosen} marks={resultMap} exam={exam} report={individualReport} metrics={individualMetrics}/>
+          <Marksheet printId={"mark-print-"+exam.id} student={chosen} marks={resultMap} exam={exam} report={individualReport} metrics={individualMetrics}/>
          </>}
        </>}</>}
        {tab==="finance"&&<><h2 className="section-title">আর্থিক সারসংক্ষেপ</h2><div className="grid grid-cols-2 gap-4">{[["income","আয়"],["expense","ব্যয়"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>৳ {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("bn-BD")}</strong></div>)}</div>
@@ -578,18 +564,29 @@ export default function DashboardPortal() {
      setIndividualGroup("");
      return true;
     }}/>}
-  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} canResetPin={actor.role==="principal"} onSave={async (values,loginPin,resetPin)=>{
-   const action=editing.type==="student"?"student.update":"application.update";
-   const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
-   if(await mutate(action,payload)){
-     if(editing.type==="student"&&!editing.item.uid&&loginPin){
-      if(await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))setEditing(null);
-     }else if(editing.type==="student"&&editing.item.uid&&resetPin){
-      if(!/^[0-9]{5}$/.test(resetPin)){setError("নতুন PIN পাঁচ সংখ্যার হতে হবে");return}
-      if(await mutate("student.pin.reset",{studentId:editing.item.id,pin:resetPin}))setEditing(null);
-     }else setEditing(null);
+  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor
+   key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item}
+   working={working} error={error} onClose={()=>{setEditing(null);setError("")}}
+   canResetPin={actor.role==="principal"}
+   onSave={async (values,loginPin,resetPin,secondaryPin,removeSecondary)=>{
+    const action=editing.type==="student"?"student.update":"application.update";
+    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
+    if(!await mutate(action,payload))return;
+    if(editing.type==="student"&&!editing.item.uid&&loginPin){
+     if(!await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))return;
     }
-  }}/>}
+    if(editing.type==="student"&&editing.item.uid&&resetPin){
+     if(!/^[0-9]{5}$/.test(toAsciiDigits(resetPin))){setError("Main PIN must have 5 digits");return}
+     if(!await mutate("student.pin.reset",{studentId:editing.item.id,pin:resetPin}))return;
+    }
+    if(editing.type==="student"&&editing.item.uid&&removeSecondary){
+     if(!await mutate("student.secondaryPin.clear",{studentId:editing.item.id}))return;
+    }else if(editing.type==="student"&&editing.item.uid&&secondaryPin){
+     if(!/^[0-9]{5}$/.test(toAsciiDigits(secondaryPin))){setError("Secondary PIN must have 5 digits");return}
+     if(!await mutate("student.secondaryPin.set",{studentId:editing.item.id,pin:secondaryPin}))return;
+    }
+    setEditing(null);
+   }}/>}
   {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async()=>{
    if(await mutate("student.delete",{studentId:deleting.id,confirmed:true})){
     if(selectedStudent===deleting.id)chooseStudent("");

@@ -52,14 +52,23 @@ tr:last-child td{border-bottom:none}
 .stat{padding:21px}
 .stat strong{display:block;font-size:28px;letter-spacing:-1px}
 .empty{padding:35px;text-align:center;color:#66788b}
-#mark-print{display:none}
+/* Keep every marksheet mounted before a mobile print tap; select only the requested sheet. */
+.hmrs-mark-report{display:none}
 @media(max-width:850px){.dashboard-layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow:auto;padding:7px}.sidebar button{min-width:max-content;width:auto}.hero-grid{grid-template-columns:1fr!important}.form-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.container{width:min(100% - 24px,1180px)}.section-title{font-size:21px}.desktop-only{display:none!important}.form-grid{grid-template-columns:1fr}.hero-title{font-size:32px!important}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.quick-grid a{min-height:110px}.mobile-wrap{flex-wrap:wrap}}
 @media print{
- body *{visibility:hidden!important}#mark-print,#mark-print *{visibility:visible!important}
- #mark-print{display:block!important;position:absolute;left:0;top:0;width:100%;padding:28px;color:black}
- #mark-print table{border:1px solid #888}#mark-print td,#mark-print th{border:1px solid #aaa}
- @page{size:A4;margin:15mm}
+ body *{visibility:hidden!important}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target,
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target *{visibility:visible!important}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target{
+  display:block!important;position:absolute!important;left:0!important;top:0!important;
+  width:100%!important;max-width:none!important;margin:0!important;padding:0!important;
+  background:white!important;color:black!important;box-shadow:none!important;
+ }
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target table{border-collapse:collapse}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target td,
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target th{border:1px solid #9da9b0}
+ @page{size:A4;margin:12mm}
 }
 
 /* Thumb-friendly, app-like portal shell */

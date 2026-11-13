@@ -1,49 +1,52 @@
 "use client";
 import {evaluateTranscript} from "../lib/academic";
-import {reportPaperRows} from "../lib/report-paper-rows.js";
-import {toBanglaDigits,gradeLabel} from "../lib/bangla-numbers";
-const n=value=>toBanglaDigits(value??"—");
-const groupName={science:"বিজ্ঞান",business:"ব্যবসায় শিক্ষা",humanities:"মানবিক"};
+import {reportPaperRows,paperScoreCells} from "../lib/report-paper-rows.js";
+import {enNumber,enGrade,enStream,enPaper,enPart} from "../lib/result-english.js";
+const n=v=>enNumber(v??0);
+const gp=v=>Number(v??0).toFixed(2);
 export default function Marksheet({student,marks,exam,printId="mark-print",report,metrics}){
  if(!student||!exam)return null;
  const result=report||evaluateTranscript(student,marks||{});
  const papers=reportPaperRows(result,marks||{},metrics);
- return <section id={printId} className="hmrs-mark-report" aria-label={student.name+" এর বিস্তারিত নম্বরপত্র"}>
+ return <section id={printId} className="hmrs-mark-report" aria-label={student.name+" detailed marksheet"}>
   <div className="hmrs-mark-report-header">
-   <div className="hmrs-mark-school">হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</div>
-   <div className="hmrs-mark-address">পঞ্চবটি, বৈদ্যেরবাজার, সোনারগাঁ, নারায়ণগঞ্জ · EIIN: 112359</div>
-   <h2>{exam.name} — বিস্তারিত নম্বরপত্র</h2>
+   <div className="hmrs-mark-school">Haji Matiur Rahman Sarkar High School</div>
+   <div className="hmrs-mark-address">Sonargaon, Narayanganj · EIIN: 112359</div>
+   <h2>{exam.name} — Individual Marksheet</h2>
   </div>
   <div className="hmrs-mark-student-grid">
-   <div><b>শিক্ষার্থী</b><span>{student.name}</span></div>
-   <div><b>রোল</b><span>{n(student.roll)}</span></div>
-   <div><b>শ্রেণি</b><span>{gradeLabel(student.grade)}</span></div>
-   {Number(student.grade)>=9&&<div><b>বিভাগ</b><span>{groupName[student.group]||"—"}</span></div>}
-   <div><b>পিতার নাম</b><span>{student.fatherName||"—"}</span></div>
-   <div><b>মাতার নাম</b><span>{student.motherName||"—"}</span></div>
+   <div><b>Student</b><span>{student.name}</span></div>
+   <div><b>Roll</b><span>{n(student.roll)}</span></div>
+   <div><b>Class</b><span>{enGrade(student.grade)}</span></div>
+   {Number(student.grade)>=9&&<div><b>Group</b><span>{enStream(student.group)}</span></div>}
+   <div><b>Father's Name</b><span>{student.fatherName||"—"}</span></div>
+   <div><b>Mother's Name</b><span>{student.motherName||"—"}</span></div>
   </div>
   <table className="hmrs-mark-table">
-   <thead><tr><th>বিষয় / পত্র</th><th>লিখিত / CQ / MCQ / ব্যবহারিক</th><th>পূর্ণ নম্বর</th>
-    <th>প্রাপ্ত</th><th>সর্বোচ্চ</th><th>গ্রেড</th><th>GP</th></tr></thead>
+   <thead><tr><th>Subject / Paper</th><th>CQ / Written</th><th>MCQ</th><th>Practical</th>
+    <th>Obtained / Full</th><th>Highest</th><th>Grade</th><th>GP</th></tr></thead>
    <tbody>{papers.map(row=><tr key={row.id}>
-    <td className="hmrs-mark-subject"><strong>{row.paperName}</strong>
-     {row.optional&&<small>৪র্থ বিষয়</small>}{row.legacy&&<small>পুরোনো একত্রিত নম্বর — পত্রভিত্তিক তথ্য নেই</small>}</td>
-    <td className="hmrs-mark-parts"><div className="hmrs-mark-paper">
-     {row.parts.map(part=><span key={part.key}>{part.label}: {n(part.received)}/{n(part.max)}</span>)}
-    </div></td>
-    <td>{n(row.possible)}</td><td>{n(row.obtained)}</td>
-    <td>{n(row.highest)}</td><td>{row.subjectGrade||"—"}</td><td>{n(row.subjectPoint)}</td>
+    <td className="hmrs-mark-subject"><strong>{enPaper(row.subjectId,row.paperName)}</strong>
+     {row.optional&&<small>4th Subject</small>}{row.legacy&&<small>Legacy combined marks — no paper breakdown</small>}
+     {!row.complete&&<small>Missing = 0</small>}</td>
+    {["written","mcq","practical"].map(key=>{
+      const part=paperScoreCells(row)[key];
+      return <td key={key} className="hmrs-result-mark-cell">{part?n(part.received)+"/"+n(part.max):"—"}</td>;
+     })}
+    <td>{n(row.obtained)} / {n(row.possible)}</td>
+    <td>{row.highest===null||row.highest===undefined?"—":n(row.highest)}</td>
+    <td>{row.subjectGrade||"—"}</td><td>{row.subjectPoint===null||row.subjectPoint===undefined?"—":n(row.subjectPoint)}</td>
    </tr>)}</tbody>
   </table>
   <div className="hmrs-mark-totals">
-   <div><small>মোট প্রাপ্ত / পূর্ণ</small><b>{n(result.total)} / {n(result.maxTotal)}</b></div>
-   <div><small>GPA (৪র্থ ছাড়া)</small><b>{n(result.withoutFourthGpa)} / ৫.০০</b></div>
-   <div><small>GPA (৪র্থসহ)</small><b>{n(result.withFourthGpa)} / ৫.০০</b></div>
-   <div><small>ফলাফল</small><b>{result.letter} {result.complete?(result.passed?"· উত্তীর্ণ":"· অনুত্তীর্ণ"):"· অসম্পূর্ণ"}</b></div>
-   <div><small>মেধাক্রম (শ্রেণি/বিভাগ)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"—"}</b></div>
+   <div><small>Obtained / Full Marks</small><b>{n(result.total)} / {n(result.maxTotal)}</b></div>
+   <div><small>GPA (without 4th)</small><b>{gp(result.withoutFourthGpa)} / 5.00</b></div>
+   <div><small>GPA (with 4th)</small><b>{gp(result.withFourthGpa)} / 5.00</b></div>
+   <div><small>Result</small><b>{result.letter} {result.passed?"· Pass":"· Fail"}</b></div>
+   <div><small>Merit Position (Class / Group)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"—"}</b></div>
   </div>
-  {!result.complete&&<div className="hmrs-mark-missing">নম্বর অসম্পূর্ণ: {result.missingSubjects.join(" · ")}</div>}
-  <div className="hmrs-mark-signatures"><span>শ্রেণি শিক্ষকের স্বাক্ষর</span><span>প্রধান শিক্ষকের স্বাক্ষর</span></div>
-  <p className="hmrs-mark-legal">কম্পিউটার প্রস্তুতকৃত ফলাফল। বিদ্যালয় কর্তৃপক্ষের যাচাই ও স্বাক্ষর সাপেক্ষে প্রযোজ্য।</p>
+  {!result.complete&&<div className="hmrs-mark-missing">Provisional result — missing marks treated as 0: {result.missingSubjects.join(" · ")}</div>}
+  <div className="hmrs-mark-signatures"><span>Class Teacher Signature</span><span>Head Teacher Signature</span></div>
+  <p className="hmrs-mark-legal">Computer-generated result. Subject to verification by school authorities.</p>
  </section>;
 }

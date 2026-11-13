@@ -227,11 +227,11 @@
 @page hmrs-sheet-print{size:A3 landscape;margin:6mm}
 @page hmrs-mark-print{size:A4 portrait;margin:12mm}
 @media print{
- body.hmrs-print-sheet #mark-print{display:none!important}
+ body.hmrs-print-sheet .hmrs-mark-report{display:none!important}
  body.hmrs-print-sheet .hmrs-sheet,body.hmrs-print-sheet .hmrs-sheet *{visibility:visible!important}
  body.hmrs-print-sheet .hmrs-sheet{display:block!important;position:absolute;left:0;top:0;width:100%;max-width:none;
   margin:0;padding:4mm;box-shadow:none;border:none;page:hmrs-sheet-print}
- body.hmrs-print-sheet .hmrs-sheet::before{content:"হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয় — পরীক্ষার নম্বরপত্র (Excel শিট)";
+ body.hmrs-print-sheet .hmrs-sheet::before{content:"Haji Matiur Rahman Sarkar High School — Excel Marks Register";
   display:block;text-align:center;font-weight:800;font-size:13px;margin:0 0 7px}
  body.hmrs-print-sheet .hmrs-sheet-filters,body.hmrs-print-sheet .hmrs-sheet-heading button,
  body.hmrs-print-sheet .hmrs-sheet-bottom,body.hmrs-print-sheet .hmrs-sheet-heading span,
@@ -243,10 +243,10 @@
  body.hmrs-print-sheet .hmrs-sheet-table input{border:0!important;background:transparent!important;
   height:15px!important;max-height:15px!important;font-size:8px!important;width:100%!important;padding:0!important;
   color:#000!important;-webkit-text-fill-color:#000!important}
- body:not(.hmrs-print-sheet) #mark-print{page:hmrs-mark-print;padding:0!important}
- body:not(.hmrs-print-sheet) #mark-print .hmrs-mark-report{padding:0}
- body:not(.hmrs-print-sheet) #mark-print .hmrs-mark-table th,
- body:not(.hmrs-print-sheet) #mark-print .hmrs-mark-table td{border:1px solid #9baab0}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target{page:hmrs-mark-print;padding:0!important}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target{padding:0}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target .hmrs-mark-table th,
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target .hmrs-mark-table td{border:1px solid #9baab0}
 }
 
 /* Result publishing and student report details */
@@ -408,3 +408,38 @@
  .hmrs-exam-modal .record-modal-body{padding:14px}
  .hmrs-publish-controls .btn{flex:1 1 auto;justify-content:center}
 }
+
+/* New English marks register: roll/name stick to the left after removing serial column */
+.hmrs-sheet-table .hmrs-sheet-roll{left:0}
+.hmrs-sheet-table .hmrs-sheet-name{left:66px}
+.hmrs-sheet .hmrs-sheet-table .hmrs-sheet-roll{left:0}
+.hmrs-sheet .hmrs-sheet-table .hmrs-sheet-name{left:42px}
+.hmrs-student-secondary{border-top:1px solid #e8d9b5;margin-top:12px;padding-top:12px}
+.hmrs-student-secondary>strong{display:block;font-size:12px;color:#1c614e;margin-bottom:6px}
+.hmrs-secondary-remove{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;font-weight:650}
+.hmrs-secondary-remove input{width:16px;height:16px;flex:none}
+.hmrs-entry-missing{display:block;color:#9a5c13;font-size:10px;margin-top:4px}
+.hmrs-result-not-ready{line-height:1.65}
+@media print{
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target{page:hmrs-mark-print;display:block!important;
+  visibility:visible!important;overflow:visible!important;break-inside:auto!important}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target .hmrs-mark-table{width:100%!important;table-layout:fixed!important}
+ body.hmrs-print-mark .hmrs-mark-report.hmrs-print-target .hmrs-mark-table tr{break-inside:avoid!important}
+ body.hmrs-print-sheet .hmrs-sheet{page:hmrs-sheet-print}
+}
+
+/* Paperwise eight-column report: marks are directly visible, no "Marks Components" column */
+.hmrs-mark-table th:nth-child(1){width:24%}
+.hmrs-mark-table th:nth-child(2){width:11%}
+.hmrs-mark-table th:nth-child(3),.hmrs-mark-table th:nth-child(4){width:9%}
+.hmrs-mark-table th:nth-child(5){width:16%}
+.hmrs-mark-table th:nth-child(6){width:12%}
+.hmrs-mark-table th:nth-child(7){width:9%}
+.hmrs-mark-table th:nth-child(8){width:10%}
+.hmrs-mark-table th:nth-child(n+2),.hmrs-mark-table td:nth-child(n+2){text-align:center}
+.hmrs-mark-table td{font-variant-numeric:tabular-nums}
+.hmrs-student-parts-table{min-width:720px}
+.hmrs-student-parts-table th:nth-child(n+2),.hmrs-student-parts-table td:nth-child(n+2){text-align:center}
+.hmrs-result-mark-cell{white-space:nowrap;font-weight:650;font-variant-numeric:tabular-nums}
+@media print{body.hmrs-print-mark .hmrs-mark-table th,
+ body.hmrs-print-mark .hmrs-mark-table td{font-size:9px!important;padding:4px 3px!important}}

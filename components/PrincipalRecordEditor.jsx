@@ -66,6 +66,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,ca
   optionalId:Number(item.grade)>=9?selectedFourthSubject({...item,group:item.group||"science"}):""}));
  const [loginPin,setLoginPin]=useState("");
  const [resetPin,setResetPin]=useState("");
+ const [secondaryPin,setSecondaryPin]=useState(""),[removeSecondary,setRemoveSecondary]=useState(false);
  const fields=(isStudent?studentFields:applicantFields).filter(key=>!["group","requestedRoll","optionalSubject"].includes(key)||Number(values.grade)>=9);
  if(isStudent&&Number(values.grade)>=9)fields.push("optionalId");
  const change=(key,value)=>setValues(old=>{
@@ -83,7 +84,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,ca
   <section className="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-edit-title">
    <div className="record-modal-head"><div><h2 id="record-edit-title"><Pencil size={18}/> {isStudent?"শিক্ষার্থীর তথ্য এডিট":"ভর্তি আবেদন এডিট"}</h2><p className="muted text-xs">{isStudent?item.name:item.studentName}</p></div>
     <button type="button" className="btn sm" aria-label="বন্ধ করুন" onClick={onClose} disabled={working}><X size={18}/></button></div>
-   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin,resetPin)}}>
+   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin,resetPin,secondaryPin,removeSecondary)}}>
     <div className="record-modal-body">
      {error&&<p className="alert error" role="alert">{error}</p>}
      <div className="form-grid">{fields.map(key=><label className={"field "+(key==="guardianAddress"?"record-wide":"")} key={key}>
@@ -100,11 +101,24 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,ca
      <p className="muted text-xs mt-4">রোল, শ্রেণি বা মোবাইল পরিবর্তন করলে পুরোনো রেকর্ড ও লগইন সংযোগ অক্ষত রাখা হবে।</p>
      {isStudent&&item.uid&&canResetPin&&<div className="hmrs-editor-incomplete">
        <strong>শিক্ষার্থীর PIN পরিবর্তন</strong>
-       <p>নতুন PIN দিলে আগের PIN বদলে যাবে। শুধু ফলাফল দেখার জন্য মূল PIN না বদলে Student List-এর "Test PIN" ব্যবহার করুন।</p>
+       <p>মূল PIN পরিবর্তন করলে আগের PIN আর কাজ করবে না। মূল PIN অপরিবর্তিত রাখতে নিচে আলাদা দ্বিতীয় PIN সেট করুন।</p>
        <label className="field">নতুন ৫ সংখ্যার PIN (PIN না বদলাতে চাইলে ফাঁকা)
         <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={5}
          value={resetPin} onChange={e=>setResetPin(e.target.value)} placeholder="৫ সংখ্যার PIN"/>
        </label>
+       <div className="hmrs-student-secondary">
+        <strong>বিকল্প লগইন PIN (শুধু এই শিক্ষার্থীর জন্য)</strong>
+        <p>এটি মূল PIN বদলায় না। অন্য শিক্ষার্থীর PIN-এর সঙ্গেও কোনো সম্পর্ক নেই। পরীক্ষা শেষে চাইলে এখান থেকেই বন্ধ করুন।</p>
+        <label className="field">দ্বিতীয় ৫ সংখ্যার PIN
+          <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={5}
+           placeholder={item.secondaryPinEnabled?"নতুন PIN দিলে বর্তমানটি বদলাবে":"নতুন বিকল্প PIN (ঐচ্ছিক)"}
+           value={secondaryPin} disabled={removeSecondary} onChange={e=>setSecondaryPin(e.target.value)}/>
+        </label>
+        {item.secondaryPinEnabled&&<label className="hmrs-secondary-remove">
+          <input type="checkbox" checked={removeSecondary} onChange={e=>{setRemoveSecondary(e.target.checked);setSecondaryPin("")}}/>
+          বর্তমান দ্বিতীয় PIN বন্ধ করুন
+        </label>}
+       </div>
       </div>}
      {isStudent&&item.importIncomplete===true&&<div className="hmrs-editor-incomplete">
        <strong>⚠ তথ্য অসম্পূর্ণ</strong>

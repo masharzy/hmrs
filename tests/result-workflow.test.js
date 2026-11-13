@@ -31,11 +31,12 @@ test("class teacher sees all students in marks but remains scoped elsewhere",()=
  assert.match(api,/const student = await studentForMarks\(actor/);
  assert.match(api,/resource === "marks"/);
 });
-test("result sheet supports grade, subject and all-subject mode with Bengali serials",()=>{
+test("results sheet supports grade, subjects and English numerals without serial column",()=>{
  assert.match(portal,/markMode==="grid"/);
  assert.match(portal,/<ResultEntryGrid/);
- assert.match(sheet,/<option value="">সব বিষয়<\/option>/);
- assert.match(sheet,/toBanglaDigits\(index\+1\)/);
+ assert.match(sheet,/<option value="">All subjects<\/option>/);
+ assert.doesNotMatch(sheet,/toBanglaDigits\(index\+1\)/);
+ assert.match(sheet,/enNumber\(student.roll\)/);
  assert.match(sheet,/getStudentSubjects/);
  assert.match(sheet,/marks\.batch/);
  assert.match(api,/action === "marks.batch"/);

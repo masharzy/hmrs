@@ -67,8 +67,8 @@ test("only one visible fourth selector in admission, student edit and result por
  assert.match(admission,/label="৪র্থ বিষয়" name="optionalSubject"/);
  assert.doesNotMatch(admission,/label="চতুর্থ \/ ঐচ্ছিক বিষয়"/);
  assert.doesNotMatch(portal,/Field label="নৈর্বাচনিক বিষয়"/);
- assert.match(portal,/৪র্থ বিষয় সংরক্ষণ/);
- assert.match(portal,/FOURTH_SUBJECT_OPTIONS\[chosen.group\]/);
+ assert.doesNotMatch(portal,/৪র্থ বিষয় সংরক্ষণ/);
+ assert.match(portal,/<StudentResultCard isAdmin/);
  assert.match(editor,/fields.push\("optionalId"\)/);
  assert.doesNotMatch(editor,/fields.push\("elective","fourthSubject"/);
  const api=source("app/api/portal/route.js");

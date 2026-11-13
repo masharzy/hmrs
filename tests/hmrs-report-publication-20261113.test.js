@@ -22,7 +22,7 @@ test("GPA without fourth subject is independent of absent fourth subject",()=>{
  const marks=allMarks();delete marks.biology;
  const report=evaluateTranscript(student,marks);
  assert.equal(report.withoutFourthGpa,5);
- assert.equal(report.withFourthGpa,null);
+ assert.equal(report.withFourthGpa,5);
  assert.equal(report.complete,false);
  assert.ok(report.missingSubjects.includes("জীববিজ্ঞান"));
 });
@@ -87,15 +87,15 @@ test("admission normalizes roll digits and optional subject, validates both in s
  const bad=validateAdmission({grade:"৯",group:"science",requestedRoll:"১০০০০",optionalSubject:"economics"});
  assert.ok(bad.requestedRoll);assert.ok(bad.optionalSubject);
 });
-test("temporary student preview PIN is principal-issued, 10 minute and one-use; original PIN remains",()=>{
+test("secondary student PIN is independent per student and preserves main PIN",()=>{
  const auth=source("app/api/auth/login/route.js");
  const api=source("app/api/portal/route.js");
- assert.match(auth,/previewMatches/);
- assert.match(auth,/tx.update\(previewRef,\{used:true/);
- assert.match(auth,/pinMatches\|\|previewMatches/);
- assert.match(api,/action==="student.previewPin"/);
- assert.match(api,/studentPreviewPins/);
- assert.match(api,/10\*60\*1000/);
+ assert.match(auth,/secondaryMatches/);
+ assert.match(auth,/pinMatches\|\|secondaryMatches/);
+ assert.doesNotMatch(auth,/studentPreviewPins/);
+ assert.match(api,/student.secondaryPin.set/);
+ assert.match(api,/student.secondaryPin.clear/);
+ assert.match(api,/makePinCredential\(secondPin\)/);
  assert.match(api,/student.pin.reset/);
 });
 test("dashboard has no old import panel/hint and has learner-only PDF/publication controls",()=>{

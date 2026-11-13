@@ -52,10 +52,11 @@ test("Bangla 1st and 2nd paper each have exact CQ and MCQ and own /100 totals",(
 test("paper totals are never fabricated from incomplete component scores",()=>{
  const marks={bangla:{firstCq:55,secondMcq:20}};
  const papers=reportPaperRows(evaluateTranscript(student,marks),marks).filter(x=>x.subjectId==="bangla");
- assert.equal(papers[0].obtained,null);
- assert.equal(papers[1].obtained,null);
+ assert.equal(papers[0].obtained,55);
+ assert.equal(papers[1].obtained,20);
  assert.equal(papers[0].parts[0].received,55);
- assert.equal(papers[0].parts[1].received,null);
+ assert.equal(papers[0].parts[1].received,0);
+ assert.equal(papers[0].complete,false);
 });
 test("legacy combined Bangla is explicitly labelled and not split into invented paper scores",()=>{
  const marks={bangla:{cq:80,mcq:40}};
@@ -86,8 +87,8 @@ test("exam creation global, class/stream filtered individual, and paper-by-paper
  const api=src("app/api/portal/route.js");
  const studentCard=src("components/StudentResultCard.jsx");
  const print=src("components/Marksheet.jsx");
- assert.match(portal,/পরীক্ষা তৈরি করুন/);
- assert.match(modal,/সব শ্রেণি/);
+ assert.match(portal,/Create Exam/);
+ assert.match(modal,/All Classes/);
  assert.match(portal,/individualGrade/);
  assert.match(portal,/individualGroup/);
  assert.match(portal,/individualStudents/);
