@@ -9,6 +9,8 @@ import { normalizeRoutine } from "../../../lib/routines.js";
 import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json, needRole, studentKey, validGrade, verifyOrigin } from "../../../lib/server-auth";
 import { sameStudentRoll } from "../../../lib/school-identity.js";
 import {incompleteStudentFields} from "../../../lib/selection-import.js";
+import {getPublishedStudentResults} from "../../../lib/published-student-results.js";
+import {publicationKey} from "../../../lib/result-publication.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -64,16 +66,7 @@ export async function GET(req) {
         return json({...base,attendance:asDocs(snap)});
       }
       if(resource==="student.results"){
-        const [examsSnap,allMarks]=await Promise.all([
-          store.collection("exams").where("published","==",true).limit(30).get(),
-          store.collection("marks").where("studentId","==",student.id).limit(1000).get()
-        ]);
-        const results=asDocs(examsSnap).map(exam=>{
-          const marks=Object.fromEntries(allMarks.docs.filter(m=>m.data().examId===exam.id)
-            .map(m=>[m.data().subjectId,m.data().scores]));
-          return {exam,result:evaluateTranscript(student,marks)};
-        });
-        return json({...base,results});
+        return json({...base,results:await getPublishedStudentResults(student,store)});
       }
     }
     if (resource === "profile") {
@@ -81,14 +74,7 @@ export async function GET(req) {
       const student = await studentFor(actor, actor.studentId);
       const attendance = await store.collection("attendance").where("studentId", "==", student.id).limit(250).get();
       const dues = student.due || 0;
-      const examsSnap = await store.collection("exams").where("published", "==", true).limit(30).get();
-      const published = asDocs(examsSnap);
-      const results = [];
-      const allMarks = await store.collection("marks").where("studentId", "==", student.id).limit(1000).get();
-      for (const exam of published) {
-        const markMap = Object.fromEntries(allMarks.docs.filter(m => m.data().examId === exam.id).map(m => [m.data().subjectId, m.data().scores]));
-        results.push({ exam, result: evaluateTranscript(student, markMap) });
-      }
+      const results=await getPublishedStudentResults(student,store);
       return json({ actor, student, dues, attendance: asDocs(attendance), results });
     }
     if (resource === "dashboard.data") {
@@ -629,6 +615,21 @@ export async function POST(req) {
       const ref = await store.collection("exams").add({ name, year: new Date().getFullYear(),
         published: false, createdAt: iso(), createdBy: actor.uid });
       await audit(actor, action, ref.id); return json({ ok: true, examId: ref.id });
+    }
+    if(action==="result.publish"){
+      needRole(actor,["principal"]);
+      const examId=cleanText(body.examId,150),studentId=cleanText(body.studentId,150);
+      if(!examId||!studentId||examId.includes("/")||studentId.includes("/"))
+       return fail("পরীক্ষা ও শিক্ষার্থী নির্বাচন করুন");
+      const [examSnap,studentSnap]=await Promise.all([
+       store.collection("exams").doc(examId).get(),store.collection("students").doc(studentId).get()
+      ]);
+      if(!examSnap.exists||!studentSnap.exists||studentSnap.data()?.deleting)return fail("পরীক্ষা বা শিক্ষার্থী পাওয়া যায়নি",404);
+      const published=body.published===true;
+      const ref=store.collection("resultPublications").doc(publicationKey(examId,studentId));
+      await ref.set({examId,studentId,published,updatedAt:iso(),updatedBy:actor.uid},{merge:true});
+      await audit(actor,action,ref.id);
+      return json({ok:true,published});
     }
     if (action === "exam.publish") {
       needRole(actor, ["principal"]);
