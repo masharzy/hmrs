@@ -3,6 +3,7 @@ import { useState } from "react";
 import { X, Pencil, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { toBanglaDigits, gradeLabel } from "../lib/bangla-numbers";
 import { groupNames } from "../lib/student-admin";
+import {FOURTH_SUBJECT_OPTIONS,fourthSubjectSelection,selectedFourthSubject} from "../lib/academic.js";
 
 const groups=[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
 const labels={
@@ -13,7 +14,7 @@ const labels={
  motherName:"মাতার নাম",motherPhone:"মাতার মোবাইল",guardianAddress:"অভিভাবকের ঠিকানা",
  previousSchool:"পূর্ববর্তী বিদ্যালয়",previousClass:"পূর্ববর্তী শ্রেণি",
  previousResult:"পূর্ববর্তী ফলাফল",paymentMethod:"পেমেন্ট মাধ্যম",paymentReference:"পেমেন্ট রেফারেন্স",
- elective:"নৈর্বাচনিক বিষয়",fourthSubject:"চতুর্থ বিষয়",optionalId:"ঐচ্ছিক বিষয়"
+ elective:"নৈর্বাচনিক বিষয়",fourthSubject:"চতুর্থ বিষয়",optionalId:"৪র্থ বিষয়"
 };
 const studentFields=[
  "name","grade","roll","group","phone","dob","birthRegistration","gender",
@@ -55,20 +56,18 @@ function choicesFor(key,values){
    :[["civics","পৌরনীতি"],["economics","অর্থনীতি"]]);
  }
  if(key==="fourthSubject")return [["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]];
- if(key==="optionalId")return values.group==="science"
-  ?[["biology","জীববিজ্ঞান"],[values.elective||"higher-math","নৈর্বাচনিক বিষয়"]]
-  :values.group==="business"?[[values.elective||"agriculture","নৈর্বাচনিক বিষয়"]]
-  :[[values.fourthSubject||"agriculture","চতুর্থ বিষয়"]];
+ if(key==="optionalId")return (FOURTH_SUBJECT_OPTIONS[values.group]||[]).map(s=>[s.id,s.name]);
  return null;
 }
 
 export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,canResetPin=false}){
  const isStudent=type==="student";
- const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":""}));
+ const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":"",
+  optionalId:Number(item.grade)>=9?selectedFourthSubject({...item,group:item.group||"science"}):""}));
  const [loginPin,setLoginPin]=useState("");
  const [resetPin,setResetPin]=useState("");
  const fields=(isStudent?studentFields:applicantFields).filter(key=>!["group","requestedRoll","optionalSubject"].includes(key)||Number(values.grade)>=9);
- if(isStudent&&Number(values.grade)>=9)fields.push("elective","fourthSubject","optionalId");
+ if(isStudent&&Number(values.grade)>=9)fields.push("optionalId");
  const change=(key,value)=>setValues(old=>{
   const next={...old,[key]:value};
   if(key==="grade"){
@@ -76,8 +75,8 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,ca
    else if(!groupNames[next.group]){next.group="science";Object.assign(next,defaults.science);}
   }
   if(key==="group"&&defaults[value])Object.assign(next,defaults[value]);
-  if(key==="elective"&&next.group==="business")next.optionalId=value;
-  if(key==="fourthSubject"&&next.group==="humanities")next.optionalId=value;
+  if(key==="optionalId"&&next.group&&Number(next.grade)>=9)Object.assign(next,fourthSubjectSelection(next.group,value));
+
   return next;
  });
  return <div className="record-modal-backdrop" role="presentation">
