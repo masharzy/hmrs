@@ -56,6 +56,12 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   const i=key.indexOf("|");return {studentId:key.slice(0,i),subjectId:key.slice(i+1),scores};
  }),[edits]);
  const locked=!!exam?.published&&actor?.role!=="principal";
+ useEffect(()=>{
+  if(!entries.length&&!sending)return;
+  const warn=event=>{event.preventDefault();event.returnValue=""};
+  window.addEventListener("beforeunload",warn);
+  return()=>window.removeEventListener("beforeunload",warn);
+ },[entries.length,sending]);
  const changeGuard=()=>!savingRef.current&&(!entries.length||window.confirm("Some marks are still pending auto-save. Discard them and switch?"));
  function scoreFor(student,subject,part){
   const key=keyFor(student.id,subject.subjectId);
