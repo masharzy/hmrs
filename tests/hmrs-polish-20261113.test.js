@@ -42,9 +42,10 @@ test("Excel grid is dense and offers group & separate subject/paper filters",()=
  assert.match(sheet,/paper\|\|/);
  assert.match(source("lib/academic.js"),/বাংলা ১ম পত্র/);
  assert.match(source("lib/academic.js"),/বাংলা ২য় পত্র/);
- assert.match(sheet,/ব্যবসায় শিক্ষা/);
- assert.match(sheet,/মানবিক/);
- assert.match(sheet,/toBanglaDigits\(index\+1\)/);
+ assert.match(sheet,/Business Studies/);
+ assert.match(sheet,/Humanities/);
+ assert.doesNotMatch(sheet,/toBanglaDigits\(index\+1\)/);
+ assert.match(sheet,/enNumber\(student.roll\)/);
  assert.match(css,/height:27px/);
  assert.match(css,/width:53px/);
  assert.match(css,/hmrs-sheet-sticky/);
