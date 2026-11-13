@@ -4,7 +4,7 @@ import { toAsciiDigits, toBanglaDigits } from "../lib/bangla-numbers";
 
 const digits = text => toAsciiDigits(text).replace(/\D/g,"");
 
-export default function PinInput({ value="", onChange, disabled=false, label="পাঁচ সংখ্যার PIN", autoFocus=false }){
+export default function PinInput({ value="", onChange, disabled=false, label="5-digit PIN", autoFocus=false }){
  const inputs=useRef([]);
  const pin=(value||"").slice(0,5);
  function write(index,text){
@@ -21,7 +21,7 @@ export default function PinInput({ value="", onChange, disabled=false, label="�
        key={i} ref={el=>inputs.current[i]=el} type="password"
        inputMode="numeric" pattern="[0-9]*" maxLength={1}
        autoComplete="off" autoFocus={autoFocus&&i===0}
-       className="pin-cell" aria-label={"PIN সংখ্যা "+toBanglaDigits(i+1)}
+       className="pin-cell" aria-label={"PIN digit "+toBanglaDigits(i+1)}
        value={pin[i]||""} disabled={disabled}
        onChange={e=>write(i,e.target.value)}
        onPaste={e=>{e.preventDefault();write(i,e.clipboardData.getData("text"))}}
@@ -36,6 +36,6 @@ export default function PinInput({ value="", onChange, disabled=false, label="�
          if(e.key==="ArrowRight")inputs.current[Math.min(4,i+1)]?.focus();
        }}/>)}
    </div>
-   <p className="muted text-xs mt-2 mb-0">শুধু ৫টি সংখ্যা। প্রথম সংখ্যা ০-ও হতে পারে।</p>
+   <p className="muted text-xs mt-2 mb-0">Enter exactly 5 digits. The first digit may be 0.</p>
  </div>;
 }
