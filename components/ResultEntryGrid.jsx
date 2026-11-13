@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Save } from "lucide-react";
-import { getSubjects } from "../lib/academic";
+import { getStudentSubjects } from "../lib/academic";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { gradeLabel, toBanglaDigits, toAsciiDigits } from "../lib/bangla-numbers";
 
 const grades=[6,7,8,9,10],groupOptions=[["","সব বিভাগ"],["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
 const keyFor=(studentId,subjectId)=>studentId+"|"+subjectId;
-const getList=student=>{try{return getSubjects(student.grade,student.group,student.elective,student.fourthSubject)}catch{return []}};
+const getList=student=>{try{return getStudentSubjects(student)}catch{return []}};
 const sortStudents=(a,b)=>Number(a.roll)-Number(b.roll)||String(a.name).localeCompare(String(b.name),"bn");
 // Present papers as separate Excel column groups; retain one subject ID in Firestore/GPA.
 function displayGroups(specs){
