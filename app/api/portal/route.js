@@ -168,7 +168,27 @@ export async function GET(req) {
       const grade=scoped?parseBanglaNumber(gradeValue):null;
       const query=store.collection("marks").where("examId","==",examId);
       const snap=await query.limit(5000).get();
-      return json({ items: asDocs(snap).filter(m => (!scoped||Number(m.grade)===grade)&&canViewGrade(actor,m.grade)&&(!Array.isArray(actor.teachingSubjects)||actor.teachingSubjects.includes(m.subjectId))) });
+      const allMarks=asDocs(snap).filter(m=>!scoped||Number(m.grade)===grade);
+      const permitted=allMarks.filter(m=>canViewGrade(actor,m.grade)&&
+       (!Array.isArray(actor.teachingSubjects)||actor.teachingSubjects.includes(m.subjectId)));
+      // GPA is computed using all actual subject marks, even when a teacher only
+      // has permission to edit some subjects; no other subject scores are exposed.
+      let gpaByStudent={};
+      if(scoped){
+       const roster=await store.collection("students").where("grade","==",grade).limit(950).get();
+       const subjectMap=new Map();
+       for(const mark of allMarks){
+        if(!subjectMap.has(mark.studentId))subjectMap.set(mark.studentId,{});
+        subjectMap.get(mark.studentId)[mark.subjectId]=mark.scores||{};
+       }
+       for(const student of asDocs(roster).filter(x=>!x.deleting&&studentVisibleForTeaching(actor,x))){
+        try{
+         const result=evaluateTranscript(student,subjectMap.get(student.id)||{});
+         gpaByStudent[student.id]={gpa:result.gpa,withoutFourthGpa:result.withoutFourthGpa,complete:result.complete};
+        }catch{}
+       }
+      }
+      return json({items:permitted,gpaByStudent});
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
