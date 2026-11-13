@@ -336,17 +336,16 @@ export default function DashboardPortal() {
        {tab==="overview"&&<DashboardStudentHome profile={profile}/>}
        {tab==="records"&&<><h2 className="section-title">হাজিরা ও প্রাতিষ্ঠানিক পাওনা</h2><div className="panel stat"><div className="muted">বর্তমান বকেয়া</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">কোনো অসঙ্গতি থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।</p></div>
         <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>উপস্থিতি</th><th>মন্তব্য</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toBanglaDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">হাজিরার তথ্য নেই।</p>}</div></>}
-       {tab==="results"&&<><h2 className="section-title">ফলাফল ও নম্বরপত্র</h2>{!profile?.results?.length?<div className="panel empty">এখনো কোনো ফলাফল প্রকাশিত হয়নি।</div>:profile.results.map(({exam:ex,result})=><div className="panel p-6" key={ex.id}>
-        <div className="flex justify-between items-center gap-3 flex-wrap"><div><b>{ex.name}</b><div className="muted text-xs mt-1">ফলাফল: {result.letter} · GPA: {toBanglaDigits(result.gpa??"অসম্পূর্ণ")}</div></div><button className="btn sm" onClick={()=>{setExamId(ex.id);print()}}><Printer size={15}/> নম্বরপত্র প্রিন্ট</button></div>
-        <div className="table-wrap mt-4"><table><thead><tr><th>বিষয়</th><th>প্রাপ্ত</th><th>গ্রেড</th></tr></thead><tbody>{result.rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}</td><td>{toBanglaDigits(r.status==="complete"?r.received:"—")} / {toBanglaDigits(r.subject.max)}</td><td>{r.letter||"—"}</td></tr>)}</tbody></table></div>
-       </div>)}</>}
-       {tab==="results"&&profile?.student&&<Marksheet student={profile.student} exam={profile.results?.find(x=>x.exam.id===examId)?.exam} report={profile.results?.find(x=>x.exam.id===examId)?.result}/>}
-       {/* Student printing uses the precomputed report below; no private API bypass. */}
-       {profile?.student&&profile.results?.filter(x=>x.exam.id===examId).map(({exam:ex,result})=><div key={ex.id} id="student-report-print" style={{display:"none"}}>
-        <h2>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</h2><p>{ex.name} — {profile.student.name} · শ্রেণি {toBanglaDigits(profile.student.grade)} · রোল {toBanglaDigits(profile.student.roll)}</p>
-        <table><thead><tr><th>বিষয়</th><th>প্রাপ্ত নম্বর</th><th>গ্রেড</th></tr></thead><tbody>{result.rows.map(r=><tr key={r.subjectId}><td>{r.subject.name}</td><td>{toBanglaDigits(r.received??"—")}/{toBanglaDigits(r.subject.max)}</td><td>{r.letter??"—"}</td></tr>)}</tbody></table>
-        <h3>GPA: {toBanglaDigits(result.gpa??"—")} — {result.letter}</h3>
-       </div>)}
+       {tab==="results"&&<>
+        <h2 className="section-title">আমার প্রকাশিত ফলাফল ও নম্বরপত্র</h2>
+        {!profile?.results?.length?<div className="panel empty">এখনো আপনার কোনো ফলাফল প্রকাশিত হয়নি।</div>:
+         profile.results.map(({exam:ex,result,metrics,marks})=>
+          <StudentResultCard key={ex.id} exam={ex} result={result} metrics={metrics} marks={marks}
+           onPrint={()=>setPrintExamId(ex.id)}/>)}
+        {printExamId&&profile?.student&&profile.results?.filter(x=>x.exam.id===printExamId)
+          .map(({exam:ex,result,metrics,marks})=><Marksheet key={ex.id} student={profile.student}
+           exam={ex} report={result} metrics={metrics} marks={marks}/>)}
+       </>}
       </>:
       <>
         {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
@@ -466,6 +465,8 @@ export default function DashboardPortal() {
     <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>শ্রেণিভিত্তিক নম্বর (Excel)</button>
     <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>একজন শিক্ষার্থীর ফলাফল</button>
    </div>
+   {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
+     students={students} request={request} mutate={mutate} working={working}/>}
    {markMode==="grid"?<><ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam} students={students} actor={actor} request={request} mutate={mutate} working={working}/>
      }</>:
    <><h2 className="section-title">পরীক্ষা নির্বাচন ও নম্বর প্রদান</h2>
@@ -515,12 +516,15 @@ export default function DashboardPortal() {
     </>}
    </section>
   </DashboardShell>
-  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={async (values,loginPin)=>{
+  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} canResetPin={actor.role==="principal"} onSave={async (values,loginPin,resetPin)=>{
    const action=editing.type==="student"?"student.update":"application.update";
    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
    if(await mutate(action,payload)){
      if(editing.type==="student"&&!editing.item.uid&&loginPin){
       if(await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))setEditing(null);
+     }else if(editing.type==="student"&&editing.item.uid&&resetPin){
+      if(!/^\\d{5}$/.test(resetPin)){setError("নতুন PIN পাঁচ সংখ্যার হতে হবে");return}
+      if(await mutate("student.pin.reset",{studentId:editing.item.id,pin:resetPin}))setEditing(null);
      }else setEditing(null);
     }
   }}/>}
