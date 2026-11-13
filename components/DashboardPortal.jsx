@@ -564,18 +564,29 @@ export default function DashboardPortal() {
      setIndividualGroup("");
      return true;
     }}/>}
-  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item} working={working} error={error} onClose={()=>{setEditing(null);setError("")}} canResetPin={actor.role==="principal"} onSave={async (values,loginPin,resetPin)=>{
-   const action=editing.type==="student"?"student.update":"application.update";
-   const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
-   if(await mutate(action,payload)){
-     if(editing.type==="student"&&!editing.item.uid&&loginPin){
-      if(await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))setEditing(null);
-     }else if(editing.type==="student"&&editing.item.uid&&resetPin){
-      if(!/^[0-9]{5}$/.test(resetPin)){setError("নতুন PIN পাঁচ সংখ্যার হতে হবে");return}
-      if(await mutate("student.pin.reset",{studentId:editing.item.id,pin:resetPin}))setEditing(null);
-     }else setEditing(null);
+  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor
+   key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item}
+   working={working} error={error} onClose={()=>{setEditing(null);setError("")}}
+   canResetPin={actor.role==="principal"}
+   onSave={async (values,loginPin,resetPin,secondaryPin,removeSecondary)=>{
+    const action=editing.type==="student"?"student.update":"application.update";
+    const payload=editing.type==="student"?{studentId:editing.item.id,values}:{id:editing.item.id,values};
+    if(!await mutate(action,payload))return;
+    if(editing.type==="student"&&!editing.item.uid&&loginPin){
+     if(!await mutate("student.activate",{studentId:editing.item.id,pin:loginPin}))return;
     }
-  }}/>}
+    if(editing.type==="student"&&editing.item.uid&&resetPin){
+     if(!/^[0-9]{5}$/.test(toAsciiDigits(resetPin))){setError("Main PIN must have 5 digits");return}
+     if(!await mutate("student.pin.reset",{studentId:editing.item.id,pin:resetPin}))return;
+    }
+    if(editing.type==="student"&&editing.item.uid&&removeSecondary){
+     if(!await mutate("student.secondaryPin.clear",{studentId:editing.item.id}))return;
+    }else if(editing.type==="student"&&editing.item.uid&&secondaryPin){
+     if(!/^[0-9]{5}$/.test(toAsciiDigits(secondaryPin))){setError("Secondary PIN must have 5 digits");return}
+     if(!await mutate("student.secondaryPin.set",{studentId:editing.item.id,pin:secondaryPin}))return;
+    }
+    setEditing(null);
+   }}/>}
   {actor.role==="principal"&&deleting&&<DeleteStudentModal key={deleting.id} student={deleting} working={working} error={error} onClose={()=>{setDeleting(null);setError("")}} onDelete={async()=>{
    if(await mutate("student.delete",{studentId:deleting.id,confirmed:true})){
     if(selectedStudent===deleting.id)chooseStudent("");
