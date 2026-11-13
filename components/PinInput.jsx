@@ -1,6 +1,6 @@
 "use client";
 import { useRef } from "react";
-import { toAsciiDigits, toBanglaDigits } from "../lib/bangla-numbers";
+import { toAsciiDigits, toAsciiDigits } from "../lib/bangla-numbers";
 
 const digits = text => toAsciiDigits(text).replace(/\D/g,"");
 
@@ -21,7 +21,7 @@ export default function PinInput({ value="", onChange, disabled=false, label="5-
        key={i} ref={el=>inputs.current[i]=el} type="password"
        inputMode="numeric" pattern="[0-9]*" maxLength={1}
        autoComplete="off" autoFocus={autoFocus&&i===0}
-       className="pin-cell" aria-label={"PIN digit "+toBanglaDigits(i+1)}
+       className="pin-cell" aria-label={"PIN digit "+toAsciiDigits(i+1)}
        value={pin[i]||""} disabled={disabled}
        onChange={e=>write(i,e.target.value)}
        onPaste={e=>{e.preventDefault();write(i,e.clipboardData.getData("text"))}}
