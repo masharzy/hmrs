@@ -1,5 +1,6 @@
 import { adminAuth, db } from "../../../lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import {randomInt} from "node:crypto";
 import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
 import { admissionSchema } from "../../../lib/admission-schema";
 import { normalizeStudentEdit } from "../../../lib/student-admin";
@@ -348,6 +349,38 @@ export async function POST(req) {
         });
       });
       await audit(actor, action, id); return json({ok:true});
+    }
+    if(action==="student.previewPin"){
+      needRole(actor,["principal"]);
+      const studentId=cleanText(body.studentId,120);
+      if(!studentId||studentId.includes("/"))return fail("শিক্ষার্থী নির্বাচন করুন");
+      const snap=await store.collection("students").doc(studentId).get();
+      if(!snap.exists||!snap.data()?.uid||snap.data()?.deleting)return fail("সক্রিয় শিক্ষার্থী অ্যাকাউন্ট পাওয়া যায়নি",404);
+      const student=snap.data(),pin=String(randomInt(10000,100000)),expiresAt=Date.now()+10*60*1000;
+      const ref=store.collection("studentPreviewPins").doc("current");
+      await store.runTransaction(async tx=>{
+       const previous=await tx.get(ref);
+       if(previous.exists&&!previous.data()?.used&&Number(previous.data()?.expiresAt)>Date.now())
+        throw Object.assign(Error("আগের test PIN-এর মেয়াদ শেষ হওয়া পর্যন্ত নতুনটি চালু করা যাবে না"),{status:409});
+       tx.set(ref,{uid:student.uid,studentId,used:false,expiresAt,
+        ...makePinCredential(pin),issuedBy:actor.uid,createdAt:iso()});
+      });
+      await audit(actor,action,studentId);
+      return json({ok:true,pin,expiresAt});
+    }
+    if(action==="student.pin.reset"){
+      needRole(actor,["principal"]);
+      const id=cleanText(body.studentId,120),pin=normalizePin(body.pin);
+      if(!id||id.includes("/")||!pin)return fail("শিক্ষার্থী ও নতুন ৫ সংখ্যার PIN দিন");
+      const snap=await store.collection("students").doc(id).get();
+      if(!snap.exists||!snap.data()?.uid)return fail("শিক্ষার্থীর অ্যাকাউন্ট সক্রিয় নয়",409);
+      const uid=snap.data().uid;
+      const credentials=store.collection("loginCredentials").doc(uid);
+      if(!(await credentials.get()).exists)return fail("এই শিক্ষার্থীর আগের PIN সেট করা নেই",409);
+      await credentials.update({...makePinCredential(pin),updatedAt:iso(),updatedBy:actor.uid});
+      await adminAuth().revokeRefreshTokens(uid);
+      await audit(actor,action,id);
+      return json({ok:true});
     }
     if (action === "student.activate") {
       needRole(actor,["principal"]);
