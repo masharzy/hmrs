@@ -79,7 +79,7 @@ test("teacher modal uses accessible pressed multi-select cards, not native check
  const ui=source("components/AccountManager.jsx");
  const css=source("app/dashboard/results-workflow.css");
  assert.match(ui,/aria-pressed=\{chosen\}/);
- assert.match(ui,/hmrs-teacher-picker-roles/); // dynamic class name in picker
+ assert.match(ui,/kind="roles"/);
  assert.match(ui,/searchable options=\{TEACHER_SUBJECT_OPTIONS\}/);
  assert.doesNotMatch(ui,/type="checkbox"/);
  assert.match(css,/hmrs-teacher-picker-roles/);
