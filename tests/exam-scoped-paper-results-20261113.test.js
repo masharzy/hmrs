@@ -87,8 +87,8 @@ test("exam creation global, class/stream filtered individual, and paper-by-paper
  const api=src("app/api/portal/route.js");
  const studentCard=src("components/StudentResultCard.jsx");
  const print=src("components/Marksheet.jsx");
- assert.match(portal,/পরীক্ষা তৈরি করুন/);
- assert.match(modal,/সব শ্রেণি/);
+ assert.match(portal,/Create Exam/);
+ assert.match(modal,/All Classes/);
  assert.match(portal,/individualGrade/);
  assert.match(portal,/individualGroup/);
  assert.match(portal,/individualStudents/);
