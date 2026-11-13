@@ -7,7 +7,8 @@ export default function ExamManager({actor,exams,working,onCreate,onEdit,onDelet
  return <section className="hmrs-exam-manager">
   <div className="hmrs-results-page-head">
    <div><h2>Exams</h2><p>Create and manage exams separately from marks entry.</p></div>
-   <button className="btn primary" type="button" onClick={onCreate} disabled={working}><Plus size={16}/> Create Exam</button>
+   {(actor.role==="principal"||actor.role==="class_teacher")&&
+    <button className="btn primary" type="button" onClick={onCreate} disabled={working}><Plus size={16}/> Create Exam</button>}
   </div>
   {!exams.length?<div className="panel empty">No exams yet. Create your first exam to start adding marks.</div>:
   <div className="hmrs-exam-list">
