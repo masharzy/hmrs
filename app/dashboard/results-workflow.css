@@ -527,3 +527,10 @@
  body.hmrs-print-sheet .hmrs-sheet-heading{display:none!important}
  body.hmrs-print-sheet .hmrs-sheet::before{font-size:11px!important;margin:0 0 3mm!important}
 }
+
+.hmrs-sheet .hmrs-sheet-scroll{position:relative}
+.hmrs-grid-refresh{position:sticky;top:0;left:0;width:max-content;max-width:100%;z-index:8;
+ margin:0 auto -36px;padding:9px 16px;border:1px solid #cddfdf;background:#f4fbf9;
+ box-shadow:0 4px 15px #12352a12;border-radius:6px;color:#226e5c;font-size:12px;font-weight:750;
+ text-align:center;pointer-events:auto}
+@media print{.hmrs-grid-refresh{display:none!important}}
