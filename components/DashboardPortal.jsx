@@ -23,6 +23,7 @@ const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
 import {enNumber,enGrade,enStream,enSubject,enPart} from "../lib/result-english.js";
+const formatClassEnglish=(grade,group)=>enGrade(grade)+(group?" · "+enStream(group):"");
 import { formatClass, groupNames } from "../lib/student-admin";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import StudentResultCard from "./StudentResultCard";
@@ -34,22 +35,22 @@ const ResultPublishControls=dynamic(()=>import("./ResultPublishControls"),{ssr:f
 // Parameter-scoped keys keep attendance dates and exam results separate.
 const routeKey=(section,date,examId)=>section==="attendance"?"attendance:"+date:section==="marks"?"marks:"+(examId||"none"):section;
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const roleNames={principal:"প্রতিষ্ঠান প্রধান",class_teacher:"শ্রেণি শিক্ষক",teacher:"শিক্ষক",student:"শিক্ষার্থী"};
-const statusNames={present:"উপস্থিত",absent:"অনুপস্থিত",left_early:"পালিয়ে গেছে"};
+const roleNames={principal:"Head Teacher",class_teacher:"Class Teacher",teacher:"Teacher",student:"Student"};
+const statusNames={present:"Present",absent:"Absent",left_early:"Left Early"};
 const roles={
- student: [["overview","আমার ড্যাশবোর্ড",LayoutDashboard],["records","হাজিরা ও পাওনা",CalendarCheck2],["results","Results & Marksheet",GraduationCap],["profile","আমার PIN",LockKeyhole]],
- teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["attendance","হাজিরা",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["profile","আমার PIN",LockKeyhole]],
- class_teacher: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","শ্রেণির হিসাব",Wallet],["profile","আমার PIN",LockKeyhole]],
- principal: [["overview","ওভারভিউ",LayoutDashboard],["students","শিক্ষার্থী",Users],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["attendance","হাজিরা",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","আয়-ব্যয় হিসাব",Wallet],["notices","নোটিশ",Bell],["routines","রুটিন",CalendarCheck2],["accounts","ইউজার ব্যবস্থাপনা",ShieldCheck],["security","লগইন নিরাপত্তা",LockKeyhole],["settings","ওয়েবসাইট সেটিংস",Settings],["profile","আমার PIN",LockKeyhole]]
+ student: [["overview","My Dashboard",LayoutDashboard],["records","Attendance & Dues",CalendarCheck2],["results","Results & Marksheet",GraduationCap],["profile","My PIN",LockKeyhole]],
+ teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["profile","My PIN",LockKeyhole]],
+ class_teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","Class Accounts",Wallet],["profile","My PIN",LockKeyhole]],
+ principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["marks","Exams & Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["routines","Routines",CalendarCheck2],["accounts","Staff Accounts",ShieldCheck],["security","Login Security",LockKeyhole],["settings","Website Settings",Settings],["profile","My PIN",LockKeyhole]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
 const Input=({value,onChange,placeholder="",type="text",min,step,required=true,...rest})=><input type={type==="number"?"text":type} inputMode={type==="number"?"decimal":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} min={min} step={step} required={required} {...rest}/>;
 const Select=({value,onChange,choices})=><select value={value} onChange={e=>onChange(e.target.value)}>{choices.map(([v,label])=><option key={v} value={v}>{label}</option>)}</select>;
-const gradeChoices=[6,7,8,9,10].map(g=>[String(g),gradeLabel(g)]);
+const gradeChoices=[6,7,8,9,10].map(g=>[String(g),enGrade(g)]);
 const phoneLink=(student,status)=>{
  const phone=toAsciiDigits(student.fatherPhone||student.motherPhone||"").replace(/[^0-9]/g,"");
  const intl=phone.startsWith("0")?"88"+phone:phone;
- const message="সম্মানিত অভিভাবক, "+student.name+" (শ্রেণি "+toBanglaDigits(student.grade)+", রোল "+toBanglaDigits(student.roll)+") আজ "+(status==="absent"?"বিদ্যালয়ে অনুপস্থিত":"অনুমতি ছাড়া বিদ্যালয় ত্যাগ করেছে")+"। অনুগ্রহ করে বিদ্যালয়ের সঙ্গে যোগাযোগ করুন। — হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়";
+ const message="সম্মানিত অভিভাবক, "+student.name+" (শ্রেণি "+toAsciiDigits(student.grade)+", রোল "+toAsciiDigits(student.roll)+") আজ "+(status==="absent"?"বিদ্যালয়ে অনুপস্থিত":"অনুমতি ছাড়া বিদ্যালয় ত্যাগ করেছে")+"। অনুগ্রহ করে বিদ্যালয়ের সঙ্গে যোগাযোগ করুন। — হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়";
  return "https://wa.me/"+intl+"?text="+encodeURIComponent(message);
 };
 export default function DashboardPortal() {
@@ -79,13 +80,13 @@ export default function DashboardPortal() {
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
 
  async function request(resource,opts){
-  const auth=firebaseAuth(),u=auth.currentUser;if(!u)throw Error("লগইন প্রয়োজন");
+  const auth=firebaseAuth(),u=auth.currentUser;if(!u)throw Error("Sign in required");
   const token=await u.getIdToken();
   const r=await fetch("/api/portal"+(opts?.body?"":"?resource="+encodeURIComponent(resource)+(opts?.params?"&"+opts.params:"")),{
    method:opts?.body?"POST":"GET",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
    body:opts?.body?JSON.stringify(opts.body):undefined,cache:"no-store",signal:opts?.signal
   });
-  const d=await r.json();if(!r.ok)throw Error(d.error||"সার্ভারে সমস্যা হয়েছে");return d;
+  const d=await r.json();if(!r.ok)throw Error(d.error||"Server request failed");return d;
  }
  async function refresh(who=actor,chosenDate=date,chosenExam=examId,section=tab,force=false){
   if(!who)return;
@@ -161,10 +162,12 @@ export default function DashboardPortal() {
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[actor?.uid,tab]);
  async function mutate(action,params={}){
-  setWorking(true);setError("");setSuccess("");
+  // Spreadsheet auto-save is quiet: don't block navigation or flash a global banner each time.
+  const quiet=action==="marks.batch";
+  if(!quiet){setWorking(true);setError("");setSuccess("")}
   try{
    const r=await request("",{body:{action,...params}});
-   setSuccess("পরিবর্তন সংরক্ষিত হয়েছে");
+   if(!quiet)setSuccess("Changes saved successfully");
    if(action==="attendance.set"){
     const key=routeKey("attendance",params.date,examId);
     const current=routeCache.current.get(key);
@@ -226,7 +229,7 @@ export default function DashboardPortal() {
      routeCache.current.delete(key);
    await refresh(actor,date,examId,tab,true);
    return r;
-  }catch(e){setError(e.message);return null}finally{setWorking(false)}
+  }catch(e){if(!quiet)setError(e.message);return null}finally{if(!quiet)setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
  const incompleteStudents=students.filter(s=>s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0);
@@ -235,7 +238,7 @@ export default function DashboardPortal() {
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
  const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||String(a.group||"").localeCompare(String(b.group||""))||Number(a.roll)-Number(b.roll)).filter(s=>
    (tab!=="students"||(!studentGrade||Number(s.grade)===Number(studentGrade))&&(!studentGroup||s.group===studentGroup))&&
-   (s.name+" "+s.roll+" "+s.grade+" "+formatClass(s.grade,s.group)+" "+toBanglaDigits(s.roll)+" "+toBanglaDigits(s.grade)).toLowerCase().includes(query.toLowerCase())
+   (s.name+" "+s.roll+" "+s.grade+" "+formatClassEnglish(s.grade,s.group)+" "+toAsciiDigits(s.roll)+" "+toAsciiDigits(s.grade)).toLowerCase().includes(query.toLowerCase())
  ),[students,query,tab,studentGrade,studentGroup]);
  const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
  const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
@@ -310,10 +313,10 @@ export default function DashboardPortal() {
    const token=await firebaseAuth().currentUser.getIdToken();
    const response=await fetch("/api/school-photo",{method:"POST",headers:{Authorization:"Bearer "+token},body:formData});
    const output=await response.json();
-   if(!response.ok)throw Error(output.error||"ছবি আপলোড হয়নি");
+   if(!response.ok)throw Error(output.error||"Image upload failed");
    setPhoto(output.photoUrl);setUploadFile(null);
    if(photoUploadInput.current)photoUploadInput.current.value="";
-   setSuccess("ImgBB-তে ছবি আপলোড হয়েছে এবং হোমপেজে প্রকাশিত হয়েছে");
+   setSuccess("Image uploaded to ImgBB and published on the home page.");
    await refresh(actor,date,examId,"settings",true);
   }catch(e){setError(e.message)}finally{setWorking(false)}
  }
@@ -327,9 +330,9 @@ export default function DashboardPortal() {
   window.addEventListener("afterprint",clear,{once:true});
   window.print();
  }
- if(busy)return <div className="hmrs-auth-loading" aria-busy="true" aria-label="অ্যাকাউন্ট যাচাই চলছে"><div className="hmrs-auth-icon"><School size={24}/></div><div className="hmrs-auth-lines"><span/><span/></div><div className="hmrs-auth-layout"><span/><span/><span/><span/></div></div>;
- if(!actor)return <main className="container py-16"><div className="panel p-8"><h1 className="section-title">ড্যাশবোর্ডে প্রবেশ করা যায়নি</h1><p className="alert error">{error||"অ্যাকাউন্ট পাওয়া যায়নি"}</p><Link className="btn primary mt-4" href="/login/student">পুনরায় লগইন</Link></div></main>;
- const options=(arr,place="নির্বাচন করুন")=>[["",place],...arr];
+ if(busy)return <div className="hmrs-auth-loading" aria-busy="true" aria-label="Checking Account"><div className="hmrs-auth-icon"><School size={24}/></div><div className="hmrs-auth-lines"><span/><span/></div><div className="hmrs-auth-layout"><span/><span/><span/><span/></div></div>;
+ if(!actor)return <main className="container py-16"><div className="panel p-8"><h1 className="section-title">Dashboard Unavailable</h1><p className="alert error">{error||"Account not found"}</p><Link className="btn primary mt-4" href="/login/student">Sign In Again</Link></div></main>;
+ const options=(arr,place="Select")=>[["",place],...arr];
  const showPlaceholder=tab!=="security" && tab!=="profile" && !routeCache.current.has(routeKey(tab,date,examId));
  return <>
   <DashboardShell
@@ -342,8 +345,8 @@ export default function DashboardPortal() {
    onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>{if(e?.name!=="AbortError")setError(e.message)})}
    onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
   >
-   {actor&&!actor.pinEnabled&&<div className="alert mb-4">এই অ্যাকাউন্টে এখনো মোবাইল + PIN সেট করা হয়নি। <Link href="/migrate" className="font-bold underline">একবার আপগ্রেড করুন</Link></div>}
-   {error&&<div role="alert" className="alert error mb-4">{error}<button type="button" onClick={()=>setError("")} className="float-right" aria-label="ত্রুটি বন্ধ করুন">×</button></div>}
+   {actor&&!actor.pinEnabled&&<div className="alert mb-4">This account does not have a phone number and PIN yet. <Link href="/migrate" className="font-bold underline">Set up account</Link></div>}
+   {error&&<div role="alert" className="alert error mb-4">{error}<button type="button" onClick={()=>setError("")} className="float-right" aria-label="Dismiss Error">×</button></div>}
    {success&&<div role="status" className="alert mb-4">{success}</div>}
    <section className="hmrs-main-content dashboard-section-content">
     {showPlaceholder?<DashboardSkeleton kind={tab}/>:<>
@@ -351,8 +354,8 @@ export default function DashboardPortal() {
      {tab==="profile"&&<ChangePinForm actor={actor} mutate={mutate} working={working}/>}
      {actor.role==="student"?<>
        {tab==="overview"&&<DashboardStudentHome profile={profile}/>}
-       {tab==="records"&&<><h2 className="section-title">হাজিরা ও প্রাতিষ্ঠানিক পাওনা</h2><div className="panel stat"><div className="muted">বর্তমান বকেয়া</div><strong>৳ {toBanglaDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">কোনো অসঙ্গতি থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।</p></div>
-        <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>উপস্থিতি</th><th>মন্তব্য</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toBanglaDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">হাজিরার তথ্য নেই।</p>}</div></>}
+       {tab==="records"&&<><h2 className="section-title">Attendance & Outstanding Dues</h2><div className="panel stat"><div className="muted">Outstanding Balance</div><strong>BDT  {toAsciiDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">Contact your class teacher if you notice any incorrect dues.</p></div>
+        <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toAsciiDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">No attendance records found.</p>}</div></>}
        {tab==="results"&&<>
         <h2 className="section-title">My Results & Marksheets</h2>
         {!profile?.results?.length?<div className="panel empty">No exam results have been published for your account yet.</div>:
@@ -368,103 +371,103 @@ export default function DashboardPortal() {
         {tab==="overview"&&<DashboardOverview actor={actor} summary={summary} routes={roles[actor.role]||[]}/>}
        {tab==="students"&&<>
         {!!incompleteStudents.length&&<section className="hmrs-student-warning" role="status">
-          <div className="hmrs-student-warning-head"><AlertTriangle size={18}/><div><b>{toBanglaDigits(incompleteStudents.length)} জন শিক্ষার্থীর তথ্য সম্পূর্ণ হয়নি</b>
-           <p>মোবাইল, জন্মনিবন্ধন, অভিভাবকের তথ্য বা লগইন PIN বাকি আছে। শিক্ষার্থীর নামের পাশে সতর্কতা আইকন দেখানো হচ্ছে।</p></div></div>
-          <details><summary>কার কার তথ্য অসম্পূর্ণ — দেখুন</summary><div className="hmrs-student-warning-list">
+          <div className="hmrs-student-warning-head"><AlertTriangle size={18}/><div><b>{toAsciiDigits(incompleteStudents.length)} students have incomplete profiles</b>
+           <p>Phone, birth registration, guardian details or PIN are missing. A warning appears beside these students.</p></div></div>
+          <details><summary>View students with incomplete information</summary><div className="hmrs-student-warning-list">
            {incompleteStudents.map(s=><div key={s.id} className="hmrs-warning-student">
              <button type="button" className="btn sm" onClick={()=>setEditing({type:"student",item:s})}>
-              <AlertTriangle size={13}/> {s.name} · {formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}
+              <AlertTriangle size={13}/> {s.name} · {formatClassEnglish(toAsciiDigits(s.grade),s.group)} · Roll {toAsciiDigits(s.roll)}
              </button>
              {pendingByStudent.get(s.id)?<button type="button" className="btn sm" onClick={()=>setActiveApplicationId(pendingByStudent.get(s.id).id)}>
-              আবেদন জমা পড়েছে · অপেক্ষমাণ · দেখুন
-             </button>:<span className="muted text-xs">আবেদন জমা পড়েনি / রোল মেলেনি</span>}
+              Application received · Pending · View
+             </button>:<span className="muted text-xs">No matching application yet</span>}
             </div>)}
           </div></details>
          </section>}
         {activeApplication&&<section className="hmrs-student-application">
-          <div className="flex justify-between items-center gap-3"><h3>ভর্তি আবেদন · অপেক্ষমাণ</h3>
-           <button type="button" className="btn sm" onClick={()=>setActiveApplicationId("")}>বন্ধ</button></div>
-          <p><b>রোস্টারের নাম:</b> {students.find(s=>s.id===activeApplication.matchedStudentId)?.name}
-           <span className="hmrs-application-status">Excel-এর নাম অপরিবর্তিত থাকবে</span></p>
-          <p><b>আবেদনকারীর দেওয়া নাম:</b> {activeApplication.studentName} · রোল {toBanglaDigits(activeApplication.requestedRoll)}</p>
-          <p>পিতা: {activeApplication.fatherName} · মাতা: {activeApplication.motherName}</p>
-          <p>মোবাইল: {toBanglaDigits(activeApplication.studentPhone)} · ৪র্থ বিষয়: {activeApplication.optionalSubject||"পরে নির্বাচন"}</p>
+          <div className="flex justify-between items-center gap-3"><h3>Pending Admission Application</h3>
+           <button type="button" className="btn sm" onClick={()=>setActiveApplicationId("")}>Close</button></div>
+          <p><b>Roster Name:</b> {students.find(s=>s.id===activeApplication.matchedStudentId)?.name}
+           <span className="hmrs-application-status">The existing roster name will be preserved</span></p>
+          <p><b>Applicant's Name:</b> {activeApplication.studentName} · Roll {toAsciiDigits(activeApplication.requestedRoll)}</p>
+          <p>Father: {activeApplication.fatherName} · Mother: {activeApplication.motherName}</p>
+          <p>Phone: {toAsciiDigits(activeApplication.studentPhone)} · 4th Subject: {activeApplication.optionalSubject||"Not selected yet"}</p>
           <AdmissionApproval key={activeApplication.id} item={activeApplication} mutate={async(action,params)=>{
             const result=await mutate(action,params);if(result&&action==="application.approve")setActiveApplicationId("");return result;
            }} busy={working} principal={actor.role==="principal"}/>
          </section>}
-        <div className="dashboard-toolbar"><div><h2 className="section-title">শিক্ষার্থীর রেকর্ড</h2><p className="muted text-xs">{toBanglaDigits(filtered.length)} জন শিক্ষার্থী</p></div>
+        <div className="dashboard-toolbar"><div><h2 className="section-title">Student Records</h2><p className="muted text-xs">{toAsciiDigits(filtered.length)} students</p></div>
          <div className="hmrs-student-filters">
-           <label className="field">শ্রেণি<select value={studentGrade} onChange={e=>{setStudentGrade(e.target.value);setStudentGroup("");setPage(1)}}>
-            <option value="">সব শ্রেণি</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
-           {Number(studentGrade)>=9&&<label className="field">বিভাগ<select value={studentGroup} onChange={e=>{setStudentGroup(e.target.value);setPage(1)}}>
-            <option value="">সব বিভাগ</option><option value="science">বিজ্ঞান</option><option value="business">ব্যবসায় শিক্ষা</option><option value="humanities">মানবিক</option></select></label>}
-           <label className="field dashboard-search">খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
+           <label className="field">Class<select value={studentGrade} onChange={e=>{setStudentGrade(e.target.value);setStudentGroup("");setPage(1)}}>
+            <option value="">All Classes</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+           {Number(studentGrade)>=9&&<label className="field">Group<select value={studentGroup} onChange={e=>{setStudentGroup(e.target.value);setPage(1)}}>
+            <option value="">All Groups</option><option value="science">Science</option><option value="business">Business Studies</option><option value="humanities">Humanities</option></select></label>}
+           <label className="field dashboard-search">Search <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
           </div></div>
-        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>ক্রমিক</th><th>নাম</th><th>শ্রেণি / বিভাগ</th><th>রোল</th><th>পাওনা</th><th>ব্যবস্থা</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toBanglaDigits((visiblePage-1)*25+i+1)}</td>
-         <td className="font-bold">{s.name}{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">আবেদন অপেক্ষমাণ</span>}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
-           <button type="button" title={"তথ্য অসম্পূর্ণ: "+(s.missingFields||[]).join(", ")} className="hmrs-student-incomplete-icon" onClick={()=>setEditing({type:"student",item:s})}>
-            <AlertTriangle size={15}/><span className="sr-only">তথ্য অসম্পূর্ণ, এডিট করুন</span></button>}</td>
-         <td>{formatClass(toBanglaDigits(s.grade),s.group)}</td>
-         <td>{toBanglaDigits(s.roll)}</td><td>৳ {toBanglaDigits(s.due||0)}</td>
-         <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
-          <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
-           {pendingByStudent.get(s.id)&&<button className="btn sm" onClick={()=>setActiveApplicationId(pendingByStudent.get(s.id).id)}>আবেদন</button>}
-           {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button>}</></div></td>
-        </tr>)}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী পাওয়া যায়নি</p>}</div>
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>No.</th><th>Name</th><th>Class / Group</th><th>Roll</th><th>Dues</th><th>Actions</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toAsciiDigits((visiblePage-1)*25+i+1)}</td>
+         <td className="font-bold">{s.name}{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
+           <button type="button" title={"Missing information: "+(s.missingFields||[]).join(", ")} className="hmrs-student-incomplete-icon" onClick={()=>setEditing({type:"student",item:s})}>
+            <AlertTriangle size={15}/><span className="sr-only">Incomplete information · Edit</span></button>}</td>
+         <td>{formatClassEnglish(toAsciiDigits(s.grade),s.group)}</td>
+         <td>{toAsciiDigits(s.roll)}</td><td>BDT  {toAsciiDigits(s.due||0)}</td>
+         <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
+          <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> Edit</button>
+           {pendingByStudent.get(s.id)&&<button className="btn sm" onClick={()=>setActiveApplicationId(pendingByStudent.get(s.id).id)}>Application</button>}
+           {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div></td>
+        </tr>)}</tbody></table>{!filtered.length&&<p className="empty">No students found</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
-         <b>{s.name}</b>{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">আবেদন অপেক্ষমাণ</span>}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
+         <b>{s.name}</b>{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
            <button type="button" className="hmrs-student-incomplete-icon" title={(s.missingFields||[]).join(", ")}
-            onClick={()=>setEditing({type:"student",item:s})}><AlertTriangle size={15}/> তথ্য অসম্পূর্ণ</button>}
-           <p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)} · পাওনা ৳ {toBanglaDigits(s.due||0)}</p>
-         <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> নম্বর</button>
-          <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> এডিট</button>
-           {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> ডিলিট</button>}</></div>
-        </div>)}{!filtered.length&&<div className="panel empty">শিক্ষার্থী পাওয়া যায়নি</div>}</div>
+            onClick={()=>setEditing({type:"student",item:s})}><AlertTriangle size={15}/> Incomplete Information</button>}
+           <p className="muted text-xs mt-1">{formatClassEnglish(toAsciiDigits(s.grade),s.group)} · Roll {toAsciiDigits(s.roll)} · Dues BDT  {toAsciiDigits(s.due||0)}</p>
+         <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
+          <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> Edit</button>
+           {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div>
+        </div>)}{!filtered.length&&<div className="panel empty">No students found</div>}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
        {tab==="admissions"&&<>
         <div className="hmrs-admission-head">
-         <div><h2 className="section-title">ভর্তি অনুমোদন</h2><p className="muted text-xs">{toBanglaDigits(filteredAdmissions.length)}টি আবেদন</p></div>
+         <div><h2 className="section-title">Approve Admission</h2><p className="muted text-xs">{toAsciiDigits(filteredAdmissions.length)} applications</p></div>
          <div className="hmrs-admission-filters">
-          <label className="field">শ্রেণি<select value={admissionGrade} onChange={e=>{setAdmissionGrade(e.target.value);setAdmissionGroup("");setAdmissionsPage(1)}}>
-           <option value="">সব শ্রেণি</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
-          {Number(admissionGrade)>=9&&<label className="field">বিভাগ<select value={admissionGroup} onChange={e=>{setAdmissionGroup(e.target.value);setAdmissionsPage(1)}}>
-           <option value="">সব বিভাগ</option><option value="science">বিজ্ঞান</option><option value="business">ব্যবসায় শিক্ষা</option><option value="humanities">মানবিক</option></select></label>}
+          <label className="field">Class<select value={admissionGrade} onChange={e=>{setAdmissionGrade(e.target.value);setAdmissionGroup("");setAdmissionsPage(1)}}>
+           <option value="">All Classes</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+          {Number(admissionGrade)>=9&&<label className="field">Group<select value={admissionGroup} onChange={e=>{setAdmissionGroup(e.target.value);setAdmissionsPage(1)}}>
+           <option value="">All Groups</option><option value="science">Science</option><option value="business">Business Studies</option><option value="humanities">Humanities</option></select></label>}
          </div></div>
         <div className="hmrs-admission-list">
          {filteredAdmissions.slice((admissionsCurrentPage-1)*20,admissionsCurrentPage*20).map((a,i)=><article key={a.id} className="hmrs-admission-card panel">
           <div className="hmrs-admission-card-head">
-           <span className="hmrs-admission-number">{toBanglaDigits((admissionsCurrentPage-1)*20+i+1)}</span>
+           <span className="hmrs-admission-number">{toAsciiDigits((admissionsCurrentPage-1)*20+i+1)}</span>
            <div className="hmrs-admission-card-info"><h3>{a.studentName}</h3>
-            <div className="hmrs-admission-meta"><span>{formatClass(toBanglaDigits(a.grade),a.group)}</span><span>পিতা: {a.fatherName}</span><span>মোবাইল: {toBanglaDigits(a.fatherPhone)}</span></div>
-            <p>পূর্ববর্তী বিদ্যালয়: {a.previousSchool||"—"}</p>
+            <div className="hmrs-admission-meta"><span>{formatClassEnglish(toAsciiDigits(a.grade),a.group)}</span><span>Father: {a.fatherName}</span><span>Phone: {toAsciiDigits(a.fatherPhone)}</span></div>
+            <p>Previous School: {a.previousSchool||"—"}</p>
            </div>
-           <span className={"chip "+(a.status==="pending"?"":"gray")}>{({pending:"অপেক্ষমাণ",approved:"অনুমোদিত",rejected:"বাতিল"})[a.status]||a.status}</span>
+           <span className={"chip "+(a.status==="pending"?"":"gray")}>{({pending:"Pending",approved:"Approved",rejected:"Rejected"})[a.status]||a.status}</span>
           </div>
-          {actor.role==="principal"&&a.status!=="approved"&&<button className="btn sm hmrs-admission-edit" type="button" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> আবেদন এডিট</button>}
+          {actor.role==="principal"&&a.status!=="approved"&&<button className="btn sm hmrs-admission-edit" type="button" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> Edit Application</button>}
           {a.status==="pending"&&<div className="hmrs-admission-actions"><AdmissionApproval item={a} busy={working} mutate={mutate} principal={actor.role==="principal"}/></div>}
          </article>)}
-         {!filteredAdmissions.length&&<p className="panel empty">এই ফিল্টারে কোনো আবেদন পাওয়া যায়নি।</p>}
+         {!filteredAdmissions.length&&<p className="panel empty">No applications match these filters.</p>}
         </div>
         <Pager total={filteredAdmissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
        </>}
        {tab==="attendance"&&<>
-        <div className="dashboard-toolbar"><h2 className="section-title">হাজিরার তালিকা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
-        <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="নাম, শ্রেণি বা রোল"/></label>
-        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>ক্রমিক</th><th>শিক্ষার্থী</th><th>শ্রেণি / রোল</th><th>অবস্থা</th><th>হাজিরা</th><th>অভিভাবক</th></tr></thead><tbody>{pageItems.map((s,i)=>{
+        <div className="dashboard-toolbar"><h2 className="section-title">Attendance Register</h2><label className="field">Date <Input type="date" value={date} onChange={changeDate}/></label></div>
+        <label className="field dashboard-search">Search Students <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
+        <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>No.</th><th>Student</th><th>Class / Roll</th><th>Status</th><th>Attendance</th><th>Guardian</th></tr></thead><tbody>{pageItems.map((s,i)=>{
          const record=attendanceByStudent.get(s.id);
-         return <tr key={s.id}><td>{toBanglaDigits((visiblePage-1)*25+i+1)}</td><td className="font-bold">{s.name}</td><td>{toBanglaDigits(s.grade)} / {toBanglaDigits(s.roll)}</td>
-          <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></td>
-          <td><div className="inline-actions">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
+         return <tr key={s.id}><td>{toAsciiDigits((visiblePage-1)*25+i+1)}</td><td className="font-bold">{s.name}</td><td>{toAsciiDigits(s.grade)} / {toAsciiDigits(s.roll)}</td>
+          <td><span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"Not Marked"}</span></td>
+          <td><div className="inline-actions">{[["present","Present"],["absent","Absent"],["left_early","Left Early"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}</div></td>
           <td>{record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</td>
-         </tr>})}</tbody></table>{!filtered.length&&<p className="empty">শিক্ষার্থী নেই।</p>}</div>
+         </tr>})}</tbody></table>{!filtered.length&&<p className="empty">No students found.</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=>{
           const record=attendanceByStudent.get(s.id);
           return <div key={s.id} className="panel dashboard-mobile-record">
-           <div className="flex justify-between items-center gap-2"><div><b>{s.name}</b><p className="muted text-xs mt-1">{formatClass(toBanglaDigits(s.grade),s.group)} · রোল {toBanglaDigits(s.roll)}</p></div>
-            <span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"চিহ্নিত নয়"}</span></div>
-           <div className="inline-actions mt-3">{[["present","উপস্থিত"],["absent","অনুপস্থিত"],["left_early","পালিয়েছে"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}
+           <div className="flex justify-between items-center gap-2"><div><b>{s.name}</b><p className="muted text-xs mt-1">{formatClassEnglish(toAsciiDigits(s.grade),s.group)} · Roll {toAsciiDigits(s.roll)}</p></div>
+            <span className={"chip "+(record?.status==="absent"||record?.status==="left_early"?"red":"")}>{statusNames[record?.status]||"Not Marked"}</span></div>
+           <div className="inline-actions mt-3">{[["present","Present"],["absent","Absent"],["left_early","Left Early"]].map(([v,l])=><button disabled={working||changingDate} key={v} className={"btn sm "+(record?.status===v?"primary":"")} onClick={()=>mutate("attendance.set",{studentId:s.id,date,status:v})}>{l}</button>)}
             {record&&record.status!=="present"&&<a className="btn sm" target="_blank" rel="noopener noreferrer" href={phoneLink(s,record.status)}><MessageCircle size={15}/> WhatsApp</a>}</div>
           </div>;
         })}</div>
@@ -476,7 +479,7 @@ export default function DashboardPortal() {
          {(actor.role==="principal"||actor.role==="class_teacher")&&
           <button className="btn primary" type="button" onClick={()=>setCreatingExam(true)}><Plus size={16}/> Create Exam</button>}
         </div>
-        <div className="hmrs-marks-mode" role="group" aria-label="নম্বর দেখার পদ্ধতি">
+        <div className="hmrs-marks-mode" role="group" aria-label="Marks entry mode">
          <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>Class Marks (Excel)</button>
          <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>Individual Result</button>
         </div>
@@ -528,27 +531,27 @@ export default function DashboardPortal() {
           <Marksheet printId={"mark-print-"+exam.id} student={chosen} marks={resultMap} exam={exam} report={individualReport} metrics={individualMetrics}/>
          </>}
        </>}</>}
-       {tab==="finance"&&<><h2 className="section-title">আর্থিক সারসংক্ষেপ</h2><div className="grid grid-cols-2 gap-4">{[["income","আয়"],["expense","ব্যয়"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>৳ {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("bn-BD")}</strong></div>)}</div>
-        <div className="panel p-5"><h3 className="font-bold mb-4">নতুন হিসাব যুক্ত করুন</h3><div className="form-grid">
-         <Field label="ধরন"><Select value={ledgerForm.type} onChange={v=>setLedgerForm(o=>({...o,type:v}))} choices={[["income","আয়"],["expense","ব্যয়"]]}/></Field>
-         <Field label="টাকার পরিমাণ"><Input type="number" min="1" value={ledgerForm.amount} onChange={v=>setLedgerForm(o=>({...o,amount:v}))}/></Field>
-         <Field label="শ্রেণি"><Select value={ledgerForm.grade} onChange={v=>setLedgerForm(o=>({...o,grade:v}))} choices={gradeChoices}/></Field>
-         <Field label="বিবরণ"><Input value={ledgerForm.description} onChange={v=>setLedgerForm(o=>({...o,description:v}))}/></Field>
-        </div><button disabled={working} className="btn primary mt-4" onClick={async()=>{const r=await mutate("ledger.add",ledgerForm);if(r)setLedgerForm(o=>({...o,amount:"",description:""}))}}>হিসাব সংরক্ষণ</button>
+       {tab==="finance"&&<><h2 className="section-title">Financial Overview</h2><div className="grid grid-cols-2 gap-4">{[["income","Income"],["expense","Expense"]].map(([key,label])=><div className="panel stat" key={key}><div className="muted text-xs">{label}</div><strong>BDT  {(data.ledger||[]).filter(a=>a.type===key).reduce((t,a)=>t+Number(a.amount),0).toLocaleString("en-US")}</strong></div>)}</div>
+        <div className="panel p-5"><h3 className="font-bold mb-4">Add Financial Entry</h3><div className="form-grid">
+         <Field label="Type"><Select value={ledgerForm.type} onChange={v=>setLedgerForm(o=>({...o,type:v}))} choices={[["income","Income"],["expense","Expense"]]}/></Field>
+         <Field label="Amount (BDT)"><Input type="number" min="1" value={ledgerForm.amount} onChange={v=>setLedgerForm(o=>({...o,amount:v}))}/></Field>
+         <Field label="Class"><Select value={ledgerForm.grade} onChange={v=>setLedgerForm(o=>({...o,grade:v}))} choices={gradeChoices}/></Field>
+         <Field label="Description"><Input value={ledgerForm.description} onChange={v=>setLedgerForm(o=>({...o,description:v}))}/></Field>
+        </div><button disabled={working} className="btn primary mt-4" onClick={async()=>{const r=await mutate("ledger.add",ledgerForm);if(r)setLedgerForm(o=>({...o,amount:"",description:""}))}}>Save Entry</button>
         </div>
-        <div className="panel p-5"><h3 className="font-bold mb-3">শিক্ষার্থীর বকেয়া হালনাগাদ</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
-        <div className="panel table-wrap"><table><thead><tr><th>তারিখ</th><th>শ্রেণি</th><th>ধরন</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toBanglaDigits(l.createdAt?.slice(0,10))}</td><td>{toBanglaDigits(l.grade)}</td><td>{l.type==="income"?"আয়":"ব্যয়"}</td><td>{l.description}</td><td>৳ {toBanglaDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
+        <div className="panel p-5"><h3 className="font-bold mb-3">Update Student Dues</h3><DuesEditor students={students} working={working} mutate={mutate}/></div>
+        <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Class</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toAsciiDigits(l.createdAt?.slice(0,10))}</td><td>{toAsciiDigits(l.grade)}</td><td>{l.type==="income"?"Income":"Expense"}</td><td>{l.description}</td><td>BDT  {toAsciiDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
         {tab==="routines"&&actor.role==="principal"&&<RoutineManager items={data.routines||[]} working={working} mutate={mutate}/>}
        {tab==="accounts"&&actor.role==="principal"&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}
-       {tab==="settings"&&<><h2 className="section-title">হোমপেজের তথ্য ও ছবি</h2><div className="panel p-6 grid gap-4">
-        <div className="alert">ছবি আপলোড করলে ImgBB-তে সংরক্ষিত হবে এবং হোমপেজের হিরো সেকশনে স্বয়ংক্রিয়ভাবে দেখাবে। আলাদা করে সেটিংস সংরক্ষণ করতে হবে না। অন্য বিদ্যালয়ের ছবি ব্যবহার করবেন না।</div>
-        <Field label="হোমপেজের ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
-        <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> ছবি আপলোড করুন</button>
-        <Field label="অথবা HTTPS ছবির URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
-        <Field label="প্রতিষ্ঠানের সংক্ষিপ্ত পরিচিতি"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
-        {photo&&<img key={photo} src={photo} alt="বিদ্যালয়ের ছবি প্রিভিউ" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
-        <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>সেটিংস সংরক্ষণ</button>
+       {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2><div className="panel p-6 grid gap-4">
+        <div className="alert">Upload a school photo to ImgBB and it will appear on the home page. Use only your school's own images.</div>
+        <Field label="Upload Home Photo (JPG, PNG, WebP; max 3 MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
+        <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> Upload Photo</button>
+        <Field label="Or HTTPS Photo URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
+        <Field label="Short School Description"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
+        {photo&&<img key={photo} src={photo} alt="School Photo Preview" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
+        <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>Save Settings</button>
        </div></>}
       </>}
     </>}
@@ -599,19 +602,19 @@ export default function DashboardPortal() {
 function AdmissionApproval({item,mutate,busy,principal}){
  const [roll,setRoll]=useState(String(item.requestedRoll||"")),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||""),[pin,setPin]=useState("");
  return <div className="flex flex-wrap gap-3 mt-4 items-end">
-  <label className="field" style={{maxWidth:90}}>রোল <input value={roll} onChange={e=>setRoll(e.target.value)} inputMode="numeric" required/></label>
-  <label className="field" style={{maxWidth:230}}>লগইন মোবাইল <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+8801712345678" required/></label>
-  <PinInput label="শিক্ষার্থীর PIN" value={pin} onChange={setPin}/>
-  <button className="btn sm primary" disabled={busy} onClick={()=>mutate("application.approve",{id:item.id,roll,phone,pin})}><Check size={14}/> ভর্তি অনুমোদন</button>
-  <button className="btn sm danger" disabled={busy} onClick={()=>{if(confirm("আবেদন বাতিল করবেন?"))mutate("application.reject",{id:item.id})}}><X size={14}/> বাতিল</button>
-  {principal&&item.paymentStatus!=="verified_manually"&&<button className="btn sm" disabled={busy} onClick={()=>{if(confirm("বাস্তবে পেমেন্ট যাচাই করেছেন?"))mutate("payment.verify",{id:item.id})}}><CreditCard size={14}/> পেমেন্ট যাচাই হয়েছে</button>}
+  <label className="field" style={{maxWidth:90}}>Roll <input value={roll} onChange={e=>setRoll(e.target.value)} inputMode="numeric" required/></label>
+  <label className="field" style={{maxWidth:230}}>Login Phone <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+8801712345678" required/></label>
+  <PinInput label="Student PIN" value={pin} onChange={setPin}/>
+  <button className="btn sm primary" disabled={busy} onClick={()=>mutate("application.approve",{id:item.id,roll,phone,pin})}><Check size={14}/> Approve Admission</button>
+  <button className="btn sm danger" disabled={busy} onClick={()=>{if(confirm("Reject this application?"))mutate("application.reject",{id:item.id})}}><X size={14}/> Rejected</button>
+  {principal&&item.paymentStatus!=="verified_manually"&&<button className="btn sm" disabled={busy} onClick={()=>{if(confirm("Have you verified the payment?"))mutate("payment.verify",{id:item.id})}}><CreditCard size={14}/> Payment Verified</button>}
  </div>;
 }
 function DuesEditor({students,mutate,working}){
  const [id,setId]=useState(""),[amount,setAmount]=useState("");
  return <div className="flex flex-wrap gap-3 items-end">
-  <Field label="শিক্ষার্থী"><Select value={id} onChange={v=>{setId(v);setAmount(String(students.find(s=>s.id===v)?.due||0))}} choices={[["","নির্বাচন করুন"],...students.map(s=>[s.id,s.name+" ("+s.grade+" / "+s.roll+")"])]}/></Field>
-  <Field label="পাওনা (৳)"><Input type="number" min="0" value={amount} onChange={setAmount}/></Field>
-  <button disabled={working||!id||amount===""} className="btn primary" onClick={()=>mutate("student.dues",{studentId:id,amount})}>সংরক্ষণ</button>
+  <Field label="Student"><Select value={id} onChange={v=>{setId(v);setAmount(String(students.find(s=>s.id===v)?.due||0))}} choices={[["","Select"],...students.map(s=>[s.id,s.name+" ("+s.grade+" / "+s.roll+")"])]}/></Field>
+  <Field label="Dues (BDT )"><Input type="number" min="0" value={amount} onChange={setAmount}/></Field>
+  <button disabled={working||!id||amount===""} className="btn primary" onClick={()=>mutate("student.dues",{studentId:id,amount})}>Save</button>
  </div>;
 }

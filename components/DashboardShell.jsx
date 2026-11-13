@@ -4,25 +4,25 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, ChevronRight, GraduationCap, LayoutDashboard, LogOut, Menu, RefreshCw, School, X } from "lucide-react";
 
 const descriptions={
- overview:"সবচেয়ে গুরুত্বপূর্ণ তথ্য ও দৈনন্দিন কাজ এক জায়গায়",
- students:"শিক্ষার্থী খুঁজুন, তথ্য দেখুন এবং প্রয়োজনীয় পরিবর্তন করুন",
- admissions:"ভর্তি আবেদন, যাচাই ও অনুমোদন",
- attendance:"তারিখ অনুযায়ী শিক্ষার্থীদের হাজিরা পরিচালনা",
- marks:"পরীক্ষা তৈরি, নম্বর প্রদান ও ফলাফল প্রকাশ",
- finance:"প্রতিষ্ঠানের আর্থিক হিসাব ও বকেয়া",
- notices:"বিদ্যালয়ের নোটিশ তৈরি এবং প্রকাশ",
- routines:"শ্রেণি ও পরীক্ষার রুটিন প্রকাশ এবং পরিবর্তন",
- accounts:"শিক্ষক ও শ্রেণি শিক্ষকের অ্যাকাউন্ট",
- security:"লগইন নিরাপত্তা ও অ্যাকাউন্ট নিয়ন্ত্রণ",
- settings:"হোমপেজ এবং প্রতিষ্ঠানের তথ্য",
- records:"নিজের উপস্থিতি ও পাওনার বিবরণ",
- results:"পরীক্ষার ফলাফল ও নম্বরপত্র",
- profile:"নিজের PIN ও অ্যাকাউন্ট নিরাপত্তা"
+ overview:"Key information and daily tasks in one place",
+ students:"Find students, review records and update details",
+ admissions:"Review and approve admission applications",
+ attendance:"Manage daily attendance by date",
+ marks:"Create exams, enter marks and publish results",
+ finance:"School finances and outstanding dues",
+ notices:"Create and publish school notices",
+ routines:"Manage class and exam timetables",
+ accounts:"Teacher and class teacher accounts",
+ security:"Login security and account management",
+ settings:"Home page and school information",
+ records:"Your attendance and outstanding dues",
+ results:"Exam results and marksheets",
+ profile:"Your PIN and account security"
 };
 const workRoutes=new Set(["overview","students","admissions","attendance","marks","routines","records","results"]);
 const navGroups=(items)=>[
- {label:"মূল কার্যক্রম",items:items.filter(([key])=>workRoutes.has(key))},
- {label:"পরিচালনা ও সেটিংস",items:items.filter(([key])=>!workRoutes.has(key))}
+ {label:"Main Menu",items:items.filter(([key])=>workRoutes.has(key))},
+ {label:"Administration & Settings",items:items.filter(([key])=>!workRoutes.has(key))}
 ].filter(group=>group.items.length);
 const mainDockKeys=["overview","students","admissions","attendance","records","results"];
 
@@ -46,11 +46,11 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
  const [menuOpen,setMenuOpen]=useState(false);
  const drawerCloseButton=useRef(null);
  const activeItem=routes.find(([key])=>key===active);
- const heading=activeItem?.[1]||"ড্যাশবোর্ড";
+ const heading=activeItem?.[1]||"Dashboard";
  const groups=useMemo(()=>navGroups(routes),[routes]);
  const dock=routes.filter(([key])=>mainDockKeys.includes(key)).slice(0,4);
  const isDockActive=dock.some(([key])=>key===active);
- const today=new Date().toLocaleDateString("bn-BD",{timeZone:"Asia/Dhaka",day:"numeric",month:"long",year:"numeric"});
+ const today=new Date().toLocaleDateString("en-GB",{timeZone:"Asia/Dhaka",day:"numeric",month:"long",year:"numeric"});
  useEffect(()=>{setMenuOpen(false)},[active]);
  useEffect(()=>{
   if(!menuOpen)return;
@@ -69,7 +69,7 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
   };
  },[menuOpen]);
  function navigation(){
-  return <nav className="hmrs-console-navigation" aria-label="ড্যাশবোর্ড নেভিগেশন">
+  return <nav className="hmrs-console-navigation" aria-label="Dashboard Navigation">
    {groups.map(group=><div className="hmrs-navigation-group" key={group.label}>
     <div className="hmrs-navigation-label">{group.label}</div>
     {group.items.map(([key,label,Icon])=><DashboardRouteLink href={"/dashboard/"+key} key={key}
@@ -83,69 +83,69 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
   </nav>;
  }
  return <div className="hmrs-console">
-  <aside className="hmrs-console-sidebar" aria-label="প্রশাসনিক সাইডবার">
+  <aside className="hmrs-console-sidebar" aria-label="Admin Sidebar">
    <DashboardRouteLink href="/dashboard/overview" className="hmrs-console-brand" onNavigate={onNavigate}>
     <span className="hmrs-brand-emblem"><GraduationCap size={24}/></span>
     <span><strong>HMRS</strong><small>School Administration</small></span>
    </DashboardRouteLink>
    {navigation()}
    <div className="hmrs-sidebar-bottom">
-    <div className="hmrs-sidebar-user"><span className="hmrs-user-avatar">{(actor.name||"অ").slice(0,1)}</span>
-     <span className="hmrs-user-details"><strong>{actor.name||"ব্যবহারকারী"}</strong><small>{roleName}</small></span>
+    <div className="hmrs-sidebar-user"><span className="hmrs-user-avatar">{(actor.name||"U").slice(0,1)}</span>
+     <span className="hmrs-user-details"><strong>{actor.name||"User"}</strong><small>{roleName}</small></span>
     </div>
     <div className="hmrs-sidebar-actions">
-     <Link href="/" className="hmrs-console-small-link"><School size={16}/> ওয়েবসাইটে ফিরুন</Link>
-     <button type="button" onClick={onLogout} className="hmrs-console-small-link"><LogOut size={16}/> লগআউট</button>
+     <Link href="/" className="hmrs-console-small-link"><School size={16}/> Back to Website</Link>
+     <button type="button" onClick={onLogout} className="hmrs-console-small-link"><LogOut size={16}/> Log Out</button>
     </div>
    </div>
   </aside>
   <div className="hmrs-console-workspace">
    <header className="hmrs-console-topbar">
     <div className="hmrs-topbar-location">
-     <button className="hmrs-topbar-menu" type="button" onClick={()=>setMenuOpen(true)} aria-label="নেভিগেশন খুলুন"><Menu size={21}/></button>
-     <span className="hmrs-topbar-home"><LayoutDashboard size={16}/> ম্যানেজমেন্ট</span>
+     <button className="hmrs-topbar-menu" type="button" onClick={()=>setMenuOpen(true)} aria-label="Open Navigation"><Menu size={21}/></button>
+     <span className="hmrs-topbar-home"><LayoutDashboard size={16}/> Management</span>
      <ChevronRight size={15} className="hmrs-topbar-separator"/>
      <strong>{heading}</strong>
     </div>
     <div className="hmrs-topbar-tools">
      <span className="hmrs-topbar-date"><CalendarDays size={16}/>{today}</span>
      <span className="hmrs-topbar-role">{roleName}</span>
-     <button type="button" className="hmrs-topbar-logout" onClick={onLogout} title="লগআউট" aria-label="লগআউট"><LogOut size={18}/></button>
+     <button type="button" className="hmrs-topbar-logout" onClick={onLogout} title="Log Out" aria-label="Log Out"><LogOut size={18}/></button>
     </div>
-    {loading&&<div className="hmrs-top-progress" role="progressbar" aria-label="ডেটা লোড হচ্ছে"/>}
+    {loading&&<div className="hmrs-top-progress" role="progressbar" aria-label="Loading data"/>}
    </header>
    <main className="hmrs-console-main" id="dashboard-main">
     <div className="hmrs-console-pagehead">
-     <div className="hmrs-pagehead-copy"><span className="hmrs-pagehead-eyebrow">বিদ্যালয় পরিচালনা <span aria-hidden="true">/</span> {roleName}</span>
-      <h1>{heading}</h1><p>{descriptions[active]||"প্রয়োজনীয় তথ্য ও কার্যক্রম"}</p>
+     <div className="hmrs-pagehead-copy"><span className="hmrs-pagehead-eyebrow">School Management <span aria-hidden="true">/</span> {roleName}</span>
+      <h1>{heading}</h1><p>{descriptions[active]||"Information and Activities"}</p>
      </div>
-     <button className="hmrs-pagehead-refresh" type="button" onClick={onRefresh} title="তথ্য রিফ্রেশ করুন" aria-label="তথ্য রিফ্রেশ করুন">
+     <button className="hmrs-pagehead-refresh" type="button" onClick={onRefresh} title="Refresh Data" aria-label="Refresh Data">
       <RefreshCw size={17}/>
      </button>
     </div>
     {children}
    </main>
   </div>
-  <nav className="hmrs-mobile-dock" aria-label="দ্রুত নেভিগেশন">
+  <nav className="hmrs-mobile-dock" aria-label="Quick Navigation">
    {dock.map(([key,label,Icon])=><DashboardRouteLink key={key} className={"hmrs-dock-item"+(key===active?" is-active":"")} href={"/dashboard/"+key} aria-current={key===active?"page":undefined} onNavigate={onNavigate}>
     <Icon size={19}/><span>{label}</span></DashboardRouteLink>)}
-   <button type="button" className={"hmrs-dock-item"+(!isDockActive?" is-active":"")} aria-expanded={menuOpen} aria-controls="hmrs-mobile-drawer" onClick={()=>setMenuOpen(true)}><Menu size={20}/><span>আরও</span></button>
+   <button type="button" className={"hmrs-dock-item"+(!isDockActive?" is-active":"")} aria-expanded={menuOpen} aria-controls="hmrs-mobile-drawer" onClick={()=>setMenuOpen(true)}><Menu size={20}/><span>More</span></button>
   </nav>
-  {menuOpen&&<><button type="button" className="hmrs-drawer-backdrop" onClick={()=>setMenuOpen(false)} aria-label="মেনু বন্ধ করুন"/>
-   <div className="hmrs-mobile-drawer" id="hmrs-mobile-drawer" role="dialog" aria-modal="true" aria-label="ড্যাশবোর্ড মেনু">
-    <div className="hmrs-drawer-head"><div><b>নেভিগেশন</b><small>{actor.name||roleName}</small></div>
-     <button ref={drawerCloseButton} type="button" onClick={()=>setMenuOpen(false)} aria-label="বন্ধ করুন"><X size={21}/></button>
+  {menuOpen&&<><button type="button" className="hmrs-drawer-backdrop" onClick={()=>setMenuOpen(false)} aria-label="Close Menu"/>
+   <div className="hmrs-mobile-drawer" id="hmrs-mobile-drawer" role="dialog" aria-modal="true" aria-label="Dashboard Menu">
+    <div className="hmrs-drawer-head"><div><b>Navigation</b><small>{actor.name||roleName}</small></div>
+     <button ref={drawerCloseButton} type="button" onClick={()=>setMenuOpen(false)} aria-label="Close"><X size={21}/></button>
     </div>
     {navigation()}
-    <div className="hmrs-drawer-footer"><Link href="/" onClick={()=>setMenuOpen(false)}><ArrowLeft size={16}/> ওয়েবসাইটে ফিরুন</Link>
-     <button type="button" onClick={()=>{setMenuOpen(false);onLogout()}}><LogOut size={16}/> লগআউট</button></div>
+    <div className="hmrs-drawer-footer"><Link href="/" onClick={()=>setMenuOpen(false)}><ArrowLeft size={16}/> Back to Website</Link>
+     <button type="button" onClick={()=>{setMenuOpen(false);onLogout()}}><LogOut size={16}/> Log Out</button></div>
    </div></>}
  </div>;
 }
 
 export function DashboardSkeleton({kind="overview"}){
  const rows=kind==="overview"?4:kind==="students"||kind==="admissions"||kind==="attendance"?5:3;
- return <div className="hmrs-page-skeleton" aria-busy="true" aria-label="পৃষ্ঠা প্রস্তুত হচ্ছে">
+ return <div className="hmrs-page-skeleton" aria-busy="true" aria-label="Loading Page">
   {kind==="overview"&&<div className="hmrs-skeleton-hero hmrs-shimmer"/>}
   <div className="hmrs-skeleton-top">{Array.from({length:kind==="overview"?4:2},(_,i)=><div className="hmrs-shimmer" key={i}/>)}</div>
   <div className="hmrs-skeleton-sheet">{Array.from({length:rows},(_,i)=><div className="hmrs-shimmer" key={i}/>)}</div>

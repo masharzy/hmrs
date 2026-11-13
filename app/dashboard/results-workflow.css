@@ -443,3 +443,16 @@
 .hmrs-result-mark-cell{white-space:nowrap;font-weight:650;font-variant-numeric:tabular-nums}
 @media print{body.hmrs-print-mark .hmrs-mark-table th,
  body.hmrs-print-mark .hmrs-mark-table td{font-size:9px!important;padding:4px 3px!important}}
+
+/* Autosave status replaces both manual marks-sheet Save buttons */
+.hmrs-autosave-status{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#506775;
+ font-weight:750;min-width:0;white-space:normal;margin-right:auto}
+.hmrs-autosave-status:before{content:"";width:7px;height:7px;flex:none;border-radius:50%;
+ background:#288269;box-shadow:0 0 0 3px #28826920}
+.hmrs-sheet-heading .hmrs-autosave-status{font-size:11px}
+@media(max-width:570px){
+ .hmrs-sheet .hmrs-sheet-heading{display:flex;flex-wrap:wrap;gap:8px}
+ .hmrs-sheet-heading strong{flex:1 1 100%}
+ .hmrs-sheet-heading .hmrs-autosave-status{flex:1 1 155px}
+ .hmrs-sheet-heading .btn{flex:none!important}
+}

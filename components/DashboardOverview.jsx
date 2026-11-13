@@ -1,20 +1,20 @@
 "use client";
 import { DashboardRouteLink } from "./DashboardShell";
 import { ArrowRight, ArrowUpRight, CalendarCheck2, ClipboardCheck, FilePenLine, FileText, GraduationCap, ShieldCheck, Users, Wallet } from "lucide-react";
-import { toBanglaDigits } from "../lib/bangla-numbers";
+import { toAsciiDigits } from "../lib/bangla-numbers";
 
 const links={
- students:{label:"শিক্ষার্থী পরিচালনা",desc:"তালিকা, অনুসন্ধান ও বিস্তারিত তথ্য",Icon:Users},
- admissions:{label:"ভর্তি আবেদন",desc:"অপেক্ষমাণ আবেদন যাচাই ও অনুমোদন",Icon:ClipboardCheck},
- attendance:{label:"দৈনিক হাজিরা",desc:"উপস্থিতি ও অভিভাবকের বার্তা",Icon:CalendarCheck2},
- marks:{label:"পরীক্ষা ও ফলাফল",desc:"নম্বর প্রদান, নম্বরপত্র ও প্রকাশ",Icon:FilePenLine},
- finance:{label:"আয়-ব্যয় হিসাব",desc:"হিসাব ও শিক্ষার্থীর বকেয়া",Icon:Wallet}
+ students:{label:"Student Management",desc:"Student records and search",Icon:Users},
+ admissions:{label:"Admissions",desc:"Review pending applications",Icon:ClipboardCheck},
+ attendance:{label:"Daily Attendance",desc:"Attendance and parent notifications",Icon:CalendarCheck2},
+ marks:{label:"Exams & Results",desc:"Marks, reports and publishing",Icon:FilePenLine},
+ finance:{label:"Finance",desc:"Accounts and student dues",Icon:Wallet}
 };
 const metrics=[
- {key:"students",label:"মোট শিক্ষার্থী",Icon:Users,meta:"ভর্তিকৃত শিক্ষার্থী"},
- {key:"applications",label:"অপেক্ষমাণ আবেদন",Icon:ClipboardCheck,meta:"অনুমোদন বাকি"},
- {key:"present",label:"আজ উপস্থিত",Icon:CalendarCheck2,meta:"হাজিরা চিহ্নিত"},
- {key:"absent",label:"অনুপস্থিত / বহির্গমন",Icon:FileText,meta:"আজকের হাজিরা"}
+ {key:"students",label:"Total Students",Icon:Users,meta:"Enrolled students"},
+ {key:"applications",label:"Pending Applications",Icon:ClipboardCheck,meta:"Awaiting approval"},
+ {key:"present",label:"Present Today",Icon:CalendarCheck2,meta:"Attendance recorded"},
+ {key:"absent",label:"Absent / Left Early",Icon:FileText,meta:"Today's attendance"}
 ];
 export default function DashboardOverview({actor,summary={},routes=[]}){
  const keys=new Set(routes.map(([key])=>key));
@@ -23,15 +23,15 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
  return <div className="hmrs-overview">
   <section className="hmrs-overview-hero">
    <div className="hmrs-overview-hero-copy">
-    <div className="hmrs-overview-hero-eyebrow"><span className="hmrs-status-dot"/> বিদ্যালয়ের পরিচালনা কেন্দ্র</div>
-    <h2>স্বাগতম, {actor?.name||"ব্যবহারকারী"}</h2>
-    <p>শিক্ষার্থী, ভর্তি, হাজিরা এবং পরীক্ষার প্রয়োজনীয় তথ্য এখান থেকেই পরিচালনা করুন।</p>
+    <div className="hmrs-overview-hero-eyebrow"><span className="hmrs-status-dot"/> School Administration</div>
+    <h2>Welcome, {actor?.name||"User"}</h2>
+    <p>Manage students, admissions, attendance and exams from one place.</p>
     <div className="hmrs-overview-hero-actions">
      <DashboardRouteLink href={keys.has("students")?"/dashboard/students":"/dashboard/overview"} className="hmrs-hero-primary">
-      <Users size={17}/> শিক্ষার্থী তালিকা <ArrowRight size={16}/>
+      <Users size={17}/> Students <ArrowRight size={16}/>
      </DashboardRouteLink>
      <DashboardRouteLink href={keys.has("admissions")?"/dashboard/admissions":"/dashboard/attendance"} className="hmrs-hero-secondary">
-      {keys.has("admissions")?"ভর্তি আবেদন":"দৈনিক হাজিরা"} <ArrowUpRight size={16}/>
+      {keys.has("admissions")?"Admissions":"Daily Attendance"} <ArrowUpRight size={16}/>
      </DashboardRouteLink>
     </div>
    </div>
@@ -42,15 +42,15 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
    {metrics.filter(item=>item.key!=="applications"||keys.has("admissions")).map(({key,label,Icon,meta})=><div className="hmrs-overview-stat" key={key}>
     <div className="hmrs-stat-icon"><Icon size={20}/></div>
     <span className="hmrs-stat-label">{label}</span>
-    <strong>{toBanglaDigits(summary[key]??0)}</strong>
+    <strong>{toAsciiDigits(summary[key]??0)}</strong>
     <span className="hmrs-stat-footer">{meta}</span>
    </div>)}
   </div>
 
   <div className="hmrs-overview-columns">
    <section className="hmrs-overview-module">
-    <header className="hmrs-module-heading"><div><span className="hmrs-module-eyebrow">WORKSPACE</span><h3>দ্রুত কাজ</h3></div>
-     <span className="hmrs-module-count">{toBanglaDigits(shortcutKeys.length)}টি কার্যক্রম</span></header>
+    <header className="hmrs-module-heading"><div><span className="hmrs-module-eyebrow">WORKSPACE</span><h3>Quick Actions</h3></div>
+     <span className="hmrs-module-count">{toAsciiDigits(shortcutKeys.length)} actions</span></header>
     <div className="hmrs-shortcut-list">{shortcutKeys.map(key=>{
      const {label,desc,Icon}=links[key];
      return <DashboardRouteLink href={"/dashboard/"+key} className="hmrs-shortcut" key={key}>
@@ -61,24 +61,24 @@ export default function DashboardOverview({actor,summary={},routes=[]}){
     })}</div>
    </section>
    <section className="hmrs-overview-module hmrs-priority-panel">
-    <header className="hmrs-module-heading"><div><span className="hmrs-module-eyebrow">TODAY</span><h3>আজকের অবস্থা</h3></div>
+    <header className="hmrs-module-heading"><div><span className="hmrs-module-eyebrow">TODAY</span><h3>Today's Overview</h3></div>
      <CalendarCheck2 size={19} className="hmrs-module-heading-icon"/></header>
     <div className="hmrs-priority-block">
      <span className="hmrs-priority-icon"><ClipboardCheck size={20}/></span>
-     <div><strong>{toBanglaDigits(summary.applications??0)}টি অপেক্ষমাণ আবেদন</strong>
-      <p>{keys.has("admissions")?"নতুন ভর্তি আবেদন যাচাই ও অনুমোদন করুন।":"প্রয়োজনীয় তথ্য প্রধান শিক্ষক যাচাই করবেন।"}</p>
-      {keys.has("admissions")&&<DashboardRouteLink href="/dashboard/admissions">আবেদন দেখুন <ArrowRight size={15}/></DashboardRouteLink>}
+     <div><strong>{toAsciiDigits(summary.applications??0)} pending applications</strong>
+      <p>{keys.has("admissions")?"Review and approve new admission requests.":"The Head Teacher can review pending applications."}</p>
+      {keys.has("admissions")&&<DashboardRouteLink href="/dashboard/admissions">View Applications <ArrowRight size={15}/></DashboardRouteLink>}
      </div>
     </div>
     <div className="hmrs-priority-block">
      <span className="hmrs-priority-icon"><CalendarCheck2 size={20}/></span>
-     <div><strong>{toBanglaDigits(summary.present??0)} জনের হাজিরা চিহ্নিত</strong>
-      <p>আজকের উপস্থিতি ও অনুপস্থিতি তালিকা দেখুন।</p>
-      {keys.has("attendance")&&<DashboardRouteLink href="/dashboard/attendance">হাজিরা দেখুন <ArrowRight size={15}/></DashboardRouteLink>}
+     <div><strong>{toAsciiDigits(summary.present??0)} students marked</strong>
+      <p>Review today's present and absent students.</p>
+      {keys.has("attendance")&&<DashboardRouteLink href="/dashboard/attendance">View Attendance <ArrowRight size={15}/></DashboardRouteLink>}
      </div>
     </div>
     <div className="hmrs-priority-footer"><ShieldCheck size={16}/>
-     {isPrincipal?"প্রধান শিক্ষক হিসেবে সব প্রশাসনিক কার্যক্রমে আপনার অনুমতি আছে।":"আপনার নির্ধারিত দায়িত্ব অনুযায়ী কার্যক্রমগুলো দেখানো হচ্ছে।"}
+     {isPrincipal?"You have access to all administrative functions as Head Teacher.":"Only the tasks assigned to your role are shown."}
     </div>
    </section>
   </div>

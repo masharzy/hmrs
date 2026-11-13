@@ -80,7 +80,7 @@ test("teacher modal uses accessible pressed multi-select cards, not native check
  const css=source("app/dashboard/results-workflow.css");
  assert.match(ui,/aria-pressed=\{chosen\}/);
  assert.match(ui,/kind="roles"/);
- assert.match(ui,/searchable options=\{TEACHER_SUBJECT_OPTIONS\}/);
+ assert.match(ui,/searchable options=\{EN_SUBJECTS\}/);
  assert.doesNotMatch(ui,/type="checkbox"/);
  assert.match(css,/hmrs-teacher-picker-roles/);
  assert.match(css,/hmrs-teacher-grade-pickers/);
