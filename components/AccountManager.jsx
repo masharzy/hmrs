@@ -1,20 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search } from "lucide-react";
+import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search, Check, BookOpen, Users } from "lucide-react";
 import { toBanglaDigits } from "../lib/bangla-numbers";
 import { CLASS_OPTIONS, TEACHER_SUBJECT_OPTIONS } from "../lib/teacher-subjects";
 import PinInput from "./PinInput";
 
 const roles={teacher:"শিক্ষক",class_teacher:"শ্রেণি শিক্ষক"};
 const empty=()=>({name:"",phone:"",pin:"",roles:["teacher"],teachingClasses:[],classTeacherClasses:[],teachingSubjects:[],active:true});
-function Choices({label,options,values,onChange}){
- return <fieldset className="hmrs-teacher-choices"><legend>{label}</legend><div className="hmrs-teacher-choice-grid">
-  {options.map(option=><label key={option.value||option.id} className={values.includes(option.value||option.id)?"selected":""}>
-   <input type="checkbox" checked={values.includes(option.value||option.id)}
-    onChange={e=>onChange(e.target.checked?[...values,option.value||option.id]:values.filter(v=>v!==(option.value||option.id)))}/>
-   {option.label||option.name}
-  </label>)}
- </div></fieldset>;
+function Choices({label,options,values,onChange,kind="classes",description="",searchable=false}){
+ const [query,setQuery]=useState("");
+ const filtered=searchable?options.filter(o=>(o.label||o.name||"").toLowerCase().includes(query.trim().toLowerCase())):options;
+ const toggle=value=>onChange(values.includes(value)?values.filter(v=>v!==value):[...values,value]);
+ return <section className={"hmrs-teacher-picker hmrs-teacher-picker-"+kind} aria-label={label}>
+  <div className="hmrs-teacher-picker-heading"><div><h3>{label}</h3>{description&&<p>{description}</p>}</div>
+   <span className="hmrs-teacher-selected-count">{toBanglaDigits(values.length)}টি নির্বাচিত</span></div>
+  {searchable&&<div className="hmrs-teacher-picker-search"><Search size={15}/><input type="search" aria-label={label+" খুঁজুন"}
+   placeholder="বিষয়ের নাম দিয়ে খুঁজুন" value={query} onChange={e=>setQuery(e.target.value)}/></div>}
+  <div className="hmrs-teacher-picker-grid">
+   {filtered.map(option=>{
+    const id=option.value||option.id,chosen=values.includes(id);
+    return <button type="button" aria-pressed={chosen} key={id} onClick={()=>toggle(id)}
+     className={"hmrs-teacher-option "+(chosen?"is-selected":"")}>
+      <span className="hmrs-teacher-option-check"><Check size={13}/></span>
+      <span className="hmrs-teacher-option-label"><b>{option.label||option.name}</b>
+       {option.description&&<small>{option.description}</small>}</span>
+     </button>;
+   })}
+   {!filtered.length&&<p className="hmrs-teacher-no-match">এই নামে কোনো বিষয় পাওয়া যায়নি।</p>}
+  </div>
+ </section>;
 }
 export default function AccountManager({actor,request,mutate,working,error}){
  const [search,setSearch]=useState(""),[debounced,setDebounced]=useState("");
@@ -97,16 +111,29 @@ export default function AccountManager({actor,request,mutate,working,error}){
      <div className="form-grid">
       <label className="field">শিক্ষকের নাম<input value={values.name} onChange={e=>changed("name",e.target.value)} required maxLength={120}/></label>
       <label className="field">লগইন মোবাইল<input type="tel" value={values.phone} onChange={e=>changed("phone",e.target.value)} required/></label>
-      <div className="field"><span>ভূমিকা</span><Choices label="একাধিক ভূমিকা নির্বাচন করতে পারবেন" options={[{value:"teacher",label:"শিক্ষক"},{value:"class_teacher",label:"শ্রেণি শিক্ষক"}]}
-         values={values.roles} onChange={v=>changed("roles",v)}/></div>
+     </div>
+     <Choices label="শিক্ষকের ভূমিকা" kind="roles" description="প্রয়োজন হলে দুই ধরনের দায়িত্বই দিতে পারবেন"
+      options={[{value:"teacher",label:"শিক্ষক",description:"বিষয়ভিত্তিক ক্লাস নেবেন"},
+       {value:"class_teacher",label:"শ্রেণি শিক্ষক",description:"শ্রেণির দায়িত্ব ও ভর্তি অনুমোদন"}]}
+      values={values.roles} onChange={v=>changed("roles",v)}/>
+     <div className="form-grid hmrs-teacher-pin-row">
       <div className="field"><PinInput label={modal.kind==="create"?"পাঁচ সংখ্যার PIN":"নতুন PIN (পরিবর্তন না হলে খালি রাখুন)"} value={values.pin} onChange={v=>changed("pin",v)}/></div>
      </div>
-     {values.roles.includes("teacher")&&<Choices label="শিক্ষক হিসেবে যে শ্রেণিগুলোতে পড়ান" options={CLASS_OPTIONS}
-       values={values.teachingClasses} onChange={v=>changed("teachingClasses",v)}/>}
-     {values.roles.includes("class_teacher")&&<Choices label="যে শ্রেণিগুলোর শ্রেণি শিক্ষক" options={CLASS_OPTIONS}
-       values={values.classTeacherClasses} onChange={v=>changed("classTeacherClasses",v)}/>} 
-     <Choices label="যে যে বিষয়ের শিক্ষক" options={TEACHER_SUBJECT_OPTIONS} values={values.teachingSubjects} onChange={v=>changed("teachingSubjects",v)}/>
-     {modal.kind==="edit"&&<label className="hmrs-account-active"><input type="checkbox" checked={values.active} onChange={e=>changed("active",e.target.checked)}/> অ্যাকাউন্ট সক্রিয়</label>}
+     <div className="hmrs-teacher-grade-pickers">
+       {values.roles.includes("teacher")&&<Choices kind="classes" label="যেসব শ্রেণিতে পড়াবেন"
+        description="একাধিক শ্রেণি নির্বাচন করা যাবে" options={CLASS_OPTIONS}
+        values={values.teachingClasses} onChange={v=>changed("teachingClasses",v)}/>}
+       {values.roles.includes("class_teacher")&&<Choices kind="classes" label="শ্রেণি শিক্ষকের দায়িত্ব"
+        description="দায়িত্বপ্রাপ্ত শ্রেণিগুলো নির্বাচন করুন" options={CLASS_OPTIONS}
+        values={values.classTeacherClasses} onChange={v=>changed("classTeacherClasses",v)}/>}
+     </div>
+     <Choices kind="subjects" label="পাঠদানের বিষয়" description="শুধু নির্বাচিত বিষয়গুলোই ফলাফল ও নম্বর এন্ট্রিতে দেখাবে"
+      searchable options={TEACHER_SUBJECT_OPTIONS} values={values.teachingSubjects}
+      onChange={v=>changed("teachingSubjects",v)}/>
+     {modal.kind==="edit"&&<button type="button" role="switch" aria-checked={values.active}
+      className={"hmrs-teacher-account-switch "+(values.active?"is-on":"")} onClick={()=>changed("active",!values.active)}>
+      <span className="hmrs-teacher-switch-knob"/><span>অ্যাকাউন্ট {values.active?"সক্রিয়":"নিষ্ক্রিয়"}</span>
+     </button>}
     </div><div className="record-modal-actions"><button type="button" className="btn" disabled={working} onClick={close}>বাতিল</button>
      <button className="btn primary" disabled={working} type="submit">{working?"সংরক্ষণ হচ্ছে...":modal.kind==="create"?"শিক্ষক যুক্ত করুন":"পরিবর্তন সংরক্ষণ"}</button></div></form>
    </section>}

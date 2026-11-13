@@ -36,7 +36,7 @@ test("result sheet supports grade, subject and all-subject mode with Bengali ser
  assert.match(portal,/<ResultEntryGrid/);
  assert.match(sheet,/<option value="">সব বিষয়<\/option>/);
  assert.match(sheet,/toBanglaDigits\(index\+1\)/);
- assert.match(sheet,/getSubjects/);
+ assert.match(sheet,/getStudentSubjects/);
  assert.match(sheet,/marks\.batch/);
  assert.match(api,/action === "marks.batch"/);
  assert.match(api,/validatePartialMarkForStudent\(student,subjectId,entry.scores\)/);
