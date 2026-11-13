@@ -177,3 +177,102 @@
 .hmrs-import-review p{line-height:1.55;margin:4px 0;border-bottom:1px dotted #e4eaef;padding-bottom:4px}
 @media(max-width:600px){.hmrs-import-rolls{align-items:stretch;flex-direction:column}.hmrs-import-rolls .btn{align-self:flex-start}
  .hmrs-student-warning{padding:10px}.hmrs-student-warning-list{max-height:145px}}
+
+/* Single responsive marksheet and compact printable Excel sheet */
+.hmrs-mark-report{font-family:inherit;background:white;color:#172938;padding:20px 22px;max-width:940px;margin:0 auto}
+.hmrs-mark-report-header{text-align:center;padding-bottom:10px;border-bottom:2px solid #1c6c62}
+.hmrs-mark-school{font-size:19px;font-weight:800;letter-spacing:-.4px}
+.hmrs-mark-address{font-size:10px;color:#607782;margin:3px 0}
+.hmrs-mark-report h2{font-size:14px;font-weight:800;margin:10px 0 0}
+.hmrs-mark-student-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px 14px;padding:12px 0;font-size:11px}
+.hmrs-mark-student-grid>div{display:flex;gap:7px;align-items:baseline;min-width:0}
+.hmrs-mark-student-grid b{font-weight:600;color:#607782;white-space:nowrap;font-size:10px}
+.hmrs-mark-student-grid span{font-weight:700;overflow-wrap:anywhere}
+.hmrs-mark-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10px}
+.hmrs-mark-table th{background:#e8f2ef;color:#194b43;text-align:left}
+.hmrs-mark-table th,.hmrs-mark-table td{border:1px solid #cad8dd;padding:5px 6px;vertical-align:top}
+.hmrs-mark-table th:nth-child(1){width:18%}
+.hmrs-mark-table th:nth-child(2){width:43%}
+.hmrs-mark-table th:nth-child(n+3){text-align:center}
+.hmrs-mark-table td:nth-child(n+3){text-align:center;font-variant-numeric:tabular-nums}
+.hmrs-mark-subject strong{font-weight:750}.hmrs-mark-subject small{display:block;color:#0d7a68;font-size:9px;margin-top:3px}
+.hmrs-mark-paper{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:9px;margin-bottom:3px}
+.hmrs-mark-paper>b{font-weight:650;color:#1b5f56;min-width:55px}
+.hmrs-mark-paper span{white-space:nowrap}
+.hmrs-mark-totals{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:12px}
+.hmrs-mark-totals>div{background:#f1f7f5;border:1px solid #e0ebe6;border-radius:5px;padding:8px 7px}
+.hmrs-mark-totals small{font-size:9px;color:#627681;display:block;margin-bottom:4px}
+.hmrs-mark-totals b{font-size:12px}
+.hmrs-mark-missing{color:#9b5b17;background:#fff6e4;padding:8px 10px;font-size:10px;margin-top:9px;border-left:3px solid #d7a154}
+.hmrs-mark-signatures{margin:45px 0 8px;display:flex;justify-content:space-between;padding:0 10px;font-size:10px;font-weight:700}
+.hmrs-mark-signatures span{border-top:1px solid #9aa8b0;min-width:155px;text-align:center;padding-top:5px}
+.hmrs-mark-legal{text-align:center;font-size:8px;color:#627681;margin:12px 0 0}
+.hmrs-publish-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.hmrs-result-not-ready{display:flex;gap:6px;align-items:start;background:#fff7e7;color:#96621a;border:1px solid #ecd6af;padding:8px 10px;margin:9px 0;font-size:11px}
+.hmrs-result-not-ready>svg{flex:none}
+.hmrs-student-application{background:#fff;border:1px solid #dfd9ba;padding:10px;margin-top:10px;border-radius:6px}
+.hmrs-student-application>h3{font-size:12px;font-weight:700;margin:0 0 5px}
+.hmrs-student-application>p{font-size:11px;margin:3px 0}
+.hmrs-application-status{font-size:10px;background:#e2f4ec;color:#106b53;border-radius:3px;padding:3px 5px;margin-left:5px;display:inline-flex;align-items:center}
+.hmrs-preview-pin{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#ebf7f1;color:#145b46;border:1px solid #b7d8cc;padding:11px;margin:10px 0;border-radius:6px;font-size:11px}
+.hmrs-preview-pin code{font-weight:800;font-size:16px;letter-spacing:2px;background:white;padding:5px}
+@media(max-width:640px){
+ .hmrs-mark-student-grid{grid-template-columns:1fr 1fr}
+ .hmrs-mark-totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .hmrs-mark-report{padding:12px}
+ .hmrs-mark-table{font-size:9px}
+ .hmrs-mark-table th,.hmrs-mark-table td{padding:4px 3px}
+ .hmrs-mark-paper{font-size:8px}
+}
+@page hmrs-sheet-print{size:A3 landscape;margin:6mm}
+@page hmrs-mark-print{size:A4 portrait;margin:12mm}
+@media print{
+ body.hmrs-print-sheet #mark-print{display:none!important}
+ body.hmrs-print-sheet .hmrs-sheet,body.hmrs-print-sheet .hmrs-sheet *{visibility:visible!important}
+ body.hmrs-print-sheet .hmrs-sheet{display:block!important;position:absolute;left:0;top:0;width:100%;max-width:none;
+  margin:0;padding:4mm;box-shadow:none;border:none;page:hmrs-sheet-print}
+ body.hmrs-print-sheet .hmrs-sheet::before{content:"হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয় — পরীক্ষার নম্বরপত্র (Excel শিট)";
+  display:block;text-align:center;font-weight:800;font-size:13px;margin:0 0 7px}
+ body.hmrs-print-sheet .hmrs-sheet-filters,body.hmrs-print-sheet .hmrs-sheet-heading button,
+ body.hmrs-print-sheet .hmrs-sheet-bottom,body.hmrs-print-sheet .hmrs-sheet-heading span,
+ body.hmrs-print-sheet .hmrs-sheet-hint{display:none!important}
+ body.hmrs-print-sheet .hmrs-sheet-scroll{overflow:visible!important;max-height:none!important}
+ body.hmrs-print-sheet .hmrs-sheet-table{font-size:8px;width:100%;table-layout:auto}
+ body.hmrs-print-sheet .hmrs-sheet-table th,body.hmrs-print-sheet .hmrs-sheet-table td{padding:1px 2px!important;height:16px!important;
+  position:static!important;background:white!important;border:1px solid #777!important}
+ body.hmrs-print-sheet .hmrs-sheet-table input{border:0!important;background:transparent!important;
+  height:15px!important;max-height:15px!important;font-size:8px!important;width:100%!important;padding:0!important;
+  color:#000!important;-webkit-text-fill-color:#000!important}
+ body:not(.hmrs-print-sheet) #mark-print{page:hmrs-mark-print;padding:0!important}
+ body:not(.hmrs-print-sheet) #mark-print .hmrs-mark-report{padding:0}
+ body:not(.hmrs-print-sheet) #mark-print .hmrs-mark-table th,
+ body:not(.hmrs-print-sheet) #mark-print .hmrs-mark-table td{border:1px solid #9baab0}
+}
+
+/* Result publishing and student report details */
+.hmrs-publish-panel{padding:12px 14px;margin:10px 0;border:1px solid #d7e4e6}
+.hmrs-publish-top h3{font-weight:800;font-size:13px;margin:0}
+.hmrs-publish-top p{font-size:11px;color:#657b86;margin:3px 0 6px}
+.hmrs-publish-panel .hmrs-publish-controls{margin:6px 0;align-items:end;gap:6px}
+.hmrs-publish-panel .hmrs-publish-controls .field{flex:1 1 210px;max-width:370px;font-size:11px}
+.hmrs-publish-panel .hmrs-publish-controls select{height:35px;font-size:11px}
+.hmrs-publish-audit{margin-top:9px;border:1px solid #e4d6ae;background:#fffbef;padding:10px;font-size:11px;border-radius:5px}
+.hmrs-publish-audit>p{margin:0 0 7px;font-weight:700}
+.hmrs-publish-audit summary{font-size:11px;cursor:pointer}
+.hmrs-publish-missing{max-height:220px;overflow:auto;margin-top:6px}
+.hmrs-publish-missing p{display:flex;gap:5px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #ecdfbe;margin:0}
+.hmrs-publish-missing svg{flex:none;color:#b77a15}
+.hmrs-warning-student{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.hmrs-student-result-card{padding:18px 20px;margin-top:14px;border:1px solid #dee7e9}
+.hmrs-student-result-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.hmrs-student-result-top h2{font-size:17px;font-weight:800;margin:0}
+.hmrs-student-result-top p{font-size:11px;color:#65818c;margin:3px 0}
+.hmrs-student-parts-table{border-collapse:collapse;width:100%;font-size:11px;min-width:600px}
+.hmrs-student-parts-table th,.hmrs-student-parts-table td{border:1px solid #e0e7e9;padding:8px;vertical-align:top}
+.hmrs-student-parts-table th{background:#eaf3f0;text-align:left;color:#235f51;font-weight:800}
+.hmrs-student-part-group{display:flex;gap:5px;align-items:baseline;flex-wrap:wrap;margin:3px 0}
+.hmrs-student-part-group strong{color:#1a6359;font-size:10px}
+.hmrs-student-part-group span{font-size:10px;color:#536a77}
+.hmrs-option-label{display:block;color:#16826c;font-size:10px;margin-top:2px}
+@media(max-width:600px){.hmrs-publish-panel{padding:11px}.hmrs-publish-panel .hmrs-publish-controls .field{flex:1 1 100%;max-width:none}
+ .hmrs-student-result-card{padding:12px}.hmrs-student-result-top h2{font-size:15px}}

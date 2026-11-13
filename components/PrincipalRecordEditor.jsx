@@ -6,7 +6,7 @@ import { groupNames } from "../lib/student-admin";
 
 const groups=[["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]];
 const labels={
- name:"শিক্ষার্থীর নাম",studentName:"আবেদনকারীর নাম",grade:"শ্রেণি",roll:"রোল",group:"বিভাগ",
+ name:"শিক্ষার্থীর নাম",studentName:"আবেদনকারীর নাম",grade:"শ্রেণি",roll:"রোল",group:"বিভাগ",requestedRoll:"আবেদনের রোল",optionalSubject:"চতুর্থ বিষয়",
  phone:"শিক্ষার্থীর লগইন মোবাইল",studentPhone:"শিক্ষার্থীর মোবাইল",
  dob:"জন্মতারিখ",birthRegistration:"জন্মনিবন্ধন",gender:"লিঙ্গ",
  fatherName:"পিতার নাম",fatherPhone:"পিতার মোবাইল",
@@ -20,7 +20,7 @@ const studentFields=[
  "fatherName","fatherPhone","motherName","motherPhone","guardianAddress","previousSchool"
 ];
 const applicantFields=[
- "studentName","grade","group","dob","birthRegistration","gender",
+ "studentName","grade","group","requestedRoll","optionalSubject","dob","birthRegistration","gender",
  "studentPhone","fatherName","fatherPhone","motherName","motherPhone","guardianAddress",
  "previousSchool","previousClass","previousResult","paymentMethod","paymentReference"
 ];
@@ -44,6 +44,9 @@ export function Pager({total,page,size=25,onChange}){
 function choicesFor(key,values){
  if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),gradeLabel(v)]);
  if(key==="group")return groups;
+ if(key==="optionalSubject")return [["","পরে নির্বাচন করব"],...(values.group==="science"?[
+  ["biology","জীববিজ্ঞান"],["higher-math","উচ্চতর গণিত"],["agriculture","কৃষি শিক্ষা"]
+  ]:[["agriculture","কৃষি শিক্ষা"],["home-science","গার্হস্থ্য বিজ্ঞান"]])];
  if(key==="gender")return [["male","ছেলে"],["female","মেয়ে"],["other","অন্যান্য"]];
  if(key==="paymentMethod")return [["mobile_banking","মোবাইল ব্যাংকিং"],["online_banking","অনলাইন ব্যাংকিং"],["later","পরে পরিশোধ"]];
  if(key==="elective"){
@@ -59,11 +62,12 @@ function choicesFor(key,values){
  return null;
 }
 
-export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
+export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,canResetPin=false}){
  const isStudent=type==="student";
  const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":""}));
  const [loginPin,setLoginPin]=useState("");
- const fields=(isStudent?studentFields:applicantFields).filter(key=>key!=="group"||Number(values.grade)>=9);
+ const [resetPin,setResetPin]=useState("");
+ const fields=(isStudent?studentFields:applicantFields).filter(key=>!["group","requestedRoll","optionalSubject"].includes(key)||Number(values.grade)>=9);
  if(isStudent&&Number(values.grade)>=9)fields.push("elective","fourthSubject","optionalId");
  const change=(key,value)=>setValues(old=>{
   const next={...old,[key]:value};
@@ -80,7 +84,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
   <section className="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-edit-title">
    <div className="record-modal-head"><div><h2 id="record-edit-title"><Pencil size={18}/> {isStudent?"শিক্ষার্থীর তথ্য এডিট":"ভর্তি আবেদন এডিট"}</h2><p className="muted text-xs">{isStudent?item.name:item.studentName}</p></div>
     <button type="button" className="btn sm" aria-label="বন্ধ করুন" onClick={onClose} disabled={working}><X size={18}/></button></div>
-   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin)}}>
+   <form onSubmit={e=>{e.preventDefault();onSave(values,loginPin,resetPin)}}>
     <div className="record-modal-body">
      {error&&<p className="alert error" role="alert">{error}</p>}
      <div className="form-grid">{fields.map(key=><label className={"field "+(key==="guardianAddress"?"record-wide":"")} key={key}>
@@ -95,6 +99,14 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave}){
           autoComplete="off" required={["name","studentName","roll","studentPhone","fatherName","motherName"].includes(key)||(key==="phone"&&!!item.uid)}/>}
      </label>)}</div>
      <p className="muted text-xs mt-4">রোল, শ্রেণি বা মোবাইল পরিবর্তন করলে পুরোনো রেকর্ড ও লগইন সংযোগ অক্ষত রাখা হবে।</p>
+     {isStudent&&item.uid&&canResetPin&&<div className="hmrs-editor-incomplete">
+       <strong>শিক্ষার্থীর PIN পরিবর্তন</strong>
+       <p>নতুন PIN দিলে আগের PIN বদলে যাবে। শুধু ফলাফল দেখার জন্য মূল PIN না বদলে Student List-এর "Test PIN" ব্যবহার করুন।</p>
+       <label className="field">নতুন ৫ সংখ্যার PIN (PIN না বদলাতে চাইলে ফাঁকা)
+        <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={5}
+         value={resetPin} onChange={e=>setResetPin(e.target.value)} placeholder="৫ সংখ্যার PIN"/>
+       </label>
+      </div>}
      {isStudent&&item.importIncomplete===true&&<div className="hmrs-editor-incomplete">
        <strong>⚠ তথ্য অসম্পূর্ণ</strong>
        <p>বাকি তথ্য: {(item.missingFields||[]).join(" · ")||"শিক্ষার্থীর পরিচয় ও লগইন যাচাই করুন"}</p>
