@@ -163,8 +163,9 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   {error&&<p className="alert error" role="alert">{error}</p>}
   {saved&&<p className="alert" role="status"><Check size={14}/> {saved}</p>}
   
-  {!examId?<p className="empty">Select an exam</p>:loading?<p role="status" className="empty">Loading marks...</p>:!rows.length?<p className="empty">No students in this class or group.</p>:<>
-   <div className="hmrs-sheet-scroll" role="region" tabIndex={0} aria-label="Marks spreadsheet" ref={tableRef}>
+  {!examId?<p className="empty">Select an exam</p>:!rows.length?<p className="empty">No students in this class or group.</p>:<>
+   <div className="hmrs-sheet-scroll" role="region" tabIndex={0} aria-label="Marks spreadsheet" aria-busy={loading} ref={tableRef}>
+    {loading&&<div className="hmrs-grid-refresh" role="status">Loading marks for selected exam…</div>}
     <table className="hmrs-sheet-table"><thead><tr>
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-roll">Roll</th>
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-name">Student</th>
@@ -185,7 +186,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
          return <td key={g.id+":"+part.key} className={touched?"hmrs-sheet-changed":""}>
           <input data-sheet-row={index} data-sheet-col={column} aria-label={student.name+" — "+g.name+" — "+part.label}
            value={scoreFor(student,g,part)} onChange={e=>put(student,g,part,e.target.value)}
-           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked}
+           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked||loading}
            maxLength={6} title={"Maximum "+enNumber(valid.max)} placeholder="—"/>
          </td>;
         }))}
