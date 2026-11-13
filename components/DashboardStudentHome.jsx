@@ -1,7 +1,7 @@
 "use client";
 import { DashboardRouteLink } from "./DashboardShell";
 import { ArrowUpRight, BookOpenCheck, CalendarCheck2, GraduationCap, UserRound, Wallet } from "lucide-react";
-import { gradeLabel, toBanglaDigits } from "../lib/bangla-numbers";
+import { gradeLabel, toAsciiDigits } from "../lib/bangla-numbers";
 import { groupNames } from "../lib/student-admin";
 
 export default function DashboardStudentHome({profile}){
@@ -23,7 +23,7 @@ export default function DashboardStudentHome({profile}){
    </div>
   </section>
   <div className="hmrs-student-summary">
-   <div className="hmrs-student-summary-card"><span><Wallet size={19}/></span><div><small>Outstanding Dues</small><strong>৳ {toAsciiDigits(profile.dues||0)}</strong></div></div>
+   <div className="hmrs-student-summary-card"><span><Wallet size={19}/></span><div><small>Outstanding Dues</small><strong>BDT  {toAsciiDigits(profile.dues||0)}</strong></div></div>
    <div className="hmrs-student-summary-card"><span><BookOpenCheck size={19}/></span><div><small>Published Exams</small><strong>{toAsciiDigits(profile.publishedExams??profile.results?.length??0)}</strong></div></div>
   </div>
   <section className="hmrs-student-info">
