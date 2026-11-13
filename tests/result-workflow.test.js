@@ -47,7 +47,7 @@ test("principal teacher management edits roles, hashes PIN and asks before delet
  assert.match(portal,/<AccountManager actor=\{actor\} request=\{request\}/);
  assert.match(accounts,/role="dialog"/);
  assert.match(accounts,/staff.accounts/);
- assert.match(accounts,/শিক্ষক যুক্ত করুন/);
+ assert.match(accounts,/Add Teacher/);
  assert.match(accounts,/assignedClasses/);
  assert.match(accounts,/teachingSubjects/);
  assert.match(accounts,/role="alertdialog"/);
