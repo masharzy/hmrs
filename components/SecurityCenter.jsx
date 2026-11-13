@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { LockKeyhole, ShieldCheck, Smartphone, Clock3, UnlockKeyhole, RefreshCw, AlertTriangle } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
-import { toBanglaDigits } from "../lib/bangla-numbers";
+import { toAsciiDigits } from "../lib/bangla-numbers";
 
 export default function SecurityCenter(){
  const [items,setItems]=useState([]),[loading,setLoading]=useState(true),[working,setWorking]=useState(false);
@@ -43,8 +43,8 @@ export default function SecurityCenter(){
    </div>
    <div className="security-summary">
     <div className="panel security-summary-card"><LockKeyhole size={23}/><strong>{toAsciiDigits(items.length)}</strong><small>Locked Accounts</small></div>
-    <div className="panel security-summary-card"><Smartphone size={23}/><strong>৫</strong><small>Wrong PINs → 12-hour device lock</small></div>
-    <div className="panel security-summary-card"><ShieldCheck size={23}/><strong>২০</strong><small>Wrong PINs → Head Teacher unlock</small></div>
+    <div className="panel security-summary-card"><Smartphone size={23}/><strong>5</strong><small>Wrong PINs → 12-hour device lock</small></div>
+    <div className="panel security-summary-card"><ShieldCheck size={23}/><strong>20</strong><small>Wrong PINs → Head Teacher unlock</small></div>
    </div>
    {error&&<div className="alert error" role="alert">{error}</div>}
    {notice&&<div className="alert" role="status">{notice}</div>}
@@ -60,7 +60,7 @@ export default function SecurityCenter(){
     <h4 className="font-bold mb-3">Recent Failed Login Attempts</h4>
     <div className="security-attempts">{(item.history||[]).map((attempt,i)=><div key={i} className="security-attempt">
        <Smartphone size={18}/><div><b>{attempt.deviceLabel||"Unknown Device"}</b>
-        <p>ডিভাইস #{attempt.deviceId} · IP {attempt.ip||"—"} · {attempt.reason}</p></div>
+        <p>Device #{attempt.deviceId} · IP {attempt.ip||"—"} · {attempt.reason}</p></div>
        <small>{attempt.at?new Date(attempt.at).toLocaleString("bn-BD"):"—"}</small>
      </div>)}</div>
     <div className="security-unlock">
