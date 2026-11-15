@@ -44,7 +44,7 @@ export function Pager({total,page,size=25,onChange}){
 }
 
 function choicesFor(key,values){
- if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),gradeLabel(v)]);
+ if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),enGrade(v)]);
  if(key==="group")return groups;
  if(key==="optionalSubject")return [["","Choose Later"],...(values.group==="science"?[
   ["biology","Biology"],["higher-math","Higher Mathematics"],["agriculture","Agricultural Studies"]
@@ -142,7 +142,7 @@ export function DeleteStudentModal({student,working,error,onClose,onDelete}){
    <div className="record-modal-head"><h2 id="student-delete-title"><AlertTriangle size={20}/> Delete Student?</h2>
     <button type="button" className="btn sm" onClick={onClose} disabled={working} aria-label="Close"><X size={18}/></button></div>
    <div className="record-modal-body">
-    <p id="student-delete-description"><b>{student.name}</b> (Class {enGrade(student.grade)}, Roll {toAsciiDigits(student.roll)})'s account, attendance and marks will be permanently removed. This cannot be undone.</p>
+    <p id="student-delete-description"><b>{student.name}</b> ({enGrade(student.grade)}, Roll {toAsciiDigits(student.roll)})'s account, attendance and marks will be permanently removed. This cannot be undone.</p>
     {error&&<p role="alert" className="alert error mt-3">{error}</p>}
    </div>
    <div className="record-modal-actions"><button type="button" className="btn" onClick={onClose} disabled={working}>Cancel</button>
