@@ -233,7 +233,10 @@ export default function DashboardPortal() {
   }catch(e){if(!quiet)setError(e.message);return null}finally{if(!quiet)setWorking(false)}
  }
  const students=data.students||[],exams=data.exams||[];
- const incompleteStudents=students.filter(s=>s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0);
+ // Older imported student profiles may not have a normalized missingFields array.
+ // Keep the entire roster renderable even if an individual legacy field is malformed.
+ const missingFieldsFor=s=>Array.isArray(s?.missingFields)?s.missingFields:[];
+ const incompleteStudents=students.filter(s=>s.importIncomplete||s.loginPending||missingFieldsFor(s).length>0);
  const pendingByStudent=useMemo(()=>new Map((data.pendingApplications||[]).map(a=>[a.matchedStudentId,a])),[data.pendingApplications]);
  const activeApplication=(data.pendingApplications||[]).find(a=>a.id===activeApplicationId);
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
@@ -342,7 +345,7 @@ export default function DashboardPortal() {
    routes={roles[actor.role]||[]}
    active={tab}
    loading={loadingSection||changingDate}
-   onNavigate={()=>{setError("");setSuccess("")}}
+   onNavigate={()=>{setError("");setSuccess("");setEditing(null);setDeleting(null);setActiveApplicationId("")}}
    onRefresh={()=>refresh(actor,date,examId,tab,true).catch(e=>{if(e?.name!=="AbortError")setError(e.message)})}
    onLogout={async()=>{await signOut(firebaseAuth());router.replace("/")}}
   >
@@ -416,8 +419,8 @@ export default function DashboardPortal() {
            <label className="field dashboard-search">Search <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
           </div></div>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>No.</th><th>Name</th><th>Class / Group</th><th>Roll</th><th>Dues</th><th>Actions</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toAsciiDigits((visiblePage-1)*25+i+1)}</td>
-         <td className="font-bold">{s.name}{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
-           <button type="button" title={"Missing information: "+(s.missingFields||[]).join(", ")} className="hmrs-student-incomplete-icon" onClick={()=>setEditing({type:"student",item:s})}>
+         <td className="font-bold">{s.name}{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||missingFieldsFor(s).length>0)&&
+           <button type="button" title={"Missing information: "+missingFieldsFor(s).join(", ")} className="hmrs-student-incomplete-icon" onClick={()=>setEditing({type:"student",item:s})}>
             <AlertTriangle size={15}/><span className="sr-only">Incomplete information · Edit</span></button>}</td>
          <td>{formatClassEnglish(toAsciiDigits(s.grade),s.group)}</td>
          <td>{toAsciiDigits(s.roll)}</td><td>BDT  {toAsciiDigits(s.due||0)}</td>
@@ -427,8 +430,8 @@ export default function DashboardPortal() {
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div></td>
         </tr>)}</tbody></table>{!filtered.length&&<p className="empty">No students found</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
-         <b>{s.name}</b>{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||(s.missingFields||[]).length>0)&&
-           <button type="button" className="hmrs-student-incomplete-icon" title={(s.missingFields||[]).join(", ")}
+         <b>{s.name}</b>{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||missingFieldsFor(s).length>0)&&
+           <button type="button" className="hmrs-student-incomplete-icon" title={missingFieldsFor(s).join(", ")}
             onClick={()=>setEditing({type:"student",item:s})}><AlertTriangle size={15}/> Incomplete Information</button>}
            <p className="muted text-xs mt-1">{formatClassEnglish(toAsciiDigits(s.grade),s.group)} · Roll {toAsciiDigits(s.roll)} · Dues BDT  {toAsciiDigits(s.due||0)}</p>
          <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
