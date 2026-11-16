@@ -11,7 +11,7 @@ import { actorFrom, canAccessClass, classKey, cleanText, fail, handleError, json
 import { sameStudentRoll } from "../../../lib/school-identity.js";
 import {incompleteStudentFields} from "../../../lib/selection-import.js";
 import {getPublishedStudentResults} from "../../../lib/published-student-results.js";
-import {publicationKey,resultIsPublished} from "../../../lib/result-publication.js";
+import {publicationKey,resultIsPublished,publishedStudentIds,PUBLISHED_LOCK_MESSAGE} from "../../../lib/result-publication.js";
 import {examAppliesToStudent,examStudents} from "../../../lib/exam-scope.js";
 import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
 import {auditExamScores} from "../../../lib/result-audit.js";
@@ -188,7 +188,14 @@ export async function GET(req) {
         }catch{}
        }
       }
-      return json({items:permitted,gpaByStudent});
+      const [examDoc,pubSnap]=await Promise.all([
+       store.collection("exams").doc(examId).get(),
+       store.collection("resultPublications").where("examId","==",examId).limit(2000).get()
+      ]);
+      // Students whose result is published are locked in the marks register.
+      const studentIds=[...new Set([...allMarks.map(m=>m.studentId),...Object.keys(gpaByStudent)])];
+      const publishedIds=examDoc.exists?[...publishedStudentIds(examDoc.data(),asDocs(pubSnap),studentIds)]:[];
+      return json({items:permitted,gpaByStudent,publishedIds});
     }
     if (resource === "ledger") {
       needRole(actor, ["principal", "class_teacher"]);
@@ -804,7 +811,8 @@ export async function POST(req) {
       const exam = await store.collection("exams").doc(examId).get();
       if (!exam.exists||exam.data()?.deleted) return fail("Exam not found",404);
       if(!examAppliesToStudent(exam.data(),student))return fail("এই পরীক্ষা শিক্ষার্থীর শ্রেণির জন্য নয়",409);
-      if (exam.data().published && actor.role !== "principal") return fail("প্রকাশিত ফল প্রধান শিক্ষক ছাড়া পরিবর্তন করতে পারবেন না");
+      const publication = await store.collection("resultPublications").doc(publicationKey(examId, student.id)).get();
+      if (resultIsPublished(exam.data(), publication.exists ? publication.data() : null)) return fail(PUBLISHED_LOCK_MESSAGE, 409);
       const scores = Object.fromEntries(Object.entries(body.scores||{}).map(([part,value])=>[part,parseBanglaNumber(value)]));
       validateMarkForStudent(student, subjectId, scores);
       const key = examId + "_" + student.id + "_" + subjectId;
@@ -820,9 +828,12 @@ export async function POST(req) {
       if(!Array.isArray(entries)||!entries.length||entries.length>50)return fail("সর্বোচ্চ ৫০টি নম্বর রেকর্ড একবারে সংরক্ষণ করা যাবে");
       const examSnap=await store.collection("exams").doc(examId).get();
       if(!examSnap.exists||examSnap.data()?.deleted)return fail("Exam not found",404);
-      if(examSnap.data().published&&actor.role!=="principal")return fail("প্রকাশিত পরীক্ষার নম্বর শুধু প্রধান শিক্ষক বদলাতে পারবেন",403);
       const ids=[...new Set(entries.map(e=>cleanText(e?.studentId,120)))];
       if(ids.some(id=>!id||id.includes("/")))return fail("শিক্ষার্থী সঠিক নয়");
+      // Published results (whole exam or individual) are locked for everyone.
+      const pubSnaps=await store.getAll(...ids.map(id=>store.collection("resultPublications").doc(publicationKey(examId,id))));
+      const lockedIds=publishedStudentIds(examSnap.data(),pubSnaps.filter(s=>s.exists).map(s=>s.data()),ids);
+      if(lockedIds.size)return fail(PUBLISHED_LOCK_MESSAGE,409);
       const snaps=await store.getAll(...ids.map(id=>store.collection("students").doc(id)));
       const studentMap=new Map(snaps.filter(s=>s.exists&&!s.data()?.deleting).map(s=>[s.id,{id:s.id,...s.data()}]));
       const batch=store.batch(),used=new Set(),now=iso();

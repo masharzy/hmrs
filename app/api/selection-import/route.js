@@ -1,3 +1,4 @@
+import {publishedStudentIds,PUBLISHED_LOCK_MESSAGE} from "../../../lib/result-publication.js";
 import {db} from "../../../lib/firebase-admin";
 import {actorFrom,needRole,verifyOrigin,handleError,fail,json} from "../../../lib/server-auth";
 import {studentKey} from "../../../lib/school-identity.js";
@@ -100,6 +101,13 @@ export async function POST(req){
   const existingExam=await examRef.get();
   if(existingExam.exists&&existingExam.data()?.name!==SELECTION_EXAM_NAME)
    return fail("নির্বাচনী পরীক্ষার ID অন্য পরীক্ষায় ব্যবহার হয়েছে",409);
+  if(existingExam.exists){
+   // Published results are locked: unpublish before importing changed marks.
+   const pubs=await store.collection("resultPublications").where("examId","==",examRef.id).limit(2000).get();
+   const ids=matched.map(x=>x.student?.id).filter(Boolean);
+   const locked=publishedStudentIds(existingExam.data(),pubs.docs.map(d=>d.data()),ids);
+   if(existingExam.data()?.published||locked.size)return fail(PUBLISHED_LOCK_MESSAGE,409);
+  }
   if(!existingExam.exists){
    try{await examRef.create({name:SELECTION_EXAM_NAME,year:2026,published:false,createdBy:actor.uid,createdAt:now()})}
    catch(e){if(e.code!==6&&e.code!=="already-exists")throw e}

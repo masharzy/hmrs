@@ -63,3 +63,29 @@ test("marks register prints landscape and keeps fail colour in print",()=>{
  assert.match(grid,/hmrs-cell-fail/);
  assert.match(css,/td\.hmrs-cell-fail\{background:#fbdcdc!important;[\s\S]*print-color-adjust:exact/);
 });
+
+import {publishedStudentIds,resultIsPublished} from "../lib/result-publication.js";
+test("published results are locked: whole exam, individual, and unpublish overrides",()=>{
+ const exam={published:true,publicationVersion:3};
+ assert.deepEqual([...publishedStudentIds(exam,[],["a","b"])],["a","b"],"publish all locks everyone");
+ const hidden={studentId:"b",published:false,publicationVersion:3};
+ assert.deepEqual([...publishedStudentIds(exam,[hidden],["a","b"])],["a"],"individually unpublished student is editable");
+ const draft={published:false,publicationVersion:4};
+ const one={studentId:"a",published:true,publicationVersion:4};
+ assert.deepEqual([...publishedStudentIds(draft,[one],["a","b"])],["a"],"individual publish locks only that student");
+ assert.equal(resultIsPublished(draft,null),false);
+});
+test("marks APIs and screens enforce the publication lock for every role",()=>{
+ const api=readFileSync("app/api/portal/route.js","utf8");
+ assert.doesNotMatch(api,/actor\.role!=="principal"\)return fail\("প্রকাশিত/);
+ assert.match(api,/publishedStudentIds\(examSnap\.data\(\)/);
+ assert.match(api,/resultIsPublished\(exam\.data\(\), publication\.exists/);
+ assert.match(api,/json\(\{items:permitted,gpaByStudent,publishedIds\}\)/);
+ const imp=readFileSync("app/api/selection-import/route.js","utf8");
+ assert.match(imp,/PUBLISHED_LOCK_MESSAGE/);
+ const grid=readFileSync("components/ResultEntryGrid.jsx","utf8");
+ assert.match(grid,/disabled=\{locked\|\|loading\|\|isLocked\(student\)\}/);
+ assert.doesNotMatch(grid,/exam\?\.published&&actor\?\.role!=="principal"/);
+ const portal=readFileSync("components/DashboardPortal.jsx","utf8");
+ assert.match(portal,/individualPublished!==false/);
+});

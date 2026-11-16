@@ -4,7 +4,7 @@ import {AlertTriangle,Check,Eye,EyeOff,Trash2,Users} from "lucide-react";
 import {enNumber,enGrade,enStream} from "../lib/result-english.js";
 import {examScopeLabel,examStudents} from "../lib/exam-scope.js";
 const n=v=>enNumber(v??0);
-export default function ResultPublishControls({exams,examId,students,selectedStudent,mode="grid",request,mutate,working,onDelete}){
+export default function ResultPublishControls({exams,examId,students,selectedStudent,mode="grid",request,mutate,working,onDelete,onPublicationChange,onStatusChange}){
  const [audit,setAudit]=useState(null),[loading,setLoading]=useState(false);
  const [individualPublished,setIndividualPublished]=useState(null);
  const exam=exams.find(e=>e.id===examId);
@@ -15,7 +15,7 @@ export default function ResultPublishControls({exams,examId,students,selectedStu
   let live=true;setIndividualPublished(null);
   if(mode!=="individual"||!examId||!selectedStudent)return()=>{live=false};
   request("result.publication",{params:"examId="+encodeURIComponent(examId)+"&studentId="+encodeURIComponent(selectedStudent)})
-   .then(r=>{if(live)setIndividualPublished(r.published===true)})
+   .then(r=>{if(live){setIndividualPublished(r.published===true);onStatusChange?.(r.published===true)}})
    .catch(()=>{if(live)setIndividualPublished(null)});
   return()=>{live=false};
  // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -38,7 +38,7 @@ export default function ResultPublishControls({exams,examId,students,selectedStu
    }else if(!window.confirm(all?"Unpublish this exam for all students?":"Hide "+selected.name+"'s result?"))return;
    const args={examId,published,allowIncomplete:true};
    const done=all?await mutate("exam.publish",args):await mutate("result.publish",{...args,studentId:selected.id});
-   if(done){setAudit(null);if(!all)setIndividualPublished(published)}
+   if(done){setAudit(null);if(!all){setIndividualPublished(published);onStatusChange?.(published)}onPublicationChange?.()}
   }catch(e){setAudit({error:e.message,incomplete:[]})}finally{setLoading(false)}
  }
  async function remove(){

@@ -27,11 +27,11 @@ function displayGroups(specs){
  }
  return [...map.values()].map(group=>({...group,parts:[...group.parts.values()]}));
 }
-export default function ResultEntryGrid({exams,examId,onExamChange,students,actor,request,mutate,working}){
+export default function ResultEntryGrid({exams,examId,onExamChange,students,actor,request,mutate,working,publicationTick=0}){
  const [grade,setGrade]=useState("6"),[group,setGroup]=useState(""),[subjectId,setSubjectId]=useState("");
  const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({}),[serverGpa,setServerGpa]=useState({});
  const [loading,setLoading]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState("");
- const [attempt,setAttempt]=useState(0);
+ const [attempt,setAttempt]=useState(0),[publishedIds,setPublishedIds]=useState(()=>new Set());
  const savingRef=useRef(false),tableRef=useRef(null),examIdRef=useRef("");
  examIdRef.current=examId+"|"+grade;
  const exam=exams.find(e=>e.id===examId);
@@ -58,7 +58,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   let live=true;setLoading(!!examId);setError("");setSaved("");
   if(!examId){setLoading(false);return;}
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
-   .then(result=>{if(live){setSheet(result.items||[]);setServerGpa(result.gpaByStudent||{})}})
+   .then(result=>{if(live){setSheet(result.items||[]);setServerGpa(result.gpaByStudent||{});setPublishedIds(new Set(result.publishedIds||[]))}})
    .catch(e=>{if(live)setError(e.message)})
    .finally(()=>{if(live)setLoading(false)});
   return ()=>{live=false};
@@ -67,7 +67,10 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const entries=useMemo(()=>Object.entries(edits).map(([key,scores])=>{
   const i=key.indexOf("|");return {studentId:key.slice(0,i),subjectId:key.slice(i+1),scores};
  }),[edits]);
- const locked=!!exam?.published&&actor?.role!=="principal";
+ // A published result (whole exam or individual) is locked for everyone.
+ const isLocked=student=>publishedIds.has(student.id);
+ const locked=rows.length>0&&rows.every(isLocked);
+ const someLocked=!locked&&rows.some(isLocked);
  const printColumns=displayed.reduce((total,g)=>total+g.parts.length,3);
  useEffect(()=>{
   if(!entries.length&&!sending)return;
@@ -110,12 +113,18 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  function refreshServerGpa(){
   const requested=examId+"|"+grade;
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
-   .then(result=>{if(requested===examIdRef.current)setServerGpa(result.gpaByStudent||{})})
+   .then(result=>{if(requested===examIdRef.current){setServerGpa(result.gpaByStudent||{});setPublishedIds(new Set(result.publishedIds||[]))}})
    .catch(()=>{});
  }
+ // Re-check locks whenever a result is published or unpublished.
+ useEffect(()=>{if(examId&&publicationTick)refreshServerGpa();
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[publicationTick]);
  async function save(){
   if(!examId||loading||working||locked||savingRef.current)return;
   const valid=pendingMarkBatch(edits,new Map(rows.map(s=>[s.id,s])),subjectsByStudent);
+  // Never send marks for a student whose result was published meanwhile.
+  valid.ready=valid.ready.filter(entry=>!publishedIds.has(entry.studentId));
   if(!valid.ready.length){
    if(valid.invalid.length)setError(valid.invalid[0].reason);
    return;
@@ -176,7 +185,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
    <label className="field">Subject / Paper<select value={subjectId} onChange={e=>setSubjectId(e.target.value)}>
     <option value="">All subjects</option>{groups.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
   </div>
-  {locked&&<p className="alert">Published results can only be edited by the Head Teacher.</p>}
+  {locked&&<p className="alert">This result is published, so marks are locked. Unpublish it first to make changes.</p>}
+  {someLocked&&<p className="alert">Students marked 🔒 have a published result; their marks are locked until unpublished.</p>}
   {error&&<p className="alert error" role="alert">{error}</p>}
   {saved&&<p className="alert" role="status"><Check size={14}/> {saved}</p>}
   
@@ -200,7 +210,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
        let col=-1;
        return <tr key={student.id}>
         <td className="hmrs-sheet-sticky hmrs-sheet-roll">{enNumber(student.roll)}</td>
-        <td className="hmrs-sheet-sticky hmrs-sheet-name" title={student.name}>{student.name}</td>
+        <td className="hmrs-sheet-sticky hmrs-sheet-name" title={isLocked(student)?student.name+" — result published (locked)":student.name}>{isLocked(student)?"🔒 ":""}{student.name}</td>
         {displayed.flatMap(g=>g.parts.map(part=>{
          const column=++col,subject=own.find(s=>s.id===g.subjectId);
          const valid=subject?.parts.find(p=>p.key===part.key);
@@ -211,7 +221,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
           title={failed?"Fail — below pass mark":undefined}>
           <input data-sheet-row={index} data-sheet-col={column} aria-label={student.name+" — "+g.name+" — "+part.label}
            value={scoreFor(student,g,part)} onChange={e=>put(student,g,part,e.target.value)}
-           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked||loading}
+           onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked||loading||isLocked(student)}
            maxLength={6} title={"Maximum "+enNumber(valid.max)} placeholder="—"/>
          </td>;
         }))}

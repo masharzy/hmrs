@@ -73,7 +73,7 @@ test("exam selection refreshes only sheet and never collapses the whole dashboar
  assert.match(portal,/section==="attendance"\?"attendance:"\+date:section;/);
  assert.match(grid,/hmrs-grid-refresh/);
  assert.doesNotMatch(grid,/:loading\?<p role="status" className="empty">Loading marks/);
- assert.match(grid,/disabled=\{locked\|\|loading\}/);
+ assert.match(grid,/disabled=\{locked\|\|loading(\|\|isLocked\(student\))?\}/);
 });
 test("print is landscape, fitted to all spreadsheet columns; subject names remain Bangla",()=>{
  const css=read("app/dashboard/results-workflow.css");

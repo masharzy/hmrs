@@ -71,6 +71,8 @@ export default function DashboardPortal() {
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [date,setDate]=useState(today()),[query,setQuery]=useState(""),[selectedStudent,setSelectedStudent]=useState(""),[examId,setExamId]=useState("");
  const [markSubject,setMarkSubject]=useState(""),[markScores,setMarkScores]=useState({});
+ // Published results are locked; the principal must unpublish before editing.
+ const [publicationTick,setPublicationTick]=useState(0),[individualPublished,setIndividualPublished]=useState(null);
  const [markMode,setMarkMode]=useState("grid");
  const [creatingExam,setCreatingExam]=useState(false),[editingExam,setEditingExam]=useState(null);
  const [selectedPublishedExam,setSelectedPublishedExam]=useState("");
@@ -506,9 +508,9 @@ export default function DashboardPortal() {
         </div>
         {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
          students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}
-           onDelete={undefined}/> }
+           onDelete={undefined} onPublicationChange={()=>setPublicationTick(t=>t+1)} onStatusChange={setIndividualPublished}/> }
         {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam}
-          students={students} actor={actor} request={request} mutate={mutate} working={working}/>:
+          students={students} actor={actor} request={request} mutate={mutate} working={working} publicationTick={publicationTick}/>:
          <>
           <div className="hmrs-individual-lookup panel">
            <div className="hmrs-individual-lookup-head"><h3>Individual Student Result</h3>
@@ -541,7 +543,9 @@ export default function DashboardPortal() {
              <Input type="number" min="0" step="0.01" value={markScores[part.key]??""}
               onChange={v=>setMarkScores(o=>({...o,[part.key]:v===""?"":v}))}/></Field>)}
            </div>
-           <button disabled={working||changingExam||(exam.published&&actor.role!=="principal")}
+           {(actor.role==="principal"?individualPublished===true:!!exam.published)&&
+            <p className="alert">This result is published, so marks are locked. Unpublish it first to make changes.</p>}
+           <button disabled={working||changingExam||(actor.role==="principal"?individualPublished!==false:!!exam.published)}
             className="btn primary mt-4" onClick={()=>mutate("marks.set",
             {studentId:chosen.id,examId,subjectId:markSubject,scores:markScores})}><Check size={15}/> Save Marks</button></>}
           </div>
