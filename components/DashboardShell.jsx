@@ -110,20 +110,22 @@ export default function DashboardShell({actor,roleName,routes,active,loading=fal
     </div>
     <div className="hmrs-topbar-tools">
      <span className="hmrs-topbar-date"><CalendarDays size={16}/>{today}</span>
+     {/* Marks keeps its title only in the top bar, so refresh lives here. */}
+     {active==="marks"&&<button type="button" className="hmrs-topbar-refresh" onClick={onRefresh} title="Refresh Data" aria-label="Refresh Data"><RefreshCw size={16}/></button>}
      <span className="hmrs-topbar-role">{roleName}</span>
      <button type="button" className="hmrs-topbar-logout" onClick={onLogout} title="Log Out" aria-label="Log Out"><LogOut size={18}/></button>
     </div>
     {loading&&<div className="hmrs-top-progress" role="progressbar" aria-label="Loading data"/>}
    </header>
    <main className="hmrs-console-main" id="dashboard-main">
-    <div className="hmrs-console-pagehead">
+    {active!=="marks"&&<div className="hmrs-console-pagehead">
      <div className="hmrs-pagehead-copy"><span className="hmrs-pagehead-eyebrow">School Management <span aria-hidden="true">/</span> {roleName}</span>
       <h1>{heading}</h1><p>{descriptions[active]||"Information and Activities"}</p>
      </div>
      <button className="hmrs-pagehead-refresh" type="button" onClick={onRefresh} title="Refresh Data" aria-label="Refresh Data">
       <RefreshCw size={17}/>
      </button>
-    </div>
+    </div>}
     {children}
    </main>
   </div>

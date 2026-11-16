@@ -64,3 +64,14 @@ test("summary is wired to the marks page filters, principal only, printable in c
  const portal=readFileSync("components/DashboardPortal.jsx","utf8");
  assert.doesNotMatch(portal,/<h2>Marks<\/h2>/);
 });
+
+test("marks page has no duplicate heading and a clean mobile layout",()=>{
+ const shell=readFileSync("components/DashboardShell.jsx","utf8");
+ assert.match(shell,/active!=="marks"&&<div className="hmrs-console-pagehead">/);
+ assert.match(shell,/className="hmrs-topbar-refresh"/);
+ const css=readFileSync("app/dashboard/results-workflow.css","utf8");
+ const mobile=css.slice(css.lastIndexOf("Marks page — mobile layout"));
+ assert.match(mobile,/\.hmrs-sheet \.hmrs-sheet-heading\{display:flex!important;flex-direction:row!important/);
+ assert.match(mobile,/\.hmrs-marks-mode\{display:grid;grid-template-columns:1fr 1fr/);
+ assert.match(mobile,/\.hmrs-sheet-filters\{display:grid!important;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/);
+});

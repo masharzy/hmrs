@@ -337,3 +337,5 @@
 .routine-full-close{position:sticky;top:0;margin-left:auto;display:grid;place-items:center;z-index:2;border:0;background:#173b36;color:#fff;border-radius:8px;width:36px;height:36px}
 @media(max-width:1150px){.routine-admin{grid-template-columns:1fr}.routine-admin-card{min-height:150px}}
 @media(max-width:720px){.routine-admin{gap:15px}.routine-admin-title,.routine-editor-body{padding:16px}.routine-editor-body .form-grid{grid-template-columns:1fr}.routine-editor-body .form-grid>.field:last-child:nth-child(3){grid-column:auto}.routine-admin-card{gap:11px;padding:10px;min-height:137px}.routine-card-thumb{width:97px}.routine-upload-preview{height:245px}.routine-form-actions .btn{flex:1}}
+
+.hmrs-topbar-refresh{display:inline-grid;place-items:center;width:32px;height:32px;border:1px solid #deebe7;border-radius:8px;background:#fff;color:#0c6c64;cursor:pointer;flex:none}
