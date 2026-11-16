@@ -544,3 +544,59 @@
   -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
  body.hmrs-print-sheet .hmrs-sheet-table td.hmrs-cell-fail input{color:#a32020!important;-webkit-text-fill-color:#a32020!important;font-weight:700!important}
 }
+
+/* ===== Compact marks page: mode switch + publish controls on one row ===== */
+.hmrs-marks-toolbar{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+.hmrs-marks-toolbar .hmrs-marks-mode{margin:0;gap:0;flex:none;border:1px solid #c9d4d2;border-radius:5px;overflow:hidden;align-self:center}
+.hmrs-marks-toolbar .hmrs-marks-mode .btn{border:0;border-radius:0;min-height:32px;height:32px;padding:0 12px;font-size:12px}
+.hmrs-marks-toolbar .hmrs-publish-panel{flex:1 1 420px;margin:0;padding:4px 8px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;border-radius:5px}
+.hmrs-marks-toolbar .hmrs-publish-top{flex:1 1 auto;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.hmrs-marks-toolbar .hmrs-publish-top>div{display:flex;align-items:baseline;gap:8px;min-width:0}
+.hmrs-marks-toolbar .hmrs-publish-top h3{font-size:12px;white-space:nowrap}
+.hmrs-marks-toolbar .hmrs-publish-top p{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmrs-marks-toolbar .hmrs-publish-controls{margin:0;flex:none}
+.hmrs-marks-toolbar .hmrs-publish-controls .btn{min-height:28px!important;height:28px;padding:0 9px!important;font-size:11px}
+.hmrs-marks-toolbar .hmrs-publish-individual,.hmrs-marks-toolbar .hmrs-publish-audit{flex-basis:100%;margin:2px 0 4px}
+.hmrs-marks-toolbar .hmrs-publish-empty{margin:0;align-self:center;font-size:11px;color:#6a7b88}
+.hmrs-sheet .hmrs-sheet-filters{flex-wrap:nowrap;overflow-x:auto}
+.hmrs-sheet .hmrs-sheet-filters .hmrs-summary-btn{flex:none;height:32px;min-height:32px!important;padding:0 11px!important;align-self:flex-end}
+@media(max-width:700px){.hmrs-sheet .hmrs-sheet-filters{flex-wrap:wrap}.hmrs-marks-toolbar .hmrs-publish-top{flex-wrap:wrap}}
+
+/* ===== Result summary (Excel style) ===== */
+.hmrs-summary-backdrop{position:fixed;inset:0;z-index:80;background:#10282438;display:flex;align-items:flex-start;justify-content:center;padding:28px 12px;overflow:auto}
+.hmrs-summary{background:#fff;width:min(1120px,100%);border:1px solid #b9c5c9;box-shadow:0 16px 50px #0d2b2433;padding:0 0 10px}
+.hmrs-summary-head{display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f3f6f5;border-bottom:1px solid #c9d1d6}
+.hmrs-summary-head>div{margin-right:auto;min-width:0}
+.hmrs-summary-head h2{font-size:14px;margin:0;font-weight:800}
+.hmrs-summary-head p{font-size:11px;color:#5d6f7a;margin:1px 0 0}
+.hmrs-summary-head .btn{min-height:28px!important;height:28px;padding:0 9px!important;font-size:11px;border-radius:3px}
+.hmrs-summary h3{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#2a4553;margin:10px 10px 4px}
+.hmrs-summary-scroll{overflow:auto;margin:0 10px}
+.hmrs-summary-msg{padding:16px 10px;margin:0;color:#5d6f7a}
+.hmrs-xl{border-collapse:collapse;width:100%;font-family:"Segoe UI","Hind Siliguri",Calibri,system-ui,sans-serif;font-size:12px}
+.hmrs-xl th,.hmrs-xl td{border:1px solid #c9d1d6;height:23px;padding:0 7px;white-space:nowrap}
+.hmrs-xl thead th{background:#e8edf0;font-weight:700;font-size:11.5px;text-align:center}
+.hmrs-xl td{text-align:right;font-variant-numeric:tabular-nums}
+.hmrs-xl td.label{text-align:left}
+.hmrs-xl td.no{background:#e8edf0;color:#5d6f7a;text-align:center;width:30px;font-weight:600}
+.hmrs-xl tr.head td.label{font-weight:800;background:#f4f6f7}
+.hmrs-xl tr.sub td.label{padding-left:20px;color:#3f5360}
+.hmrs-xl tr.total td{font-weight:800;background:#eef3f1;border-top:2px solid #9fb0b6}
+.hmrs-xl td.fail{background:#fbdcdc;color:#a32020;font-weight:700}
+.hmrs-xl td.hi{background:#fbdcdc;color:#a32020;font-weight:800}
+.hmrs-xl td.zero{color:#a8b3b9}
+.hmrs-xl td.na{color:#a8b3b9;text-align:center}
+@media print{
+ body.hmrs-print-summary *{visibility:hidden!important}
+ body.hmrs-print-summary .hmrs-summary,body.hmrs-print-summary .hmrs-summary *{visibility:visible!important}
+ body.hmrs-print-summary .hmrs-summary-backdrop{position:absolute;inset:0;background:none;padding:0;display:block;overflow:visible}
+ body.hmrs-print-summary .hmrs-summary{position:absolute;left:0;top:0;width:100%;border:0;box-shadow:none;padding:0}
+ body.hmrs-print-summary .hmrs-summary-head{background:none;border:0;padding:0 0 4px}
+ body.hmrs-print-summary .hmrs-summary-head .btn{display:none!important}
+ body.hmrs-print-summary .hmrs-summary-scroll{overflow:visible;margin:0}
+ body.hmrs-print-summary .hmrs-summary h3{margin:8px 0 3px}
+ body.hmrs-print-summary .hmrs-xl{font-size:10.5px}
+ body.hmrs-print-summary .hmrs-xl th,body.hmrs-print-summary .hmrs-xl td{height:18px;padding:0 5px;
+  -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ body.hmrs-print-summary .hmrs-xl tr{break-inside:avoid}
+}

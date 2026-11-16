@@ -15,6 +15,7 @@ import {publicationKey,resultIsPublished,publishedStudentIds,PUBLISHED_LOCK_MESS
 import {examAppliesToStudent,examStudents} from "../../../lib/exam-scope.js";
 import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
 import {auditExamScores} from "../../../lib/result-audit.js";
+import {buildResultSummary} from "../../../lib/result-summary.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -118,6 +119,25 @@ export async function GET(req) {
       ]);
       if(!ex.exists||ex.data()?.deleted)return fail("Exam not found",404);
       return json({published:resultIsPublished(ex.data(),publication.exists?publication.data():null)});
+    }
+    if(resource==="result.summary"){
+      needRole(actor,["principal"]);
+      const examId=cleanText(u.searchParams.get("examId"),150);
+      if(!examId||examId.includes("/"))return fail("পরীক্ষা নির্বাচন করুন");
+      const gradeParam=cleanText(u.searchParams.get("grade")||"all",10);
+      if(gradeParam!=="all"&&!validGrade(gradeParam))return fail("সঠিক শ্রেণি নির্বাচন করুন");
+      const group=cleanText(u.searchParams.get("group")||"",20);
+      if(group&&!["science","business","humanities"].includes(group))return fail("সঠিক বিভাগ নির্বাচন করুন");
+      const subjectId=cleanText(u.searchParams.get("subjectId")||"",60);
+      const [ex,studentsSnap,marksSnap]=await Promise.all([
+       store.collection("exams").doc(examId).get(),
+       store.collection("students").limit(950).get(),
+       store.collection("marks").where("examId","==",examId).limit(5000).get()
+      ]);
+      if(!ex.exists||ex.data()?.deleted)return fail("Exam not found",404);
+      const summary=buildResultSummary({students:examStudents(ex.data(),asDocs(studentsSnap)),marks:asDocs(marksSnap),
+       grade:gradeParam==="all"?"all":parseBanglaNumber(gradeParam),group,subjectId});
+      return json({summary});
     }
     if(resource==="result.audit"){
       needRole(actor,["principal"]);

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, RefreshCw, Table2 } from "lucide-react";
+import ResultSummary from "./ResultSummary.jsx";
 import { getStudentSubjects,evaluateTranscript,failedPartKeys } from "../lib/academic";
 import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
@@ -41,6 +42,17 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const subjectsByStudent=useMemo(()=>new Map(rows.map(s=>[s.id,allowedSubjects(actor,s)])),[rows,actor]);
  const groups=useMemo(()=>displayGroups(subjectsByStudent),[subjectsByStudent]);
  const displayed=subjectId?groups.filter(s=>s.id===subjectId):groups;
+ const [showSummary,setShowSummary]=useState(false);
+ // With "All classes" there is no sheet; offer whole subjects for the summary.
+ const subjectChoices=useMemo(()=>{
+  if(grade!=="all")return groups;
+  const seen=new Map();
+  for(const st of students.filter(x=>examAppliesToStudent(exam,x)&&(!group||(Number(x.grade)>=9&&x.group===group)))){
+   try{for(const sub of getStudentSubjects(st))if(!seen.has(sub.id))seen.set(sub.id,{id:sub.id,subjectId:sub.id,name:sub.name})}catch{}
+  }
+  return [...seen.values()];
+ },[grade,group,groups,students,exam]);
+ const summarySubjectId=subjectChoices.find(x=>x.id===subjectId)?.subjectId||"";
  const byKey=useMemo(()=>new Map(sheet.map(m=>[keyFor(m.studentId,m.subjectId),m.scores||{}])),[sheet]);
  const studentGpas=useMemo(()=>new Map(rows.map(student=>{
   const markMap={};
@@ -55,8 +67,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  })),[rows,sheet,edits]);
  useEffect(()=>{setSubjectId("");setEdits({});setError("");setSaved("")},[grade,group]);
  useEffect(()=>{
-  let live=true;setLoading(!!examId);setError("");setSaved("");
-  if(!examId){setLoading(false);return;}
+  let live=true;setLoading(!!examId&&grade!=="all");setError("");setSaved("");
+  if(!examId||grade==="all"){setLoading(false);setSheet([]);return;}
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
    .then(result=>{if(live){setSheet(result.items||[]);setServerGpa(result.gpaByStudent||{});setPublishedIds(new Set(result.publishedIds||[]))}})
    .catch(e=>{if(live)setError(e.message)})
@@ -111,6 +123,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   if(input){event.preventDefault();input.focus();input.select()}
  }
  function refreshServerGpa(){
+  if(!examId||grade==="all")return;
   const requested=examId+"|"+grade;
   request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
    .then(result=>{if(requested===examIdRef.current){setServerGpa(result.gpaByStudent||{});setPublishedIds(new Set(result.publishedIds||[]))}})
@@ -179,18 +192,25 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   <div className="hmrs-sheet-filters">
    <label className="field">Exam<select value={examId} onChange={e=>{if(changeGuard())onExamChange(e.target.value)}}>
     <option value="">Select exam</option>{exams.map(e=><option key={e.id} value={e.id}>{e.name} · {examScopeLabel(e)}{e.published?" (Published)":""}</option>)}</select></label>
-   <label className="field">Class<select value={grade} disabled={!!scopedGrade} onChange={e=>{if(changeGuard()){setGrade(e.target.value);setGroup("")}}}>{grades.filter(n=>!scopedGrade||n===scopedGrade).map(n=><option key={n} value={n}>{enGrade(n)}</option>)}</select></label>
-   {Number(grade)>=9&&<label className="field">Group<select value={group} onChange={e=>{if(changeGuard())setGroup(e.target.value)}}>
+   <label className="field">Class<select value={grade} disabled={!!scopedGrade} onChange={e=>{if(changeGuard()){setGrade(e.target.value);setGroup("")}}}>
+    {!scopedGrade&&<option value="all">All classes</option>}
+    {grades.filter(n=>!scopedGrade||n===scopedGrade).map(n=><option key={n} value={n}>{enGrade(n)}</option>)}</select></label>
+   {(grade==="all"||Number(grade)>=9)&&<label className="field">Group<select value={group} onChange={e=>{if(changeGuard())setGroup(e.target.value)}}>
     {groupOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
    <label className="field">Subject / Paper<select value={subjectId} onChange={e=>setSubjectId(e.target.value)}>
-    <option value="">All subjects</option>{groups.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+    <option value="">All subjects</option>{subjectChoices.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+   {actor?.role==="principal"&&<button type="button" className="btn sm primary hmrs-summary-btn" disabled={!examId}
+    onClick={()=>setShowSummary(true)}><Table2 size={14}/> Summary</button>}
   </div>
+  {showSummary&&exam&&<ResultSummary exam={exam} grade={grade} group={group}
+   groupLabel={(groupOptions.find(([v])=>v===group)||[])[1]} subjectId={summarySubjectId}
+   subjectLabel={subjectChoices.find(x=>x.id===subjectId)?.name} request={request} onClose={()=>setShowSummary(false)}/>}
   {locked&&<p className="alert">This result is published, so marks are locked. Unpublish it first to make changes.</p>}
   {someLocked&&<p className="alert">Students marked 🔒 have a published result; their marks are locked until unpublished.</p>}
   {error&&<p className="alert error" role="alert">{error}</p>}
   {saved&&<p className="alert" role="status"><Check size={14}/> {saved}</p>}
   
-  {!examId?<p className="empty">Select an exam</p>:!rows.length?<p className="empty">No students in this class or group.</p>:<>
+  {!examId?<p className="empty">Select an exam</p>:grade==="all"?<p className="empty">Select a class to enter marks.</p>:!rows.length?<p className="empty">No students in this class or group.</p>:<>
    <div className="hmrs-sheet-scroll" role="region" tabIndex={0} aria-label="Marks spreadsheet" aria-busy={loading} ref={tableRef}>
     {loading&&<div className="hmrs-grid-refresh" role="status">Loading marks for selected exam…</div>}
     <table className="hmrs-sheet-table"><thead><tr>

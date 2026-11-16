@@ -499,16 +499,13 @@ export default function DashboardPortal() {
           if(result&&examId===item.id)await changeExam("");
          }}/>}
        {tab==="marks"&&<>
-        <div className="hmrs-results-page-head">
-         <div><h2>Marks</h2><p>Select an exam, class and group to enter marks or review results.</p></div>
-        </div>
-        <div className="hmrs-marks-mode" role="group" aria-label="Marks entry mode">
+        <div className="hmrs-marks-toolbar"><div className="hmrs-marks-mode" role="group" aria-label="Marks entry mode">
          <button className={"btn "+(markMode==="grid"?"primary":"")} type="button" onClick={()=>setMarkMode("grid")}>Class Marks (Excel)</button>
          <button className={"btn "+(markMode==="individual"?"primary":"")} type="button" onClick={()=>setMarkMode("individual")}>Individual Result</button>
         </div>
         {actor.role==="principal"&&<ResultPublishControls exams={exams} examId={examId}
          students={students} selectedStudent={selectedStudent} mode={markMode} request={request} mutate={mutate} working={working}
-           onDelete={undefined} onPublicationChange={()=>setPublicationTick(t=>t+1)} onStatusChange={setIndividualPublished}/> }
+           onDelete={undefined} onPublicationChange={()=>setPublicationTick(t=>t+1)} onStatusChange={setIndividualPublished}/> }</div>
         {markMode==="grid"?<ResultEntryGrid exams={exams} examId={examId} onExamChange={changeExam}
           students={students} actor={actor} request={request} mutate={mutate} working={working} publicationTick={publicationTick}/>:
          <>
