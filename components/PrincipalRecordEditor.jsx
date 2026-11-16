@@ -27,7 +27,7 @@ const applicantFields=[
  "previousSchool","previousClass","previousResult","paymentMethod","paymentReference"
 ];
 const defaults={
- science:{elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"},
+ science:{elective:"agriculture",fourthSubject:"agriculture",optionalId:"agriculture"},
  business:{elective:"agriculture",fourthSubject:"agriculture",optionalId:"agriculture"},
  humanities:{elective:"civics",fourthSubject:"agriculture",optionalId:"agriculture"}
 };

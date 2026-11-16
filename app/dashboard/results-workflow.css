@@ -534,3 +534,13 @@
  box-shadow:0 4px 15px #12352a12;border-radius:6px;color:#226e5c;font-size:12px;font-weight:750;
  text-align:center;pointer-events:auto}
 @media print{.hmrs-grid-refresh{display:none!important}}
+
+/* Failed mark cells: soft red, visible on screen and in print */
+.hmrs-sheet .hmrs-sheet-table td.hmrs-cell-fail,
+.hmrs-sheet .hmrs-sheet-table tbody tr:hover td.hmrs-cell-fail{background:#fde4e4!important;box-shadow:inset 0 0 0 1px #f2b8b8}
+.hmrs-sheet .hmrs-sheet-table td.hmrs-cell-fail input{color:#a32020;font-weight:700}
+@media print{
+ body.hmrs-print-sheet .hmrs-sheet-table td.hmrs-cell-fail{background:#fbdcdc!important;
+  -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ body.hmrs-print-sheet .hmrs-sheet-table td.hmrs-cell-fail input{color:#a32020!important;-webkit-text-fill-color:#a32020!important;font-weight:700!important}
+}

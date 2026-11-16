@@ -78,7 +78,7 @@ test("higher math in grades 9 and 10 has the same CQ, MCQ and practical breakdow
 
 test("higher math mark submission requires and validates practical marks", () => {
   for (const grade of [9, 10]) {
-    const student = { grade, group: "science", elective: "higher-math" };
+    const student = { grade, group: "science", elective: "higher-math", optionalId: "higher-math" };
     assert.throws(() => validateMarkForStudent(student, "higher-math", { cq: 50, mcq: 25 }), /নম্বর সঠিক নয়/);
     assert.throws(() => validateMarkForStudent(student, "higher-math", { cq: 50, mcq: 25, practical: 26 }), /নম্বর সঠিক নয়/);
     const result = validateMarkForStudent(student, "higher-math", { cq: 40, mcq: 20, practical: 20 });

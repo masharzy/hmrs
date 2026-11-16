@@ -19,11 +19,12 @@ test("humanities Economics students keep Economics, not Civics",()=>{
  assert.ok(TEACHER_SUBJECT_IDS.has("economics"),"teachers can be assigned Economics");
 });
 
-test("old science records use their stored elective as the 4th subject",()=>{
+test("science without an explicit 4th subject defaults to Agricultural Studies",()=>{
  const base={grade:10,group:"science",roll:1};
- assert.equal(selectedFourthSubject({...base,elective:"higher-math"}),"higher-math");
- assert.equal(selectedFourthSubject({...base,elective:"agriculture"}),"agriculture");
+ assert.equal(selectedFourthSubject(base),"agriculture");
+ assert.equal(selectedFourthSubject({...base,elective:"higher-math"}),"agriculture");
  assert.equal(selectedFourthSubject({...base,elective:"higher-math",optionalId:"biology"}),"biology","explicit choice wins");
+ assert.equal(selectedFourthSubject({...base,optionalSubject:"higher-math"}),"higher-math");
 });
 
 test("principal editor shows Civics/Economics for humanities and keeps it on 4th-subject change",()=>{
@@ -36,4 +37,29 @@ test("teacher marks sheet refreshes server GPA after auto-save",()=>{
  const grid=readFileSync("components/ResultEntryGrid.jsx","utf8");
  assert.match(grid,/function refreshServerGpa\(\)/);
  assert.match(grid,/if\(savedCount&&actor\?\.role!=="principal"\)refreshServerGpa\(\);/);
+});
+
+import {failedPartKeys,getSubjects} from "../lib/academic.js";
+const subj=(g,id,grp)=>getSubjects(g,grp).find(s=>s.id===id);
+test("failed mark cells are detected with the same pass rules",()=>{
+ const math=subj(9,"math","science");
+ assert.deepEqual([...failedPartKeys(math,{cq:22})],["cq"],"written below 23 flags as soon as entered");
+ assert.deepEqual([...failedPartKeys(math,{cq:23,mcq:10})],[]);
+ assert.deepEqual([...failedPartKeys(math,{cq:"",mcq:9})],["mcq"]);
+ const phy=subj(10,"physics","science");
+ assert.deepEqual([...failedPartKeys(phy,{cq:40,mcq:20,practical:7})],["practical"]);
+ const bangla=subj(10,"bangla","science");
+ assert.deepEqual([...failedPartKeys(bangla,{firstMcq:5})],[],"combined section waits for both papers");
+ assert.deepEqual([...failedPartKeys(bangla,{firstCq:40,firstMcq:14,secondCq:10,secondMcq:5})].sort(),["firstMcq","secondMcq"]);
+ const eng=subj(8,"english");
+ assert.deepEqual([...failedPartKeys(eng,{first:40,second:9})].sort(),["first","second"]);
+ const ict=subj(7,"ict");
+ assert.deepEqual([...failedPartKeys(ict,{cq:3,mcq:5,practical:8})].sort(),["cq","mcq","practical"],"components pass but 16/50 < 33%");
+});
+test("marks register prints landscape and keeps fail colour in print",()=>{
+ const grid=readFileSync("components/ResultEntryGrid.jsx","utf8");
+ const css=readFileSync("app/dashboard/results-workflow.css","utf8");
+ assert.match(grid,/@page\{size:landscape/);
+ assert.match(grid,/hmrs-cell-fail/);
+ assert.match(css,/td\.hmrs-cell-fail\{background:#fbdcdc!important;[\s\S]*print-color-adjust:exact/);
 });

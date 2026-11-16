@@ -78,7 +78,7 @@ export default function DashboardPortal() {
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
  const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
  const photoUploadInput=useRef(null);
- const [studentSubject,setStudentSubject]=useState({group:"science",elective:"higher-math",fourthSubject:"agriculture",optionalId:"biology"});
+ const [studentSubject,setStudentSubject]=useState({group:"science",elective:"agriculture",fourthSubject:"agriculture",optionalId:"agriculture"});
 
  async function request(resource,opts){
   const auth=firebaseAuth(),u=auth.currentUser;if(!u)throw Error("Sign in required");

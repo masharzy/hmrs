@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, RefreshCw } from "lucide-react";
-import { getStudentSubjects,evaluateTranscript } from "../lib/academic";
+import { getStudentSubjects,evaluateTranscript,failedPartKeys } from "../lib/academic";
 import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { toAsciiDigits } from "../lib/bangla-numbers";
@@ -89,7 +89,14 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   if(!rows.length||!examId||loading)return;
   if((entries.length||savingRef.current)&&!window.confirm("Some recent changes have not finished auto-saving. Continue printing?"))return;
   document.body.classList.add("hmrs-print-sheet");
-  const restore=()=>{document.body.classList.remove("hmrs-print-sheet");window.removeEventListener("afterprint",restore)};
+  // Force landscape for the whole-class register (named pages are ignored for
+  // the absolutely positioned sheet, so the browser fell back to portrait).
+  const orientation=document.createElement("style");
+  orientation.id="hmrs-print-landscape";
+  orientation.textContent="@page{size:landscape;margin:5mm}";
+  document.getElementById("hmrs-print-landscape")?.remove();
+  document.head.appendChild(orientation);
+  const restore=()=>{document.body.classList.remove("hmrs-print-sheet");orientation.remove();window.removeEventListener("afterprint",restore)};
   window.addEventListener("afterprint",restore);
   requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
  }
@@ -184,6 +191,12 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
      </tr><tr>{displayed.flatMap(g=>g.parts.map(part=><th key={g.id+":"+part.key}>{part.label}</th>))}</tr></thead>
      <tbody>{rows.map((student,index)=>{
        const own=subjectsByStudent.get(student.id)||[];
+       const failCache=new Map();
+       const failsFor=subject=>{
+        if(!failCache.has(subject.id)){const key=keyFor(student.id,subject.id);
+         failCache.set(subject.id,failedPartKeys(subject,{...(byKey.get(key)||{}),...(edits[key]||{})}));}
+        return failCache.get(subject.id);
+       };
        let col=-1;
        return <tr key={student.id}>
         <td className="hmrs-sheet-sticky hmrs-sheet-roll">{enNumber(student.roll)}</td>
@@ -193,7 +206,9 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
          const valid=subject?.parts.find(p=>p.key===part.key);
          if(!valid)return <td className="hmrs-sheet-na" key={g.id+":"+part.key}>—</td>;
          const touched=Object.prototype.hasOwnProperty.call(edits[keyFor(student.id,g.subjectId)]||{},part.key);
-         return <td key={g.id+":"+part.key} className={touched?"hmrs-sheet-changed":""}>
+         const failed=failsFor(subject).has(part.key);
+         return <td key={g.id+":"+part.key} className={[touched?"hmrs-sheet-changed":"",failed?"hmrs-cell-fail":""].filter(Boolean).join(" ")}
+          title={failed?"Fail — below pass mark":undefined}>
           <input data-sheet-row={index} data-sheet-col={column} aria-label={student.name+" — "+g.name+" — "+part.label}
            value={scoreFor(student,g,part)} onChange={e=>put(student,g,part,e.target.value)}
            onKeyDown={e=>moveCell(e,index,column)} inputMode="decimal" disabled={locked||loading}
