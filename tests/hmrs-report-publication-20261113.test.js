@@ -43,7 +43,7 @@ test("class 6-8 uses their actual core subject set without an invented optional 
  assert.equal(report.optionalId,null);
  assert.equal(report.withoutFourthGpa,5);assert.equal(report.withFourthGpa,5);
 });
-test("subject-specific highest and GPA-first rank for matching class and group only",()=>{
+test("subject-specific highest and total-marks rank for matching class and group only",()=>{
  const s2={...student,id:"s2",roll:2,name:"ফারিয়া"};
  const s3={...student,id:"s3",group:"business",roll:1,name:"শিলা"};
  const mk=allMarks(student);

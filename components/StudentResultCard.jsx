@@ -18,7 +18,8 @@ export default function StudentResultCard({exam,result,metrics,marks,onPrint,isA
    <div><small>GPA (without 4th)</small><b>{g(result.withoutFourthGpa)}</b></div>
    <div><small>GPA (with 4th)</small><b>{g(result.withFourthGpa)}</b></div>
    <div><small>Grade</small><b>{result.letter}</b></div>
-   <div><small>Position (Class / Group)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"Not ranked"}</b></div>
+   <div><small>Overall Position (by total marks)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"Not ranked"}</b></div>
+   <div><small>Merit Position (passed students)</small><b>{metrics?.meritRank?n(metrics.meritRank)+" / "+n(metrics.meritOf):"—"}</b></div>
   </div>
   {!result.complete&&<p className="hmrs-result-not-ready"><AlertTriangle size={16}/>
    Missing entries count as 0 for provisional GPA. This result is incomplete.</p>}

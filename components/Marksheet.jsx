@@ -38,7 +38,8 @@ export default function Marksheet({student,marks,exam,printId="mark-print",repor
    <div><small>GPA (without 4th)</small><b>{gp(result.withoutFourthGpa)} / 5.00</b></div>
    <div><small>GPA (with 4th)</small><b>{gp(result.withFourthGpa)} / 5.00</b></div>
    <div><small>Result</small><b>{result.letter} {result.passed?"· Pass":"· Fail"}</b></div>
-   <div><small>Merit Position (Class / Group)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"—"}</b></div>
+   <div><small>Overall Position (Class / Group)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"—"}</b></div>
+   <div><small>Merit Position (Passed)</small><b>{metrics?.meritRank?n(metrics.meritRank)+" / "+n(metrics.meritOf):"—"}</b></div>
   </div>
   {!result.complete&&<div className="hmrs-mark-missing">Provisional — missing marks are calculated as zero.</div>}
   <div className="hmrs-mark-signatures"><span>Class Teacher Signature</span><span>Head Teacher Signature</span></div>
