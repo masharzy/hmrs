@@ -73,7 +73,7 @@ test("only one visible fourth selector in admission, student edit and result por
  assert.doesNotMatch(editor,/fields.push\("elective","fourthSubject"/);
  const api=source("app/api/portal/route.js");
  assert.match(api,/getStudentSubjects\(student\)/);
- assert.match(api,/fourthSubjectSelection\(group,choice\)/);
+ assert.match(api,/fourthSubjectSelection\(group,choice,elective\)/);
 });
 test("teacher modal uses accessible pressed multi-select cards, not native checkbox rows",()=>{
  const ui=source("components/AccountManager.jsx");

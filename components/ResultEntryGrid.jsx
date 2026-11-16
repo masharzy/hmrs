@@ -32,7 +32,8 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const [sheet,setSheet]=useState([]),[edits,setEdits]=useState({}),[serverGpa,setServerGpa]=useState({});
  const [loading,setLoading]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState("");
  const [attempt,setAttempt]=useState(0);
- const savingRef=useRef(false),tableRef=useRef(null);
+ const savingRef=useRef(false),tableRef=useRef(null),examIdRef=useRef("");
+ examIdRef.current=examId+"|"+grade;
  const exam=exams.find(e=>e.id===examId);
  const scopedGrade=examScopeGrade(exam);
  useEffect(()=>{if(scopedGrade&&Number(grade)!==scopedGrade){setGrade(String(scopedGrade));setGroup("");}},[scopedGrade,grade]);
@@ -99,6 +100,12 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   const input=tableRef.current?.querySelector('input[data-sheet-row="'+row+'"][data-sheet-col="'+col+'"]');
   if(input){event.preventDefault();input.focus();input.select()}
  }
+ function refreshServerGpa(){
+  const requested=examId+"|"+grade;
+  request("marks",{params:"examId="+encodeURIComponent(examId)+"&grade="+encodeURIComponent(grade)})
+   .then(result=>{if(requested===examIdRef.current)setServerGpa(result.gpaByStudent||{})})
+   .catch(()=>{});
+ }
  async function save(){
   if(!examId||loading||working||locked||savingRef.current)return;
   const valid=pendingMarkBatch(edits,new Map(rows.map(s=>[s.id,s])),subjectsByStudent);
@@ -130,6 +137,9 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
    }
    if(valid.invalid.length)setError(valid.invalid[0].reason);
    else setSaved("All changes saved");
+   // Teachers see a server-computed GPA (it needs subjects they cannot view);
+   // refresh it after saving so the GPA column is never stale.
+   if(savedCount&&actor?.role!=="principal")refreshServerGpa();
   }catch(e){setError("Auto-save failed: "+e.message+" · Changes kept locally. Retry when ready.")}
   finally{
    savingRef.current=false;setSending(false);

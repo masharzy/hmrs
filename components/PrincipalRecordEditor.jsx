@@ -15,7 +15,7 @@ const labels={
  motherName:"Mother's Name",motherPhone:"Mother's Phone",guardianAddress:"Guardian Address",
  previousSchool:"Previous School",previousClass:"Previous Class",
  previousResult:"Previous Result",paymentMethod:"Payment Method",paymentReference:"Payment Reference",
- elective:"Elective Subject",fourthSubject:"Fourth Subject",optionalId:"4th Subject"
+ elective:"Civics / Economics",fourthSubject:"Fourth Subject",optionalId:"4th Subject"
 };
 const studentFields=[
  "name","grade","roll","group","phone","dob","birthRegistration","gender",
@@ -69,6 +69,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,ca
  const [resetPin,setResetPin]=useState("");
  const [secondaryPin,setSecondaryPin]=useState(""),[removeSecondary,setRemoveSecondary]=useState(false);
  const fields=(isStudent?studentFields:applicantFields).filter(key=>!["group","requestedRoll","optionalSubject"].includes(key)||Number(values.grade)>=9);
+ if(isStudent&&Number(values.grade)>=9&&values.group==="humanities")fields.push("elective");
  if(isStudent&&Number(values.grade)>=9)fields.push("optionalId");
  const change=(key,value)=>setValues(old=>{
   const next={...old,[key]:value};
@@ -77,7 +78,7 @@ export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,ca
    else if(!groupNames[next.group]){next.group="science";Object.assign(next,defaults.science);}
   }
   if(key==="group"&&defaults[value])Object.assign(next,defaults[value]);
-  if(key==="optionalId"&&next.group&&Number(next.grade)>=9)Object.assign(next,fourthSubjectSelection(next.group,value));
+  if(key==="optionalId"&&next.group&&Number(next.grade)>=9)Object.assign(next,fourthSubjectSelection(next.group,value,next.elective));
 
   return next;
  });

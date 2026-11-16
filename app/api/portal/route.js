@@ -324,7 +324,7 @@ export async function POST(req) {
         return fail("এই শ্রেণির শিক্ষার্থীর তথ্য পরিবর্তনের অনুমতি নেই",403);
       if (next.grade >= 9) {
         let derived;
-        try{derived=fourthSubjectSelection(next.group,selectedFourthSubject(next))}
+        try{derived=fourthSubjectSelection(next.group,selectedFourthSubject(next),next.elective)}
         catch{return fail("শ্রেণি ও বিভাগের ৪র্থ বিষয় সঠিক নয়");}
         Object.assign(next,derived);
       }
@@ -868,9 +868,9 @@ export async function POST(req) {
       needRole(actor, ["principal", "class_teacher"]);
       const student = await studentFor(actor, cleanText(body.studentId, 120));
       if (student.grade < 9) return fail("শুধু ৯ম ও ১০ম শ্রেণির জন্য");
-      const group=body.group||student.group, choice=body.optionalId;
+      const group=body.group||student.group, choice=body.optionalId, elective=body.elective||student.elective;
       let subjectFields;
-      try{subjectFields=fourthSubjectSelection(group,choice)}
+      try{subjectFields=fourthSubjectSelection(group,choice,elective)}
       catch{return fail("বিভাগ অনুযায়ী শুধু সঠিক ৪র্থ বিষয় নির্বাচন করুন",400)}
       const subjects=getStudentSubjects({...student,group,...subjectFields});
       if(!subjects.some(s=>s.id===choice))return fail("এই শিক্ষার্থীর ৪র্থ বিষয়টি প্রযোজ্য নয়",400);

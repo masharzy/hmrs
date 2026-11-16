@@ -304,7 +304,7 @@ export default function DashboardPortal() {
  function chooseStudent(id){
   setSelectedStudent(id);setMarkSubject("");setMarkScores({});
   const s=students.find(t=>t.id===id);
-  if(s&&Number(s.grade)>=9)setStudentSubject({group:s.group, ...fourthSubjectSelection(s.group,selectedFourthSubject(s))});
+  if(s&&Number(s.grade)>=9)setStudentSubject({group:s.group, ...fourthSubjectSelection(s.group,selectedFourthSubject(s),s.elective)});
  }
  function chooseSubject(id){
   setMarkSubject(id);setMarkScores(resultMap[id]||{});
