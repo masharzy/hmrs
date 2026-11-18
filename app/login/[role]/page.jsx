@@ -20,6 +20,8 @@ export default function Login(){
  const {role}=useParams(), router=useRouter();
  const active=roles.find(v=>v.key===role);
  const [phone,setPhone]=useState(""),[pin,setPin]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [studentIdentityRequired,setStudentIdentityRequired]=useState(false);
+ const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState(""),[studentRoll,setStudentRoll]=useState("");
  const [device,setDevice]=useState(null),[recognized,setRecognized]=useState(null),[lockedUntil,setLockedUntil]=useState(0);
  useEffect(()=>{fetch("/api/auth/device",{credentials:"same-origin",cache:"no-store"}).then(r=>r.json()).then(v=>{setDevice(v.device);setLockedUntil(v.lockedUntil||0)}).catch(()=>{});},[]);
  async function recognize(value){
@@ -36,10 +38,20 @@ export default function Login(){
   e.preventDefault();setBusy(true);setError("");
   try{
    if(isLocked)throw Error("এই ডিভাইস ১২ ঘণ্টার জন্য লক রয়েছে।");
-   const response=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone,pin,role}),cache:"no-store"});
+   if(role==="student"&&studentIdentityRequired&&(!studentGrade||!studentRoll.trim()||
+      (Number(studentGrade)>=9&&!studentGroup)))throw Error("নিজের শ্রেণি, বিভাগ ও রোল লিখুন");
+   const payload={phone,pin,role};
+   if(role==="student"&&studentIdentityRequired)Object.assign(payload,{
+     grade:studentGrade,group:studentGroup,roll:studentRoll
+   });
+   const response=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},
+     credentials:"same-origin",body:JSON.stringify(payload),cache:"no-store"});
    const body=await response.json();
    if(!response.ok){
      if(body.lockedUntil)setLockedUntil(body.lockedUntil);
+     if(body.code==="student-selection-required"){
+       setStudentIdentityRequired(true);setRecognized(null);
+     }
      throw Error(body.error||"লগইন করা যায়নি");
    }
    await signInWithCustomToken(firebaseAuth(),body.customToken);
@@ -59,7 +71,7 @@ export default function Login(){
        <p className="text-center muted text-sm mb-6">মোবাইল নম্বর এবং ৫ সংখ্যার PIN দিয়ে প্রবেশ করুন।</p>
        <div className="portal-switch" aria-label="পোর্টাল নির্বাচন">
          {roles.map(v=><Link key={v.key} href={"/login/"+v.key} aria-current={role===v.key?"page":undefined}
-            className={"portal-option "+(role===v.key?"selected":"")} onClick={()=>{setError("");setPin("");}}>
+            className={"portal-option "+(role===v.key?"selected":"")} onClick={()=>{setError("");setPin("");setStudentIdentityRequired(false);}}>
            <v.icon size={18}/><span>{v.title}</span>
          </Link>)}
        </div>
@@ -67,9 +79,32 @@ export default function Login(){
          <label className="field">মোবাইল নম্বর
            <div className="phone-input-wrap"><Smartphone size={19} color="#71869a"/>
              <input required type="tel" inputMode="tel" autoComplete="tel-national"
-               name="phone" value={phone} onChange={e=>{setPhone(e.target.value);setRecognized(null)}} onBlur={e=>recognize(e.target.value)}
+               name="phone" value={phone} onChange={e=>{setPhone(e.target.value);setRecognized(null);setStudentIdentityRequired(false)}} onBlur={e=>recognize(e.target.value)}
                placeholder="01712345678 অথবা +8801712345678" maxLength={20}/></div>
          </label>
+         {role==="student"&&studentIdentityRequired&&<div className="hmrs-family-student-login">
+          <p className="muted text-xs">একই নম্বরে ভাইবোনের একাধিক অ্যাকাউন্ট আছে। নিজের শ্রেণি ও রোল নির্বাচন করুন; প্রত্যেকের PIN আলাদা থাকতে পারে।</p>
+          <div className="form-grid">
+           <label className="field">শ্রেণি
+            <select value={studentGrade} required onChange={e=>{setStudentGrade(e.target.value);setStudentGroup("")}}>
+             <option value="">শ্রেণি নির্বাচন করুন</option>
+             {[6,7,8,9,10].map(g=><option value={g} key={g}>Class {g}</option>)}
+            </select>
+           </label>
+           {Number(studentGrade)>=9&&<label className="field">বিভাগ
+            <select value={studentGroup} required onChange={e=>setStudentGroup(e.target.value)}>
+             <option value="">বিভাগ নির্বাচন করুন</option>
+             <option value="science">Science</option>
+             <option value="business">Business Studies</option>
+             <option value="humanities">Humanities</option>
+            </select>
+           </label>}
+           <label className="field">রোল
+            <input type="text" inputMode="numeric" value={studentRoll} required maxLength={4}
+             onChange={e=>setStudentRoll(e.target.value)} placeholder="নিজের রোল"/>
+           </label>
+          </div>
+         </div>}
          {recognized&&<div className="device-recognition"><ShieldCheck size={18}/><div><strong>{recognized.name}</strong><p className="text-xs mb-0">এই ব্রাউজারে আগে {roles.find(r=>r.key===recognized.role)?.title||"ব্যবহারকারী"} হিসেবে লগইন করেছেন</p></div></div>}
          {device&&<div className="text-xs muted">বর্তমান ডিভাইস: {device.label} · #{device.id}</div>}
          {isLocked&&<div className="alert error" role="alert">এই ডিভাইস থেকে {new Date(lockedUntil).toLocaleString("bn-BD",{dateStyle:"medium",timeStyle:"short"})} পর্যন্ত লগইন বন্ধ থাকবে।</div>}

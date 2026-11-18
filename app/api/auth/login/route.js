@@ -1,5 +1,6 @@
 import { adminAuth, db } from "../../../../lib/firebase-admin";
 import { normalizePhone, normalizePin, verifyPin } from "../../../../lib/phone-pin";
+import {studentPhoneOwners,studentLoginIdentity,sameLoginIdentity} from "../../../../lib/student-phone-sharing.js";
 import { verifyOrigin } from "../../../../lib/server-auth";
 import {
  deviceFromRequest,deviceCookie,banCookie,currentDeviceBan,clearBanCookie,
@@ -28,7 +29,35 @@ export async function POST(req){
     return reply(id,{error:"সঠিক মোবাইল নম্বর ও ৫ সংখ্যার PIN দিন"},400);
   const store=db(),deviceRef=store.collection("loginDevices").doc(id);
   const mapping=await store.collection("loginPhones").doc(phone).get();
-  const uid=mapping.exists?mapping.data()?.uid:null;
+  const owners=mapping.exists?studentPhoneOwners(mapping.data()):[];
+  const shared=role==="student"&&owners.length>1;
+  let uid=mapping.exists?mapping.data()?.uid:null;
+  if(shared){
+    // Never use only phone/PIN to guess which sibling owns the session:
+    // two children might intentionally have the same five-digit PIN.
+    const identity=studentLoginIdentity(body);
+    if(!identity)return reply(id,{error:"এই নম্বরে একাধিক শিক্ষার্থী আছে। নিজের শ্রেণি, বিভাগ (যদি থাকে) ও রোল দিন।",
+      code:"student-selection-required"},409);
+    const candidates=await Promise.all(owners.map(async candidateUid=>{
+      const owner=await store.collection("users").doc(candidateUid).get();
+      if(!owner.exists||owner.data()?.role!=="student")return null;
+      const studentId=owner.data()?.studentId;
+      let profile=null;
+      if(studentId){
+        const doc=await store.collection("students").doc(studentId).get();
+        profile=doc.exists?doc.data():null;
+      }else{
+        // Compatibility with student accounts migrated before studentId was attached.
+        const found=await store.collection("students").where("uid","==",candidateUid).limit(2).get();
+        profile=found.size===1?found.docs[0].data():null;
+      }
+      return profile&&!profile.deleting&&sameLoginIdentity(profile,identity)?candidateUid:null;
+    }));
+    const matches=candidates.filter(Boolean);
+    if(matches.length!==1)return reply(id,{error:"মোবাইল নম্বর, শ্রেণি, বিভাগ, রোল বা PIN সঠিক নয়",
+      code:"invalid-credentials"},401);
+    uid=matches[0];
+  }
   const accountRef=uid?store.collection("loginSecurity").doc(uid):null;
   const userRef=uid?store.collection("users").doc(uid):null;
   const credRef=uid?store.collection("loginCredentials").doc(uid):null;

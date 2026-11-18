@@ -1,5 +1,6 @@
 import { db } from "../../../../lib/firebase-admin";
 import { normalizePhone } from "../../../../lib/phone-pin";
+import {isSharedStudentPhone} from "../../../../lib/student-phone-sharing.js";
 import { deviceFromRequest,deviceCookie,currentDeviceBan,describeDevice,publicDeviceId } from "../../../../lib/login-security";
 export const runtime="nodejs",dynamic="force-dynamic";
 export async function GET(req){
@@ -9,8 +10,13 @@ export async function GET(req){
  let recognized=null;
  if(phone&&!bannedUntil){
   try{
-   const doc=await db().collection("deviceRecognitions").doc(device.id+"_"+phone).get();
-   if(doc.exists){const v=doc.data();recognized={name:v.name,role:v.role};}
+   const store=db();
+   const mapping=await store.collection("loginPhones").doc(phone).get();
+   // A family phone must not expose the name of the last sibling who used it.
+   if(!mapping.exists||!isSharedStudentPhone(mapping.data())){
+     const doc=await store.collection("deviceRecognitions").doc(device.id+"_"+phone).get();
+     if(doc.exists){const v=doc.data();recognized={name:v.name,role:v.role};}
+   }
   }catch{ /* Recognition is optional. */ }
  }
  return Response.json({
