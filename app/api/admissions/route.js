@@ -3,7 +3,8 @@ import { createApplicationEditToken, verifyApplicationEditToken, canApplicantEdi
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../../../lib/firebase-admin";
 import { fail, handleError, json, verifyOrigin } from "../../../lib/server-auth";
-import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
+import { normalizeAdmissionData, validateAdmission, firstInvalidStep, validateAdmissionPin } from "../../../lib/admission-validation";
+import {normalizePin,makePinCredential} from "../../../lib/phone-pin";
 
 export const runtime = "nodejs";
 export async function POST(req){
@@ -25,24 +26,33 @@ export async function POST(req){
    if(raw.action==="load"){
     const saved=existing.data();
     const fields=Object.keys(admissionSchema.shape).filter(key=>key!=="website");
-    return json({ok:true,applicationId:id,values:Object.fromEntries(fields.map(key=>[key,saved[key]??""]))});
+    // The PIN is never sent back to the browser, not even its salted hash.
+    return json({ok:true,applicationId:id,pinConfigured:!!saved.studentPinCredential?.hash,
+      values:Object.fromEntries(fields.map(key=>[key,saved[key]??""]))});
    }
    if(!raw.values || typeof raw.values!=="object" || Array.isArray(raw.values))return fail("পরিবর্তনের তথ্য সঠিক নয়");
    const normalized=normalizeAdmissionData(raw.values);
    const errors=validateAdmission(raw.values);
    if(Object.keys(errors).length)
     return json({error:"চিহ্নিত তথ্যগুলো সঠিকভাবে পূরণ করুন।",fieldErrors:errors,step:firstInvalidStep(errors)},422);
+   const pinIssue=validateAdmissionPin(raw.studentPin,{alreadySet:!!existing.data()?.studentPinCredential?.hash});
+   if(pinIssue)return json({error:"শিক্ষার্থীর PIN সঠিকভাবে দিন।",fieldErrors:{studentPin:pinIssue},step:2},422);
    const parsed=admissionSchema.safeParse(normalized);
    if(!parsed.success)return fail("আবেদনের তথ্য সঠিক নয়");
    if(parsed.data.website)return fail("আবেদনের তথ্য সঠিক নয়");
    const {website,...record}=parsed.data;
+   const newPin=normalizePin(raw.studentPin);
+   const freshCredential=newPin?makePinCredential(newPin):null;
    await store.runTransaction(async tx=>{
     const latest=await tx.get(ref);
     if(!latest.exists || !verifyApplicationEditToken(editToken,latest.data()?.editTokenHash))
      throw Object.assign(Error("এডিট লিংকটি সঠিক নয়"),{status:403});
     if(!canApplicantEdit(latest.data()))
      throw Object.assign(Error("আবেদন অনুমোদনের পর এডিট করা যায় না"),{status:409});
-    tx.update(ref,{...record,section:FieldValue.delete(),updatedAt:new Date().toISOString(),lastEditSource:"applicant"});
+    if(!freshCredential&&!latest.data()?.studentPinCredential?.hash)
+     throw Object.assign(Error("ভর্তির আবেদনে নিজের ৫ সংখ্যার PIN সেট করুন।"),{status:422});
+    tx.update(ref,{...record,...(freshCredential?{studentPinCredential:freshCredential}:{}),
+      section:FieldValue.delete(),updatedAt:new Date().toISOString(),lastEditSource:"applicant"});
    });
    return json({ok:true,applicationId:id,status:"pending",updated:true});
   }
@@ -62,10 +72,13 @@ export async function POST(req){
   }
   const data=parsed.data;
   if(data.website)return json({ok:true,message:"আবেদন গ্রহণ করা হয়েছে"});
+  const pinIssue=validateAdmissionPin(raw.studentPin);
+  if(pinIssue)return json({error:"নিজের লগইন PIN সেট করুন।",fieldErrors:{studentPin:pinIssue},step:2},422);
+  const studentPinCredential=makePinCredential(normalizePin(raw.studentPin));
   const {website,...saved}=data;
   const {token,tokenHash}=createApplicationEditToken();
   const doc=await db().collection("admissions").add({
-   ...saved,status:"pending",paymentStatus:"unverified",editTokenHash:tokenHash,
+   ...saved,studentPinCredential,status:"pending",paymentStatus:"unverified",editTokenHash:tokenHash,
    createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   });
   return json({ok:true,applicationId:doc.id,editToken:token,status:"pending"},201);
