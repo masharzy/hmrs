@@ -35,7 +35,8 @@ test("student selected PIN is hashed, and verification is per user",()=>{
 test("admission uses five separate PIN boxes and submits PIN only as a dedicated field",()=>{
  const form=read("app/admission/page.jsx"),input=read("components/PinInput.jsx");
  assert.match(form,/PinInput id="admission-studentPin"/);
- assert.match(form,/studentPin:\s*studentPin/);
+ assert.match(form,/values:form,studentPin/);
+ assert.match(form,/\\.\\.\\.form,studentPin/);
  assert.match(form,/validateAdmissionPin\(studentPin/);
  assert.match(input,/Array\.from\(\{length:5\}/);
  assert.match(input,/type="password"/);
