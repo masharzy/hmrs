@@ -8,7 +8,7 @@ import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine
 import { firebaseAuth } from "../lib/firebase-client";
 import { evaluateTranscript, getSubjects,FOURTH_SUBJECT_OPTIONS,fourthSubjectSelection,selectedFourthSubject } from "../lib/academic";
 import dynamic from "next/dynamic";
-import PinInput from "./PinInput";
+
 const Marksheet=dynamic(()=>import("./Marksheet"),{ssr:false});
 const SecurityCenter=dynamic(()=>import("./SecurityCenter"),{ssr:false});
 import DashboardShell, { DashboardSkeleton } from "./DashboardShell";
@@ -617,12 +617,15 @@ export default function DashboardPortal() {
 }
 
 function AdmissionApproval({item,mutate,busy,principal}){
- const [roll,setRoll]=useState(String(item.requestedRoll||"")),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||""),[pin,setPin]=useState("");
+ const [roll,setRoll]=useState(String(item.requestedRoll||"")),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||"");
  return <div className="flex flex-wrap gap-3 mt-4 items-end">
   <label className="field" style={{maxWidth:90}}>Roll <input value={roll} onChange={e=>setRoll(e.target.value)} inputMode="numeric" required/></label>
   <label className="field" style={{maxWidth:230}}>Login Phone <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+8801712345678" required/></label>
-  <PinInput label="Student PIN" value={pin} onChange={setPin}/>
-  <button className="btn sm primary" disabled={busy} onClick={()=>mutate("application.approve",{id:item.id,roll,phone,pin})}><Check size={14}/> Approve Admission</button>
+  <div className="hmrs-approval-pin-state">
+   <ShieldCheck size={17}/>
+   <span>{item.pinConfigured?"Student PIN set during admission":"Student PIN not set. Ask applicant to edit the pending application and set a 5-digit PIN."}</span>
+  </div>
+  <button className="btn sm primary" disabled={busy||!item.pinConfigured} onClick={()=>mutate("application.approve",{id:item.id,roll,phone})}><Check size={14}/> Approve Admission</button>
   <button className="btn sm danger" disabled={busy} onClick={()=>{if(confirm("Reject this application?"))mutate("application.reject",{id:item.id})}}><X size={14}/> Rejected</button>
   {principal&&item.paymentStatus!=="verified_manually"&&<button className="btn sm" disabled={busy} onClick={()=>{if(confirm("Have you verified the payment?"))mutate("payment.verify",{id:item.id})}}><CreditCard size={14}/> Payment Verified</button>}
  </div>;
