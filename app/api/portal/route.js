@@ -29,7 +29,7 @@ export const runtime = "nodejs";
 
 const iso = () => new Date().toISOString();
 const allowedStaff = ["teacher", "class_teacher", "principal"];
-const asDocs = snap => snap.docs.map(d => { const { section, editTokenHash, ...data } = d.data(); return { id: d.id, ...data }; });
+const asDocs = snap => snap.docs.map(d => { const { section, editTokenHash, studentPinCredential, ...data } = d.data(); return { id: d.id, ...data, ...(studentPinCredential ? { pinConfigured: !!studentPinCredential.hash } : {}) }; });
 const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
 
@@ -671,9 +671,11 @@ export async function POST(req) {
       if(application.status!=="pending")return fail("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে",409);
       const roll=toAsciiDigits(body.roll||application.requestedRoll||"");
       const phone=normalizePhone(body.phone||application.studentPhone||application.fatherPhone);
-      const pin=normalizePin(body.pin);
-      if(!/^[1-9][0-9]{0,3}$/.test(roll)||!pin||!phone)
-        return fail("রোল, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
+      if(!/^[1-9][0-9]{0,3}$/.test(roll)||!phone)
+        return fail("রোল ও মোবাইল নম্বর সঠিকভাবে দিন");
+      if(!/^[a-f0-9]{32}$/.test(application.studentPinCredential?.salt||"")||
+         !/^[a-f0-9]{128}$/.test(application.studentPinCredential?.hash||""))
+        return fail("আবেদনকারীর নিজের ৫ সংখ্যার PIN এখনো সেট করা হয়নি। আবেদন Edit লিংক থেকে PIN সেট করতে বলুন।",409);
       const roster=await store.collection("students").where("grade","==",Number(application.grade)).limit(950).get();
       const rosterStudents=asDocs(roster);
       const found=findApplicantRosterMatch(application,rosterStudents,roll);
@@ -723,9 +725,13 @@ export async function POST(req) {
         loginPending:false,importIncomplete:missing.length>0,missingFields:missing});
        tx.set(rollRef,{studentId,grade:selected.grade,group:selected.group,roll:selected.roll},{merge:true});
        tx.set(phoneRef,addStudentPhoneOwner(phoneNow.data(),newUser.uid));
-       tx.create(credentialRef,{...makePinCredential(pin),phone,createdAt:at});
+       const applicantPin=appNow.data()?.studentPinCredential;
+       if(!/^[a-f0-9]{32}$/.test(applicantPin?.salt||"")||
+          !/^[a-f0-9]{128}$/.test(applicantPin?.hash||""))
+         throw Object.assign(Error("আবেদনে PIN সেট করা হয়নি।"),{status:409});
+       tx.create(credentialRef,{...applicantPin,phone,createdAt:at});
        tx.create(userRef,{role:"student",name,phone,active:true,pinEnabled:true,studentId,createdAt:at});
-       tx.update(ref,{status:"approved",studentId,approvedBy:actor.uid,approvedAt:at,
+       tx.update(ref,{studentPinCredential:FieldValue.delete(),status:"approved",studentId,approvedBy:actor.uid,approvedAt:at,
         approvedRosterName:name,requestedRoll:String(roll)});
       });
       createdUid=null;
