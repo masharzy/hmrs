@@ -4,7 +4,7 @@ import { toAsciiDigits } from "../lib/bangla-numbers";
 
 const digits = text => toAsciiDigits(text).replace(/\D/g,"");
 
-export default function PinInput({ value="", onChange, disabled=false, label="5-digit PIN", autoFocus=false }){
+export default function PinInput({ value="", onChange, disabled=false, label="5-digit PIN", autoFocus=false, id, invalid=false }){
  const inputs=useRef([]);
  const pin=(value||"").slice(0,5);
  function write(index,text){
@@ -18,7 +18,7 @@ export default function PinInput({ value="", onChange, disabled=false, label="5-
    <div className="pin-label">{label}</div>
    <div className="pin-grid" role="group" aria-label={label}>
      {Array.from({length:5},(_,i)=><input
-       key={i} ref={el=>inputs.current[i]=el} type="password"
+       key={i} id={i===0?id:undefined} aria-invalid={invalid||undefined} ref={el=>inputs.current[i]=el} type="password"
        inputMode="numeric" pattern="[0-9]*" maxLength={1}
        autoComplete="off" autoFocus={autoFocus&&i===0}
        className="pin-cell" aria-label={"PIN digit "+toAsciiDigits(i+1)}
