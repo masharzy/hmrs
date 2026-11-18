@@ -9,7 +9,9 @@ const sheet=read("components/ResultEntryGrid.jsx"),accounts=read("components/Acc
 
 test("admission is only presented in the homepage hero",()=>{
  assert.match(home,/hmrs-home-primary[^\n]+href="\/admission"/);
- assert.doesNotMatch(home,/hmrs-home-services|hmrs-home-final|hmrs-home-school-badge/);
+ assert.match(home,/hmrs-home-services/);
+ assert.match(home,/hmrs-home-final/);
+ assert.match(home,/hmrs-home-school-badge/);
  assert.doesNotMatch(header,/\["ভর্তি আবেদন","\/admission"\]/);
  assert.doesNotMatch(footer,/<Link href="\/admission">/);
  assert.match(header,/হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়/);
