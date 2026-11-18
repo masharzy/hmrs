@@ -5,7 +5,8 @@ import { ArrowLeft, ArrowRight, Check, CheckCircle2, AlertCircle, X, GraduationC
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 import { toBanglaDigits, gradeLabel } from "../../lib/bangla-numbers";
-import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep } from "../../lib/admission-validation";
+import PinInput from "../../components/PinInput";
+import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep, validateAdmissionPin } from "../../lib/admission-validation";
 
 const initial={
  studentName:"",dob:"",gender:"male",grade:"6",group:"",requestedRoll:"",optionalSubject:"",
@@ -44,6 +45,8 @@ function AdmissionField({label,name,value,onChange,error,options,type="text",pla
 }
 export default function Admission(){
  const [form,setForm]=useState(initial);
+ const [studentPin,setStudentPin]=useState("");
+ const [pinConfigured,setPinConfigured]=useState(false);
  const [step,setStep]=useState(0);
  const [errors,setErrors]=useState({});
  const [toast,setToast]=useState("");
@@ -76,6 +79,7 @@ export default function Admission(){
    }).then(result=>{
      if(!active||seq!==requestSeq)return;
      setForm({...initial,...result.values,grade:String(result.values.grade),website:""});
+     setStudentPin("");setPinConfigured(!!result.pinConfigured);
      setEditId(id);setEditToken(token);setEditMode(true);setStep(0);
    }).catch(error=>{if(active&&seq===requestSeq)setEditLoadError(error.message)})
     .finally(()=>{if(active&&seq===requestSeq)setLoadingEdit(false)});
@@ -117,6 +121,7 @@ export default function Admission(){
  function next(e){
   e.preventDefault();
   const found=validateAdmissionStep(form,step);
+  if(step===2){const issue=validateAdmissionPin(studentPin,{alreadySet:editMode&&pinConfigured});if(issue)found.studentPin=issue}
   if(Object.keys(found).length){
    handleValidationFailed(found,"এই ধাপে "+toBanglaDigits(Object.keys(found).length)+"টি তথ্য ঠিক করতে হবে।");
    return;
@@ -128,6 +133,8 @@ export default function Admission(){
   e.preventDefault();
   if(saving)return;
   const found=validateAdmission(form);
+  const pinIssue=validateAdmissionPin(studentPin,{alreadySet:editMode&&pinConfigured});
+  if(pinIssue)found.studentPin=pinIssue;
   if(Object.keys(found).length){
    const invalidStep=firstInvalidStep(found);
    const stageErrors=Object.fromEntries(ADMISSION_FIELDS[invalidStep].filter(k=>found[k]).map(k=>[k,found[k]]));
@@ -136,7 +143,7 @@ export default function Admission(){
   }
   setSaving(true);setToast("");setErrors({});
   try{
-   const payload=editMode?{action:"update",applicationId:editId,editToken,values:form}:form;
+   const payload=editMode?{action:"update",applicationId:editId,editToken,values:form,studentPin}:{...form,studentPin};
    const response=await fetch("/api/admissions",{
     method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)
    });
@@ -156,7 +163,7 @@ export default function Admission(){
      if(!result.editToken)throw Error("আবেদন সংশোধনের লিংক তৈরি হয়নি। বিদ্যালয়ে যোগাযোগ করুন।");
      setEditToken(result.editToken);
    }
-   setApplicationId(result.applicationId);
+   setStudentPin("");setApplicationId(result.applicationId);
    window.scrollTo({top:0,behavior:"smooth"});
   }catch(error){
    setToast(error.message||"সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
@@ -254,6 +261,16 @@ export default function Admission(){
          </div>
          {errors.paymentMethod&&<p className="admission-field-error"><AlertCircle size={13}/>{errors.paymentMethod}</p>}
          <div className="admission-helper mt-3"><ShieldCheck size={17}/> এই ফর্মে এখনই টাকা কাটা হবে না। বিদ্যালয় কর্তৃপক্ষ পেমেন্ট যাচাই করবে।</div>
+        </div>
+        <div className="hmrs-admission-pin admission-wide">
+         <div className="hmrs-admission-pin-icon"><ShieldCheck size={21}/></div>
+         <div className="hmrs-admission-pin-content">
+          <h3>নিজের লগইন PIN সেট করুন</h3>
+          <p>{editMode&&pinConfigured?"আগে PIN সেট করা আছে। পরিবর্তন করতে চাইলে নতুন ৫ সংখ্যা লিখুন, না হলে ফাঁকা রাখুন।":"এখনই নিজের ৫ সংখ্যার PIN দিন। ভর্তি অনুমোদনের পর এই PIN দিয়েই লগইন করবেন।"}</p>
+          <PinInput id="admission-studentPin" label="Student Login PIN" value={studentPin} onChange={v=>{setStudentPin(v);setErrors(e=>({...e,studentPin:undefined}))}} invalid={!!errors.studentPin}/>
+          {errors.studentPin&&<p className="admission-field-error" role="alert"><AlertCircle size={14}/>{errors.studentPin}</p>}
+          <small><ShieldCheck size={13}/> PIN গোপন রাখা হবে। শিক্ষক বা প্রধান শিক্ষক এটি দেখতে পারবেন না।</small>
+         </div>
         </div>
        </div>}
        <input aria-hidden="true" tabIndex={-1} name="website" value={form.website} onChange={e=>change("website",e.target.value)} className="admission-honeypot" autoComplete="off"/>
