@@ -20,6 +20,7 @@ import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStude
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
 import { registerPhoneCredential } from "../../../lib/phone-accounts";
+import {studentPhoneOwners,addStudentPhoneOwner,removeStudentPhoneOwner} from "../../../lib/student-phone-sharing.js";
 import { cleanAssignedClasses, cleanTeachingSubjects } from "../../../lib/teacher-subjects";
 import { teacherAssignments, canManageSubject, canManageHomeroom, canViewGrade, studentVisibleForTeaching } from "../../../lib/staff-permissions.js";
 
@@ -260,10 +261,8 @@ async function removeStudentRecords(actor,id,store,action){
           store.collection("loginSecurity").doc(student.uid));
       }
       const phone=normalizePhone(student.phone||"");
-      if(phone&&student.uid){
-        const mapping=await store.collection("loginPhones").doc(phone).get();
-        if(mapping.exists&&mapping.data()?.uid===student.uid)refs.push(mapping.ref);
-      }
+      // A family phone may belong to several student accounts; never delete siblings' index.
+      // Update its ownership atomically after school records are removed.
       const rollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll,student.group));
       const oldRollRef=store.collection("studentRolls").doc(studentKey(student.grade,student.roll));
       const [ownedRoll,ownedLegacy]=await Promise.all([rollRef.get(),oldRollRef.get()]);
@@ -274,6 +273,15 @@ async function removeStudentRecords(actor,id,store,action){
         const batch=store.batch();
         for(const ref of unique.slice(i,i+400))batch.delete(ref);
         await batch.commit();
+      }
+      if(phone&&student.uid){
+        const phoneRef=store.collection("loginPhones").doc(phone);
+        await store.runTransaction(async tx=>{
+          const mapping=await tx.get(phoneRef);
+          if(!mapping.exists||!studentPhoneOwners(mapping.data()).includes(student.uid))return;
+          const remaining=removeStudentPhoneOwner(mapping.data(),student.uid);
+          if(remaining)tx.set(phoneRef,remaining);else tx.delete(phoneRef);
+        });
       }
       if(student.applicationId){
         const linked=store.collection("admissions").doc(student.applicationId);
@@ -390,7 +398,11 @@ export async function POST(req) {
         ]);
         if(!current.exists||current.data()?.deleting)throw Object.assign(Error("শিক্ষার্থী পাওয়া যায়নি"),{status:404});
         if(isNewRoll && newRoll.exists && newRoll.data()?.studentId!==id)throw Object.assign(Error("এই শ্রেণিতে রোলটি অন্য শিক্ষার্থীর"),{status:409});
-        if(newPhone?.exists && newPhone.data()?.uid!==old.uid)throw Object.assign(Error("লগইন মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
+        const ownerUid=newPhone?.exists?studentPhoneOwners(newPhone.data())[0]:null;
+        const ownerAccount=ownerUid&&ownerUid!==old.uid
+          ?await tx.get(store.collection("users").doc(ownerUid)):null;
+        if(newPhone?.exists&&ownerUid!==old.uid&&ownerAccount?.data()?.role!=="student")
+          throw Object.assign(Error("এই নম্বরটি শিক্ষার্থী ছাড়া অন্য ধরনের অ্যাকাউন্টে ব্যবহৃত হচ্ছে"),{status:409});
         const missingFields=incompleteStudentFields({...next,uid:old.uid});
         tx.update(studentRef,{...next,importIncomplete:missingFields.length>0,
          missingFields,loginPending:!old.uid,section:FieldValue.delete(),updatedAt:iso(),updatedBy:actor.uid});
@@ -399,8 +411,11 @@ export async function POST(req) {
         if(legacyRoll?.exists&&legacyRoll.data()?.studentId===id&&legacyRollRef.id!==newRollRef.id)tx.delete(legacyRollRef);
         if(userRef)tx.set(userRef,{name:next.name,phone:next.phone},{merge:true});
         if(phoneChanged&&old.uid) {
-          tx.set(newPhoneRef,{uid:old.uid,createdAt:iso()});
-          if(oldPhone?.exists&&oldPhone.data()?.uid===old.uid)tx.delete(oldPhoneRef);
+          tx.set(newPhoneRef,addStudentPhoneOwner(newPhone?.data(),old.uid));
+          if(oldPhone?.exists&&studentPhoneOwners(oldPhone.data()).includes(old.uid)){
+            const remaining=removeStudentPhoneOwner(oldPhone.data(),old.uid);
+            if(remaining)tx.set(oldPhoneRef,remaining);else tx.delete(oldPhoneRef);
+          }
           if(credential?.exists)tx.update(credRef,{phone:next.phone});
         }
         for(const record of historicMarks.docs)tx.update(record.ref,{grade:next.grade,section:FieldValue.delete()});
@@ -473,13 +488,16 @@ export async function POST(req) {
       const credentialRef=store.collection("loginCredentials").doc(user.uid);
       await store.runTransaction(async tx=>{
        const [latest,mapping]=await Promise.all([tx.get(studentRef),tx.get(phoneRef)]);
+       const ownerUid=mapping.exists?studentPhoneOwners(mapping.data())[0]:null;
+       const owner=ownerUid?await tx.get(store.collection("users").doc(ownerUid)):null;
        if(!latest.exists||latest.data()?.uid||latest.data()?.deleting||normalizePhone(latest.data()?.phone||"")!==phone)
          throw Object.assign(Error("শিক্ষার্থীর তথ্য পরিবর্তিত হয়েছে"),{status:409});
        const missing=incompleteStudentFields({...latest.data(),uid:"pending"});
        if(missing.length)throw Object.assign(Error("সব তথ্য পূরণ না হওয়ায় অ্যাকাউন্ট চালু করা যায়নি"),{status:409});
-       if(mapping.exists)throw Object.assign(Error("মোবাইল নম্বর অন্য অ্যাকাউন্টে ব্যবহৃত"),{status:409});
+       if(mapping.exists&&owner?.data()?.role!=="student")
+         throw Object.assign(Error("এই নম্বর শিক্ষার্থী ছাড়া অন্য ধরনের অ্যাকাউন্টে ব্যবহৃত"),{status:409});
        const now=iso();
-       tx.create(phoneRef,{uid:user.uid,createdAt:now});
+       tx.set(phoneRef,addStudentPhoneOwner(mapping.data(),user.uid));
        tx.create(credentialRef,{...makePinCredential(pin),phone,createdAt:now});
        tx.create(userRef,{role:"student",name:student.name,phone,active:true,pinEnabled:true,studentId:id,createdAt:now});
        tx.update(studentRef,{uid:user.uid,loginPending:false,importIncomplete:false,missingFields:[],updatedAt:now,updatedBy:actor.uid});
@@ -685,13 +703,16 @@ export async function POST(req) {
        const [appNow,studentNow,phoneNow,rollNow]=await Promise.all([
         tx.get(ref),tx.get(studentRef),tx.get(phoneRef),tx.get(rollRef)
        ]);
+       const ownerUid=phoneNow.exists?studentPhoneOwners(phoneNow.data())[0]:null;
+       const ownerAccount=ownerUid?await tx.get(store.collection("users").doc(ownerUid)):null;
        if(appNow.data()?.status!=="pending")throw Object.assign(Error("আবেদন ইতিমধ্যে নিষ্পত্তি হয়েছে"),{status:409});
        if(found.match){
         if(!studentNow.exists||studentNow.data()?.uid||studentNow.data()?.deleting||
           Number(studentNow.data()?.roll)!==Number(roll)||studentNow.data()?.group!==selected.group)
          throw Object.assign(Error("শিক্ষার্থীর অসম্পূর্ণ রেকর্ডটি পরিবর্তিত হয়েছে"),{status:409});
        }else if(studentNow.exists)throw Object.assign(Error("শিক্ষার্থী আগে থেকেই আছে"),{status:409});
-       if(phoneNow.exists)throw Object.assign(Error("এই লগইন মোবাইল অন্য অ্যাকাউন্টে ব্যবহৃত"),{status:409});
+       if(phoneNow.exists&&ownerAccount?.data()?.role!=="student")
+         throw Object.assign(Error("এই নম্বর শিক্ষার্থী ছাড়া অন্য ধরনের অ্যাকাউন্টে ব্যবহৃত"),{status:409});
        if(rollNow.exists&&rollNow.data()?.studentId!==studentId)
         throw Object.assign(Error("এই বিভাগে রোলটি অন্য শিক্ষার্থীর"),{status:409});
        const at=iso(),completed={...selected,uid:newUser.uid,updatedAt:at};
@@ -701,7 +722,7 @@ export async function POST(req) {
        else tx.create(studentRef,{...selected,uid:newUser.uid,due:0,createdAt:at,
         loginPending:false,importIncomplete:missing.length>0,missingFields:missing});
        tx.set(rollRef,{studentId,grade:selected.grade,group:selected.group,roll:selected.roll},{merge:true});
-       tx.create(phoneRef,{uid:newUser.uid,createdAt:at});
+       tx.set(phoneRef,addStudentPhoneOwner(phoneNow.data(),newUser.uid));
        tx.create(credentialRef,{...makePinCredential(pin),phone,createdAt:at});
        tx.create(userRef,{role:"student",name,phone,active:true,pinEnabled:true,studentId,createdAt:at});
        tx.update(ref,{status:"approved",studentId,approvedBy:actor.uid,approvedAt:at,
