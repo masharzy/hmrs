@@ -86,7 +86,24 @@ test("head-teacher register and student documents use shared F-count formatting"
  assert.match(grid,/studentRanks/);
  const comp=readFileSync("components/ResultSummary.jsx","utf8");
  assert.match(comp,/s\.failGroups\?\.length/);
- assert.match(comp,/Student Name/);
+ assert.match(comp,/hmrs-fail-cells/);
+ assert.match(comp,/bucket.students.map\(st=>/);
  const printed=readFileSync("components/Marksheet.jsx","utf8");
  assert.match(printed,/formatResultGpa\(result,"withFourthGpa"\)/);
+});
+
+test("scrollbar interaction does not dismiss the summary modal; fail groups are compact",()=>{
+ const comp=readFileSync("components/ResultSummary.jsx","utf8");
+ const css=readFileSync("app/dashboard/results-workflow.css","utf8");
+ assert.doesNotMatch(comp,/hmrs-summary-backdrop" onMouseDown=/);
+ assert.match(comp,/className="hmrs-summary-backdrop"/);
+ assert.match(comp,/onClick=\{onClose\}/);
+ assert.match(comp,/if\(e.key==="Escape"\)onClose\(\)/);
+ assert.doesNotMatch(comp,/Missing marks count as failed subjects/);
+ assert.doesNotMatch(comp,/hmrs-summary-fail-group/);
+ assert.match(comp,/hmrs-fail-compact/);
+ assert.match(comp,/hmrs-fail-cell/);
+ assert.match(comp,/<b>\{num\(st.roll\)\}<\/b><span>\{st.name\}<\/span>/);
+ assert.match(css,/hmrs-summary\{[^}]*overflow:auto/);
+ assert.match(css,/hmrs-fail-cells\{display:grid/);
 });
