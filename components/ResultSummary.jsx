@@ -63,6 +63,18 @@ function Overall({s}){
     <th>পাসের হার</th><th>GPA 5</th><th>GPA 4+</th><th>GPA 3+</th></tr></thead>
    <tbody>{s.rows.map(row)}{s.total&&row(s.total,s.rows.length)}</tbody>
   </table></div>
+  <h3>Failed Subjects per Student</h3>
+  <p className="hmrs-summary-note">Missing marks count as failed subjects. Fourth/optional subjects are excluded from F1, F2, F3…</p>
+  {s.failGroups?.length?s.failGroups.map(bucket=><section className="hmrs-summary-fail-group" key={bucket.count}>
+   <h4>{bucket.label} <span>· {bucket.students.length} student{bucket.students.length===1?"":"s"}</span></h4>
+   <div className="hmrs-summary-scroll"><table className="hmrs-xl hmrs-fail-list">
+    <thead><tr><th>Roll</th><th>Student Name</th></tr></thead>
+    <tbody>{bucket.students.map(st=><tr key={st.id}>
+     <td className="no">{num(st.roll)}</td><td className="label">{st.name}
+      <small className="hmrs-fail-scope">Class {st.grade}{st.group?" · "+(st.group==="business"?"Business Studies":st.group[0].toUpperCase()+st.group.slice(1)):""}</small>
+     </td></tr>)}</tbody>
+   </table></div>
+  </section>):<p className="hmrs-summary-note">No failed students in this selection.</p>}
   <h3>Subject-wise Fail</h3>
   <div className="hmrs-summary-scroll"><table className="hmrs-xl">
    <thead><tr><th>#</th><th>Subject</th>{s.columns.map(c=><th key={c}>{c}</th>)}<th>মোট ফেল</th><th>ফেলের হার</th></tr></thead>
@@ -79,13 +91,13 @@ function Overall({s}){
 function SubjectTable({s}){
  const row=(r,i)=><tr key={r.label+i} className={r.kind}>
   <td className="no">{r.kind==="total"?"Σ":i+1}</td><td className="label">{r.label}</td>
-  <td className={r.appeared?"":"zero"}>{r.appeared}</td><td className={r.pass?"":"zero"}>{r.pass}</td>
+  <td>{r.eligible}</td><td className={r.appeared?"":"zero"}>{r.appeared}</td><td className={r.pass?"":"zero"}>{r.pass}</td>
   <td className={r.fail?"fail":"zero"}>{r.fail}</td><td>{pct(r.passRate)}</td>
   {SUBJECT_GRADES.map(g=><td key={g} className={g==="F"&&r.grades[g]?"fail":r.grades[g]?"":"zero"}>{r.grades[g]}</td>)}</tr>;
  return <>
   <h3>{s.subjectName}</h3>
   <div className="hmrs-summary-scroll"><table className="hmrs-xl">
-   <thead><tr><th>#</th><th>Class / Group</th><th>পরীক্ষা দিয়েছে</th><th>পাস</th><th>ফেল</th><th>পাসের হার</th>
+   <thead><tr><th>#</th><th>Class / Group</th><th>মোট শিক্ষার্থী</th><th>পরীক্ষা দিয়েছে</th><th>পাস</th><th>ফেল</th><th>পাসের হার</th>
     {SUBJECT_GRADES.map(g=><th key={g}>{g}</th>)}</tr></thead>
    <tbody>{s.rows.map(row)}{s.total&&row(s.total,s.rows.length)}</tbody>
   </table></div>

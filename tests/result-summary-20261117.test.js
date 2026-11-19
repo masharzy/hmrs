@@ -24,8 +24,8 @@ test("all classes: class rows, 9–10 split into groups, cumulative GPA 5 / 4+ /
  const c6=s.rows[0];
  assert.deepEqual([c6.enrolled,c6.appeared,c6.pass,c6.fail,c6.gpa5,c6.gpa4,c6.gpa3],[2,2,1,1,1,1,1]);
  const c7=s.rows[1];assert.deepEqual([c7.gpa5,c7.gpa4,c7.gpa3],[0,1,1],"GPA 4.x counts in 4+ and 3+");
- const hum=s.rows.find(r=>r.label==="Humanities");assert.deepEqual([hum.enrolled,hum.appeared,hum.pass,hum.fail],[1,0,0,0]);
- assert.equal(s.total.enrolled,7);assert.equal(s.total.fail,2);
+ const hum=s.rows.find(r=>r.label==="Humanities");assert.deepEqual([hum.enrolled,hum.appeared,hum.pass,hum.fail],[1,0,0,1]);
+ assert.equal(s.total.enrolled,7);assert.equal(s.total.fail,3);
  assert.deepEqual(s.columns,["Class 6","Class 7","Class 8","Class 9","Class 10"]);
  const math=s.subjects.find(x=>x.subjectId==="math");
  assert.equal(math.per[0],1);assert.equal(math.per[2],null,"no class 8 students → —");
@@ -47,7 +47,7 @@ test("single group and single subject views",()=>{
  assert.deepEqual(allSci.rows.map(r=>r.label),["Class 9 · Science"],"class 6–8 excluded when a group is chosen");
  const math=buildResultSummary({students,marks,grade:"all",subjectId:"math"});
  assert.equal(math.mode,"subject");
- assert.equal(math.total.appeared,6);assert.equal(math.total.fail,1);assert.equal(math.total.grades["F"],1);
+ assert.equal(math.total.appeared,6);assert.equal(math.total.eligible,7);assert.equal(math.total.fail,2);assert.equal(math.total.grades["F"],2);
 });
 
 test("summary is wired to the marks page filters, principal only, printable in colour",()=>{

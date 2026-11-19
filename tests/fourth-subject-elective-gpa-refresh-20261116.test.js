@@ -33,10 +33,10 @@ test("principal editor shows Civics/Economics for humanities and keeps it on 4th
  assert.match(editor,/fourthSubjectSelection\(next\.group,value,next\.elective\)/);
 });
 
-test("teacher marks sheet refreshes server GPA after auto-save",()=>{
+test("marks sheet refreshes server GPA and ranking after auto-save for all staff",()=>{
  const grid=readFileSync("components/ResultEntryGrid.jsx","utf8");
  assert.match(grid,/function refreshServerGpa\(\)/);
- assert.match(grid,/if\(savedCount&&actor\?\.role!=="principal"\)refreshServerGpa\(\);/);
+ assert.match(grid,/if\(savedCount\)refreshServerGpa\(\);/);
 });
 
 import {failedPartKeys,getSubjects} from "../lib/academic.js";

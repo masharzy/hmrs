@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, RefreshCw, Table2 } from "lucide-react";
 import ResultSummary from "./ResultSummary.jsx";
 import { getStudentSubjects,evaluateTranscript,failedPartKeys } from "../lib/academic";
+import {buildCohortRankings} from "../lib/result-metrics.js";
+import {formatResultGpa} from "../lib/result-display.js";
 import {examScopeGrade,examAppliesToStudent,examScopeLabel} from "../lib/exam-scope.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import { toAsciiDigits } from "../lib/bangla-numbers";
@@ -65,6 +67,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
   try{return [student.id,evaluateTranscript(student,markMap)]}
   catch{return [student.id,null]}
  })),[rows,sheet,edits]);
+ const studentRanks=useMemo(()=>buildCohortRankings(rows.map(student=>({student,report:studentGpas.get(student.id)}))),[rows,studentGpas]);
  useEffect(()=>{setSubjectId("");setEdits({});setError("");setSaved("")},[grade,group]);
  useEffect(()=>{
   let live=true;setLoading(!!examId&&grade!=="all");setError("");setSaved("");
@@ -83,7 +86,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
  const isLocked=student=>publishedIds.has(student.id);
  const locked=rows.length>0&&rows.every(isLocked);
  const someLocked=!locked&&rows.some(isLocked);
- const printColumns=displayed.reduce((total,g)=>total+g.parts.length,3);
+ const printColumns=displayed.reduce((total,g)=>total+g.parts.length,4);
  useEffect(()=>{
   if(!entries.length&&!sending)return;
   const warn=event=>{event.preventDefault();event.returnValue=""};
@@ -168,7 +171,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
    else setSaved("All changes saved");
    // Teachers see a server-computed GPA (it needs subjects they cannot view);
    // refresh it after saving so the GPA column is never stale.
-   if(savedCount&&actor?.role!=="principal")refreshServerGpa();
+   if(savedCount)refreshServerGpa();
   }catch(e){setError("Auto-save failed: "+e.message+" · Changes kept locally. Retry when ready.")}
   finally{
    savingRef.current=false;setSending(false);
@@ -218,6 +221,7 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
       <th rowSpan={2} className="hmrs-sheet-sticky hmrs-sheet-name">Student</th>
       {displayed.map(g=><th colSpan={g.parts.length} key={g.id}>{g.name}</th>)}
       <th rowSpan={2} className="hmrs-sheet-gpa">GPA</th>
+      <th rowSpan={2} className="hmrs-sheet-rank">Ranking</th>
      </tr><tr>{displayed.flatMap(g=>g.parts.map(part=><th key={g.id+":"+part.key}>{part.label}</th>))}</tr></thead>
      <tbody>{rows.map((student,index)=>{
        const own=subjectsByStudent.get(student.id)||[];
@@ -227,6 +231,9 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
          failCache.set(subject.id,failedPartKeys(subject,{...(byKey.get(key)||{}),...(edits[key]||{})}));}
         return failCache.get(subject.id);
        };
+       const localReport=studentGpas.get(student.id);
+       const shownReport=actor?.role==="principal"?localReport:(serverGpa[student.id]||localReport);
+       const ranking=actor?.role==="principal"?studentRanks[student.id]:serverGpa[student.id];
        let col=-1;
        return <tr key={student.id}>
         <td className="hmrs-sheet-sticky hmrs-sheet-roll">{enNumber(student.roll)}</td>
@@ -245,9 +252,12 @@ export default function ResultEntryGrid({exams,examId,onExamChange,students,acto
            maxLength={6} title={"Maximum "+enNumber(valid.max)} placeholder="—"/>
          </td>;
         }))}
-        <td className="hmrs-sheet-gpa" title={"GPA (without 4th): "+Number(studentGpas.get(student.id)?.withoutFourthGpa??0).toFixed(2)}>
-         <strong>{Number((actor?.role==="principal"?studentGpas.get(student.id)?.gpa:serverGpa[student.id]?.gpa)??studentGpas.get(student.id)?.gpa??0).toFixed(2)}</strong>
-         {!(actor?.role==="principal"?studentGpas.get(student.id)?.complete:serverGpa[student.id]?.complete)&&<span className="hmrs-gpa-provisional" title="Some marks are missing; counted as zero">!</span>}
+        <td className="hmrs-sheet-gpa" title={"GPA (without 4th): "+Number(shownReport?.withoutFourthGpa??0).toFixed(2)}>
+         <strong>{formatResultGpa(shownReport)}</strong>
+         {!shownReport?.complete&&<span className="hmrs-gpa-provisional" title="Some marks are missing; counted as fail">!</span>}
+        </td>
+        <td className="hmrs-sheet-rank" title="Overall position by total marks, within class/group; complete results only">
+         <strong>{ranking?.rank?enNumber(ranking.rank)+" / "+enNumber(ranking.rankOf):"—"}</strong>
         </td></tr>;
      })}</tbody></table>
    </div>

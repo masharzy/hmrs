@@ -16,6 +16,8 @@ import {examAppliesToStudent,examStudents} from "../../../lib/exam-scope.js";
 import {findApplicantRosterMatch,admissionSubjects} from "../../../lib/admission-match.js";
 import {auditExamScores} from "../../../lib/result-audit.js";
 import {buildResultSummary} from "../../../lib/result-summary.js";
+import {buildCohortRankings} from "../../../lib/result-metrics.js";
+import {failedSubjectCount} from "../../../lib/result-display.js";
 import { evaluateTranscript, validateMarkForStudent, validatePartialMarkForStudent } from "../../../lib/academic";
 import { toAsciiDigits, parseBanglaNumber } from "../../../lib/bangla-numbers";
 import { normalizePhone, normalizePin, makePinCredential, verifyPin } from "../../../lib/phone-pin";
@@ -202,11 +204,21 @@ export async function GET(req) {
         if(!subjectMap.has(mark.studentId))subjectMap.set(mark.studentId,{});
         subjectMap.get(mark.studentId)[mark.subjectId]=mark.scores||{};
        }
-       for(const student of asDocs(roster).filter(x=>!x.deleting&&studentVisibleForTeaching(actor,x))){
-        try{
-         const result=evaluateTranscript(student,subjectMap.get(student.id)||{});
-         gpaByStudent[student.id]={gpa:result.gpa,withoutFourthGpa:result.withoutFourthGpa,complete:result.complete};
-        }catch{}
+       // Use the full cohort, including students hidden from this teacher.
+       // Expose ranks and aggregates only, never other students' marks.
+       const reports=[];
+       for(const student of asDocs(roster).filter(x=>!x.deleting)){
+        try{reports.push({student,report:evaluateTranscript(student,subjectMap.get(student.id)||{})})}
+        catch{}
+       }
+       const rankings=buildCohortRankings(reports);
+       for(const {student,report} of reports){
+        if(!studentVisibleForTeaching(actor,student))continue;
+        gpaByStudent[student.id]={
+         gpa:report.gpa,withoutFourthGpa:report.withoutFourthGpa,
+         complete:report.complete,failedSubjectCount:failedSubjectCount(report),
+         ...rankings[student.id]
+        };
        }
       }
       const [examDoc,pubSnap]=await Promise.all([

@@ -2,7 +2,8 @@
 import {evaluateTranscript} from "../lib/academic";
 import {reportSubjectRows} from "../lib/report-subject-rows.js";
 import {enNumber,enGrade,enStream} from "../lib/result-english.js";
-const n=v=>enNumber(v??0),gp=v=>Number(v??0).toFixed(2);
+import {formatResultGpa} from "../lib/result-display.js";
+const n=v=>enNumber(v??0);
 const score=x=>x.max?n(x.obtained)+"/"+n(x.max):"—";
 export default function Marksheet({student,marks,exam,printId="mark-print",report,metrics}){
  if(!student||!exam)return null;
@@ -35,8 +36,8 @@ export default function Marksheet({student,marks,exam,printId="mark-print",repor
   </table>
   <div className="hmrs-mark-totals">
    <div><small>Obtained / Full Marks</small><b>{n(rows.reduce((t,r)=>t+r.obtained,0))} / {n(result.maxTotal)}</b></div>
-   <div><small>GPA (without 4th)</small><b>{gp(result.withoutFourthGpa)} / 5.00</b></div>
-   <div><small>GPA (with 4th)</small><b>{gp(result.withFourthGpa)} / 5.00</b></div>
+   <div><small>GPA (without 4th)</small><b>{formatResultGpa(result,"withoutFourthGpa")}{result.passed?" / 5.00":""}</b></div>
+   <div><small>GPA (with 4th)</small><b>{formatResultGpa(result,"withFourthGpa")}{result.passed?" / 5.00":""}</b></div>
    <div><small>Result</small><b>{result.letter} {result.passed?"· Pass":"· Fail"}</b></div>
    <div><small>Overall Position (Class / Group)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"—"}</b></div>
    <div><small>Merit Position (Passed)</small><b>{metrics?.meritRank?n(metrics.meritRank)+" / "+n(metrics.meritOf):"—"}</b></div>
