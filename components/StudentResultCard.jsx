@@ -3,7 +3,8 @@ import React,{useState} from "react";
 import {Printer,AlertTriangle,ChevronDown,ChevronUp} from "lucide-react";
 import {reportSubjectRows} from "../lib/report-subject-rows.js";
 import {enNumber} from "../lib/result-english.js";
-const n=v=>enNumber(v??0),g=v=>Number(v??0).toFixed(2);
+import {formatResultGpa} from "../lib/result-display.js";
+const n=v=>enNumber(v??0);
 const score=x=>x.max?n(x.obtained)+" / "+n(x.max):"—";
 export default function StudentResultCard({exam,result,metrics,marks,onPrint,isAdmin=false}){
  const rows=reportSubjectRows(result,marks||{},metrics);
@@ -15,8 +16,8 @@ export default function StudentResultCard({exam,result,metrics,marks,onPrint,isA
   </div>
   <div className="hmrs-mark-totals">
    <div><small>Obtained / Full Marks</small><b>{n(rows.reduce((t,r)=>t+r.obtained,0))} / {n(result.maxTotal)}</b></div>
-   <div><small>GPA (without 4th)</small><b>{g(result.withoutFourthGpa)}</b></div>
-   <div><small>GPA (with 4th)</small><b>{g(result.withFourthGpa)}</b></div>
+   <div><small>GPA (without 4th)</small><b>{formatResultGpa(result,"withoutFourthGpa")}</b></div>
+   <div><small>GPA (with 4th)</small><b>{formatResultGpa(result,"withFourthGpa")}</b></div>
    <div><small>Grade</small><b>{result.letter}</b></div>
    <div><small>Overall Position (by total marks)</small><b>{metrics?.rank?n(metrics.rank)+" / "+n(metrics.rankOf):"Not ranked"}</b></div>
    <div><small>Merit Position (passed students)</small><b>{metrics?.meritRank?n(metrics.meritRank)+" / "+n(metrics.meritOf):"—"}</b></div>
