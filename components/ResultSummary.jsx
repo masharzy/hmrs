@@ -34,7 +34,8 @@ export default function ResultSummary({exam,grade,group,groupLabel,subjectId,sub
  }
  const scope=[exam.name,grade==="all"?"All classes":"Class "+grade,group?groupLabel:"",subjectId?subjectLabel:""].filter(Boolean).join(" · ");
  const s=state.summary;
- return <div className="hmrs-summary-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
+ // Never dismiss on backdrop mousedown: dragging/clicking its scrollbar would close the modal.
+ return <div className="hmrs-summary-backdrop">
   <section className="hmrs-summary" role="dialog" aria-modal="true" aria-label="Result summary">
    <header className="hmrs-summary-head">
     <div><h2>Result Summary</h2><p>{scope}</p></div>
@@ -64,17 +65,19 @@ function Overall({s}){
    <tbody>{s.rows.map(row)}{s.total&&row(s.total,s.rows.length)}</tbody>
   </table></div>
   <h3>Failed Subjects per Student</h3>
-  <p className="hmrs-summary-note">Missing marks count as failed subjects. Fourth/optional subjects are excluded from F1, F2, F3…</p>
-  {s.failGroups?.length?s.failGroups.map(bucket=><section className="hmrs-summary-fail-group" key={bucket.count}>
-   <h4>{bucket.label} <span>· {bucket.students.length} student{bucket.students.length===1?"":"s"}</span></h4>
-   <div className="hmrs-summary-scroll"><table className="hmrs-xl hmrs-fail-list">
-    <thead><tr><th>Roll</th><th>Student Name</th></tr></thead>
-    <tbody>{bucket.students.map(st=><tr key={st.id}>
-     <td className="no">{num(st.roll)}</td><td className="label">{st.name}
-      <small className="hmrs-fail-scope">Class {st.grade}{st.group?" · "+(st.group==="business"?"Business Studies":st.group[0].toUpperCase()+st.group.slice(1)):""}</small>
-     </td></tr>)}</tbody>
-   </table></div>
-  </section>):<p className="hmrs-summary-note">No failed students in this selection.</p>}
+  {s.failGroups?.length?<div className="hmrs-summary-scroll">
+   <table className="hmrs-xl hmrs-fail-compact">
+    <tbody>{s.failGroups.map(bucket=><tr key={bucket.count}>
+     <th scope="row" className="hmrs-fail-category">{bucket.label}<small>{bucket.students.length}</small></th>
+     <td className="hmrs-fail-students-cell"><div className="hmrs-fail-cells" role="list" aria-label={bucket.label+" students"}>
+      {bucket.students.map(st=><span key={st.id} className="hmrs-fail-cell" role="listitem"
+       title={"Class "+st.grade+(st.group?" · "+st.group:"")}>
+       <b>{num(st.roll)}</b><span>{st.name}</span>
+      </span>)}
+     </div></td>
+    </tr>)}</tbody>
+   </table>
+  </div>:<p className="hmrs-summary-note">No failed students in this selection.</p>}
   <h3>Subject-wise Fail</h3>
   <div className="hmrs-summary-scroll"><table className="hmrs-xl">
    <thead><tr><th>#</th><th>Subject</th>{s.columns.map(c=><th key={c}>{c}</th>)}<th>মোট ফেল</th><th>ফেলের হার</th></tr></thead>
