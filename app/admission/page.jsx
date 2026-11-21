@@ -6,10 +6,11 @@ import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 import { toBanglaDigits, gradeLabel } from "../../lib/bangla-numbers";
 import PinInput from "../../components/PinInput";
+import {getAdmissionSessionYear,getAdmissionSessionOptions} from "../../lib/admission-session.js";
 import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep, validateAdmissionPin } from "../../lib/admission-validation";
 
 const initial={
- studentName:"",dob:"",gender:"male",grade:"6",group:"",requestedRoll:"",optionalSubject:"",
+ studentName:"",session:String(getAdmissionSessionYear()),dob:"",gender:"male",grade:"6",group:"",requestedRoll:"",optionalSubject:"",
  birthRegistration:"",fatherName:"",fatherPhone:"",motherName:"",motherPhone:"",
  studentPhone:"",guardianAddress:"",previousSchool:"",previousClass:"",
  previousResult:"",paymentMethod:"later",paymentReference:"",website:""
@@ -45,6 +46,7 @@ function AdmissionField({label,name,value,onChange,error,options,type="text",pla
 }
 export default function Admission(){
  const [form,setForm]=useState(initial);
+ const [sessionYear,setSessionYear]=useState(getAdmissionSessionYear);
  const [studentPin,setStudentPin]=useState("");
  const [pinConfigured,setPinConfigured]=useState(false);
  const [step,setStep]=useState(0);
@@ -60,6 +62,19 @@ export default function Admission(){
  const editUrl=editToken && (applicationId||editId) && typeof window!=="undefined"
   ? window.location.origin+"/admission#edit="+encodeURIComponent(applicationId||editId)+"&token="+encodeURIComponent(editToken)
   : "";
+ useEffect(()=>{
+  // Update the choices on Bangladesh New Year, even if this tab was left open.
+  const refresh=()=>{
+   const year=getAdmissionSessionYear();
+   setSessionYear(year);
+   if(!editMode)setForm(current=>getAdmissionSessionOptions(year).some(([value])=>value===current.session)
+    ?current:{...current,session:String(year)});
+  };
+  window.addEventListener("focus",refresh);
+  document.addEventListener("visibilitychange",refresh);
+  const timer=setInterval(refresh,60*60*1000);
+  return ()=>{window.removeEventListener("focus",refresh);document.removeEventListener("visibilitychange",refresh);clearInterval(timer)};
+ },[editMode]);
  useEffect(()=>{
   let active=true,requestSeq=0;
   const loadFromLink=()=>{
@@ -169,6 +184,9 @@ export default function Admission(){
    setToast(error.message||"সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
   }finally{setSaving(false)}
  }
+ const sessionChoices=getAdmissionSessionOptions(sessionYear);
+ if(editMode && form.session && !sessionChoices.some(([value])=>value===form.session))
+  sessionChoices.unshift([form.session,form.session+" (Previous session)"]);
  const StepIcon=steps[step].icon;
  return <><SiteHeader/><main className="admission-page">
   <div className="admission-container">
@@ -218,13 +236,14 @@ export default function Admission(){
       </div>
       <form noValidate onSubmit={step===2?submit:next}>
        {step===0&&<div className="admission-fields">
-        <AdmissionField label="শিক্ষার্থীর পূর্ণ নাম" name="studentName" value={form.studentName} onChange={change} error={errors.studentName} placeholder="বাংলায় পূর্ণ নাম লিখুন" wide maxLength={110}/>
+        <AdmissionField label="শিক্ষার্থীর পূর্ণ নাম" name="studentName" value={form.studentName} onChange={change} error={errors.studentName} placeholder="পূর্ণ নাম লিখুন" wide maxLength={110}/>
         <AdmissionField label="জন্মতারিখ" name="dob" type="date" value={form.dob} onChange={change} error={errors.dob}/>
         <AdmissionField label="জন্মনিবন্ধন নম্বর" name="birthRegistration" value={form.birthRegistration} onChange={change} error={errors.birthRegistration}
           inputMode="numeric" placeholder="১৭ সংখ্যার নম্বর (বাংলা/ইংরেজি)" maxLength={20}/>
         <AdmissionField label="লিঙ্গ" name="gender" value={form.gender} onChange={change} error={errors.gender}
           options={[["male","ছাত্র"],["female","ছাত্রী"],["other","অন্যান্য"]]}/>
         <AdmissionField label="ভর্তিচ্ছু শ্রেণি" name="grade" value={form.grade} onChange={change} error={errors.grade} options={classOptions}/>
+        <AdmissionField label="ভর্তি সেশন" name="session" value={form.session} onChange={change} error={errors.session} options={sessionChoices}/>
         {Number(form.grade)>=9&&<AdmissionField label="বিভাগ" name="group" value={form.group} onChange={change} error={errors.group} options={groupOptions}/>} 
         {Number(form.grade)>=9&&<AdmissionField label="বিদ্যালয়ের বর্তমান রোল (যদি আগে তালিকায় থাকে)"
           name="requestedRoll" value={form.requestedRoll} onChange={change} error={errors.requestedRoll}
