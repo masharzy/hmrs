@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toAsciiDigits, toBanglaDigits, parseBanglaNumber, gradeLabel } from "../lib/bangla-numbers.js";
 import { normalizeAdmissionData, validateAdmission, validateAdmissionStep, firstInvalidStep } from "../lib/admission-validation.js";
+import {getAdmissionSessionYear} from "../lib/admission-session.js";
 const valid = {
- studentName:"সুমাইয়া আক্তার", dob:"২০১৪-০৫-১৪", birthRegistration:"২০১৪১২৩৪৫৬৭৮৯০১২৩",
+ studentName:"সুমাইয়া আক্তার", session:toBanglaDigits(getAdmissionSessionYear()), dob:"২০১৪-০৫-১৪", birthRegistration:"২০১৪১২৩৪৫৬৭৮৯০১২৩",
  gender:"female", grade:"৬", group:"",
  fatherName:"মোঃ রহমান", fatherPhone:"+৮৮০১৭১২৩৪৫৬৭৮",
  motherName:"মোছাঃ রহিমা", motherPhone:"০১৮১২৩৪৫৬৭৮",

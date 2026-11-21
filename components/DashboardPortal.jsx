@@ -25,6 +25,7 @@ import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers
 import {enNumber,enGrade,enStream,enSubject,enPart} from "../lib/result-english.js";
 const formatClassEnglish=(grade,group)=>enGrade(grade)+(group?" · "+enStream(group):"");
 import { formatClass, groupNames } from "../lib/student-admin";
+import {storedAdmissionSession} from "../lib/admission-session.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import StudentResultCard from "./StudentResultCard";
 import {buildClassResultMetrics} from "../lib/result-metrics.js";
@@ -406,7 +407,7 @@ export default function DashboardPortal() {
           <p><b>Roster Name:</b> {students.find(s=>s.id===activeApplication.matchedStudentId)?.name}
            <span className="hmrs-application-status">The existing roster name will be preserved</span></p>
           <p><b>Applicant's Name:</b> {activeApplication.studentName} · Roll {toAsciiDigits(activeApplication.requestedRoll)}</p>
-          <p>Father: {activeApplication.fatherName} · Mother: {activeApplication.motherName}</p>
+          <p>Session: {storedAdmissionSession(activeApplication)} · Father: {activeApplication.fatherName} · Mother: {activeApplication.motherName}</p>
           <p>Phone: {toAsciiDigits(activeApplication.studentPhone)} · 4th Subject: {activeApplication.optionalSubject||"Not selected yet"}</p>
           <AdmissionApproval key={activeApplication.id} item={activeApplication} mutate={async(action,params)=>{
             const result=await mutate(action,params);if(result&&action==="application.approve")setActiveApplicationId("");return result;
@@ -456,7 +457,7 @@ export default function DashboardPortal() {
           <div className="hmrs-admission-card-head">
            <span className="hmrs-admission-number">{toAsciiDigits((admissionsCurrentPage-1)*20+i+1)}</span>
            <div className="hmrs-admission-card-info"><h3>{a.studentName}</h3>
-            <div className="hmrs-admission-meta"><span>{formatClassEnglish(toAsciiDigits(a.grade),a.group)}</span><span>Father: {a.fatherName}</span><span>Phone: {toAsciiDigits(a.fatherPhone)}</span></div>
+            <div className="hmrs-admission-meta"><span>{formatClassEnglish(toAsciiDigits(a.grade),a.group)}</span><span>Session: {storedAdmissionSession(a)}</span><span>Father: {a.fatherName}</span><span>Phone: {toAsciiDigits(a.fatherPhone)}</span></div>
             <p>Previous School: {a.previousSchool||"—"}</p>
            </div>
            <span className={"chip "+(a.status==="pending"?"":"gray")}>{({pending:"Pending",approved:"Approved",rejected:"Rejected"})[a.status]||a.status}</span>
