@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {normalizeStudentEdit,formatClass} from "../lib/student-admin.js";
 import {normalizeAdmissionData,validateAdmission} from "../lib/admission-validation.js";
+import {getAdmissionSessionYear} from "../lib/admission-session.js";
 import {admissionSchema} from "../lib/admission-schema.js";
 import {classKey,studentKey,canAccessGrade} from "../lib/school-identity.js";
 
@@ -36,7 +37,7 @@ test("grade 9/10 requires valid group and grade/roll limits",()=>{
 });
 test("admission normalization never sends a section, with a mandatory group only for 9 and 10",()=>{
  const raw={
-  studentName:"সুমাইয়া আক্তার",dob:"2013-01-01",birthRegistration:"12345678901234567",gender:"female",
+  studentName:"সুমাইয়া আক্তার",session:String(getAdmissionSessionYear()),dob:"2013-01-01",birthRegistration:"12345678901234567",gender:"female",
   grade:"৬",section:"a",group:"science",
   fatherName:"আবদুর রহমান",fatherPhone:"01712345678",
   motherName:"সালমা",motherPhone:"01812345678",studentPhone:"01912345678",
