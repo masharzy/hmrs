@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import {randomInt} from "node:crypto";
 import { normalizeAdmissionData, validateAdmission, firstInvalidStep } from "../../../lib/admission-validation";
 import { admissionSchema } from "../../../lib/admission-schema";
+import {storedAdmissionSession} from "../../../lib/admission-session.js";
 import { normalizeStudentEdit } from "../../../lib/student-admin";
 import { getSubjects, getStudentSubjects, fourthSubjectSelection, selectedFourthSubject } from "../../../lib/academic";
 import { getDashboardData, getDashboardSummary } from "../../../lib/dashboard-data";
@@ -352,8 +353,9 @@ export async function POST(req) {
       const snap = await ref.get();
       if (!snap.exists) return fail("আবেদন পাওয়া যায়নি", 404);
       if (!["pending","rejected"].includes(snap.data().status)) return fail("শুধু অনিষ্পন্ন/বাতিল আবেদন সম্পাদনা করা যাবে", 409);
-      const values = normalizeAdmissionData({ ...snap.data(), ...(body.values || {}) });
-      const errors = validateAdmission(values);
+      const existingSession=storedAdmissionSession(snap.data());
+      const values = normalizeAdmissionData({ ...snap.data(),session:existingSession, ...(body.values || {}) });
+      const errors = validateAdmission(values,{existingSession});
       if (Object.keys(errors).length) return json({ error:"আবেদনের তথ্য সঠিক নয়", fieldErrors: errors, step:firstInvalidStep(errors) }, 422);
       const parsed = admissionSchema.safeParse(values);
       if (!parsed.success) return fail("আবেদনের তথ্য যাচাই করুন");
@@ -700,7 +702,7 @@ export async function POST(req) {
        ?{elective:found.match.elective,fourthSubject:found.match.fourthSubject,optionalId:found.match.optionalId}
        :opts;
       const selected={
-       uid:null,applicationId:id,name,phone,grade:Number(application.grade),roll:Number(roll),
+       uid:null,applicationId:id,session:storedAdmissionSession(application),name,phone,grade:Number(application.grade),roll:Number(roll),
        group:Number(application.grade)>=9?application.group:"",...selections,
        dob:application.dob,gender:application.gender,birthRegistration:application.birthRegistration,
        fatherName:application.fatherName,fatherPhone:application.fatherPhone,
