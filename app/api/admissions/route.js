@@ -1,4 +1,5 @@
 import { admissionSchema } from "../../../lib/admission-schema.js";
+import {storedAdmissionSession} from "../../../lib/admission-session.js";
 import { createApplicationEditToken, verifyApplicationEditToken, canApplicantEdit } from "../../../lib/admission-edit.js";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../../../lib/firebase-admin";
@@ -28,11 +29,11 @@ export async function POST(req){
     const fields=Object.keys(admissionSchema.shape).filter(key=>key!=="website");
     // The PIN is never sent back to the browser, not even its salted hash.
     return json({ok:true,applicationId:id,pinConfigured:!!saved.studentPinCredential?.hash,
-      values:Object.fromEntries(fields.map(key=>[key,saved[key]??""]))});
+      values:{...Object.fromEntries(fields.map(key=>[key,saved[key]??""])),session:storedAdmissionSession(saved)}});
    }
    if(!raw.values || typeof raw.values!=="object" || Array.isArray(raw.values))return fail("পরিবর্তনের তথ্য সঠিক নয়");
    const normalized=normalizeAdmissionData(raw.values);
-   const errors=validateAdmission(raw.values);
+   const errors=validateAdmission(raw.values,{existingSession:storedAdmissionSession(existing.data())});
    if(Object.keys(errors).length)
     return json({error:"চিহ্নিত তথ্যগুলো সঠিকভাবে পূরণ করুন।",fieldErrors:errors,step:firstInvalidStep(errors)},422);
    const pinIssue=validateAdmissionPin(raw.studentPin,{alreadySet:!!existing.data()?.studentPinCredential?.hash});
