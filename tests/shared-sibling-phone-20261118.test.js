@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 import {studentPhoneOwners,addStudentPhoneOwner,removeStudentPhoneOwner,
  isSharedStudentPhone,studentLoginIdentity,sameLoginIdentity} from "../lib/student-phone-sharing.js";
 import {normalizeAdmissionData,validateAdmission} from "../lib/admission-validation.js";
+import {getAdmissionSessionYear} from "../lib/admission-session.js";
 import {makePinCredential,verifyPin} from "../lib/phone-pin.js";
 const read=path=>readFileSync(path,"utf8");
 
@@ -45,7 +46,7 @@ test("same phone and even same PIN never select a sibling without class/roll",()
 });
 test("siblings can submit admissions with identical parent and student phone numbers",()=>{
  const input={
-  studentName:"Child B",dob:"2014-01-01",birthRegistration:"12345678901234567",gender:"female",
+  studentName:"Child B",session:String(getAdmissionSessionYear()),dob:"2014-01-01",birthRegistration:"12345678901234567",gender:"female",
   grade:"৬",fatherName:"Parent",fatherPhone:"01712345678",
   motherName:"Parent Two",motherPhone:"01712345678",studentPhone:"01712345678",
   guardianAddress:"Village, post, upazila, district",previousSchool:"Previous School",
