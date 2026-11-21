@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { normalizeAdmissionData, validateAdmission } from "../lib/admission-validation.js";
+import {getAdmissionSessionYear} from "../lib/admission-session.js";
 const read=p=>readFileSync(p,"utf8");
 const home=read("app/page.jsx"),header=read("components/SiteHeader.jsx"),footer=read("components/SiteFooter.jsx");
 const portal=read("components/DashboardPortal.jsx"),api=read("app/api/portal/route.js"),data=read("lib/dashboard-data.js");
@@ -17,7 +18,7 @@ test("admission is only presented in the homepage hero",()=>{
  assert.match(header,/হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়/);
 });
 test("shared parent phones are valid even across distinct pupils",()=>{
- const base={studentName:"নবীন ইসলাম",dob:"2016-01-02",birthRegistration:"12345678901234567",gender:"male",
+ const base={studentName:"নবীন ইসলাম",session:String(getAdmissionSessionYear()),dob:"2016-01-02",birthRegistration:"12345678901234567",gender:"male",
  grade:"6",fatherName:"মোঃ করিম",fatherPhone:"০১৭১২৩৪৫৬৭৮",motherName:"মোছাঃ লায়লা",
  motherPhone:"০১৭১২৩৪৫৬৭৮",studentPhone:"01787654321",guardianAddress:"সোনারগাঁ নারায়ণগঞ্জ",
  previousSchool:"প্রাথমিক বিদ্যালয়",previousClass:"5",previousResult:"A",paymentMethod:"later",paymentReference:""};
