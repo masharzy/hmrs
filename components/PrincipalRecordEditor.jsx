@@ -4,11 +4,12 @@ import { X, Pencil, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "luc
 import { toAsciiDigits } from "../lib/bangla-numbers";
 import {enGrade} from "../lib/result-english.js";
 import { groupNames } from "../lib/student-admin";
+import {getAdmissionSessionOptions,getAdmissionSessionYear,storedAdmissionSession} from "../lib/admission-session.js";
 import {FOURTH_SUBJECT_OPTIONS,fourthSubjectSelection,selectedFourthSubject} from "../lib/academic.js";
 
 const groups=[["science","Science"],["business","Business Studies"],["humanities","Humanities"]];
 const labels={
- name:"Student Name",studentName:"Applicant Name",grade:"Class",roll:"Roll",group:"Group",requestedRoll:"Requested Roll",optionalSubject:"Fourth Subject",
+ name:"Student Name",studentName:"Applicant Name",session:"Admission Session",grade:"Class",roll:"Roll",group:"Group",requestedRoll:"Requested Roll",optionalSubject:"Fourth Subject",
  phone:"Student Login Phone",studentPhone:"Student Phone",
  dob:"Date of Birth",birthRegistration:"Birth Registration",gender:"Gender",
  fatherName:"Father's Name",fatherPhone:"Father's Phone",
@@ -22,7 +23,7 @@ const studentFields=[
  "fatherName","fatherPhone","motherName","motherPhone","guardianAddress","previousSchool"
 ];
 const applicantFields=[
- "studentName","grade","group","requestedRoll","optionalSubject","dob","birthRegistration","gender",
+ "studentName","session","grade","group","requestedRoll","optionalSubject","dob","birthRegistration","gender",
  "studentPhone","fatherName","fatherPhone","motherName","motherPhone","guardianAddress",
  "previousSchool","previousClass","previousResult","paymentMethod","paymentReference"
 ];
@@ -44,6 +45,12 @@ export function Pager({total,page,size=25,onChange}){
 }
 
 function choicesFor(key,values){
+ if(key==="session"){
+  const available=getAdmissionSessionOptions(getAdmissionSessionYear());
+  if(values.session&&!available.some(([value])=>value===values.session))
+   available.unshift([values.session,values.session+" (Previous session)"]);
+  return available;
+ }
  if(key==="grade")return [6,7,8,9,10].map(v=>[String(v),enGrade(v)]);
  if(key==="group")return groups;
  if(key==="optionalSubject")return [["","Choose Later"],...(values.group==="science"?[
@@ -63,7 +70,7 @@ function choicesFor(key,values){
 
 export function PrincipalRecordEditor({type,item,working,error,onClose,onSave,canResetPin=false}){
  const isStudent=type==="student";
- const [values,setValues]=useState(()=>({...item,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":"",
+ const [values,setValues]=useState(()=>({...item,session:!isStudent?storedAdmissionSession(item):item.session,grade:String(item.grade),group:Number(item.grade)>=9?item.group||"science":"",
   optionalId:Number(item.grade)>=9?selectedFourthSubject({...item,group:item.group||"science"}):""}));
  const [loginPin,setLoginPin]=useState("");
  const [resetPin,setResetPin]=useState("");
