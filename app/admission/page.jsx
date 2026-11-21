@@ -57,6 +57,7 @@ export default function Admission(){
  const [editId,setEditId]=useState("");
  const [editToken,setEditToken]=useState("");
  const [editMode,setEditMode]=useState(false);
+ const [originalSession,setOriginalSession]=useState("");
  const [loadingEdit,setLoadingEdit]=useState(false);
  const [editLoadError,setEditLoadError]=useState("");
  const editUrl=editToken && (applicationId||editId) && typeof window!=="undefined"
@@ -94,6 +95,7 @@ export default function Admission(){
    }).then(result=>{
      if(!active||seq!==requestSeq)return;
      setForm({...initial,...result.values,grade:String(result.values.grade),website:""});
+     setOriginalSession(String(result.values.session||""));
      setStudentPin("");setPinConfigured(!!result.pinConfigured);
      setEditId(id);setEditToken(token);setEditMode(true);setStep(0);
    }).catch(error=>{if(active&&seq===requestSeq)setEditLoadError(error.message)})
@@ -135,7 +137,7 @@ export default function Admission(){
  }
  function next(e){
   e.preventDefault();
-  const found=validateAdmissionStep(form,step);
+  const found=validateAdmissionStep(form,step,{existingSession:editMode?originalSession:""});
   if(step===2){const issue=validateAdmissionPin(studentPin,{alreadySet:editMode&&pinConfigured});if(issue)found.studentPin=issue}
   if(Object.keys(found).length){
    handleValidationFailed(found,"এই ধাপে "+toBanglaDigits(Object.keys(found).length)+"টি তথ্য ঠিক করতে হবে।");
@@ -147,7 +149,7 @@ export default function Admission(){
  async function submit(e){
   e.preventDefault();
   if(saving)return;
-  const found=validateAdmission(form);
+  const found=validateAdmission(form,{existingSession:editMode?originalSession:""});
   const pinIssue=validateAdmissionPin(studentPin,{alreadySet:editMode&&pinConfigured});
   if(pinIssue)found.studentPin=pinIssue;
   if(Object.keys(found).length){
