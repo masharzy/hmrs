@@ -9,7 +9,7 @@ const EN_SUBJECTS=TEACHER_SUBJECT_OPTIONS.map(option=>({...option,name:enSubject
 import PinInput from "./PinInput";
 
 const roles={teacher:"Teacher",class_teacher:"Class Teacher"};
-const empty=()=>({name:"",phone:"",pin:"",roles:["teacher"],teachingClasses:[],classTeacherClasses:[],teachingSubjects:[],active:true});
+const empty=()=>({name:"",phone:"",pin:"",roles:["teacher"],teachingClasses:[],classTeacherClasses:[],teachingSubjects:[],photoUrl:"",active:true});
 function Choices({label,options,values,onChange,kind="classes",description="",searchable=false}){
  const [query,setQuery]=useState("");
  const filtered=searchable?options.filter(o=>(o.label||o.name||"").toLowerCase().includes(query.trim().toLowerCase())):options;
@@ -57,13 +57,14 @@ export default function AccountManager({actor,request,mutate,working,error}){
   setValues({name:user.name||"",phone:user.phone||"",pin:"",roles,
    teachingClasses:roles.includes("teacher")?(user.teachingClasses||user.assignedClasses||[]).map(String):[],
    classTeacherClasses:roles.includes("class_teacher")?(user.classTeacherClasses||user.assignedClasses||[]).map(String):[],
-   teachingSubjects:(user.teachingSubjects||[]).map(String),active:user.active!==false});
+   teachingSubjects:(user.teachingSubjects||[]).map(String),photoUrl:user.photoUrl||"",active:user.active!==false});
  }
  function close(){if(working)return;setModal(null);setLocalError("")}
  function changed(key,value){setValues(v=>({...v,[key]:value}));setLocalError("")}
  async function submit(e){
   e.preventDefault();if(working)return;setLocalError("");
-  if(!values.name.trim()||!values.phone.trim()){setLocalError("Enter teacher name and phone number");return}
+  if(values.photoUrl&&!/^https:\/\/[^\s]+$/i.test(values.photoUrl)){setLocalError("Enter a valid HTTPS photo URL");return}
+   if(!values.name.trim()||!values.phone.trim()){setLocalError("Enter teacher name and phone number");return}
   if(!values.roles.length){setLocalError("Select at least one role");return}
   if(values.roles.includes("teacher")&&!values.teachingClasses.length){setLocalError("Select the classes this teacher teaches");return}
   if(values.roles.includes("class_teacher")&&!values.classTeacherClasses.length){setLocalError("Select the homeroom classes");return}
@@ -88,7 +89,7 @@ export default function AccountManager({actor,request,mutate,working,error}){
   </div>
   <div className="panel table-wrap"><table><thead><tr><th>No.</th><th>Name</th><th>Phone</th><th>Role</th><th>Classes</th><th>Subjects</th><th>Actions</th></tr></thead><tbody>
    {!loading&&items.map((u,i)=><tr key={u.id}><td>{toAsciiDigits((page-1)*20+i+1)}</td>
-    <td className="font-bold">{u.name}{u.active===false&&<span className="chip gray ml-2">Inactive</span>}</td>
+    <td className="font-bold"><span className="inline-flex items-center gap-2">{u.photoUrl&&<img src={u.photoUrl} alt="" style={{width:34,height:34,objectFit:"cover",borderRadius:"50%"}}/>}{u.name}</span>{u.active===false&&<span className="chip gray ml-2">Inactive</span>}</td>
     <td>{toAsciiDigits(u.phone||"—")}</td><td>{(u.roles||[u.role]).map(r=>roles[r]).filter(Boolean).join(" + ")}</td>
     <td>{[...new Set([...(u.teachingClasses||[]),...(u.classTeacherClasses||[]),...(u.assignedClasses||[])])].map(toAsciiDigits).join(", ")||"—"}</td>
     <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>enSubject(id,TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name)||id).join(", ")||"—"}</td>
@@ -114,6 +115,7 @@ export default function AccountManager({actor,request,mutate,working,error}){
      <div className="form-grid">
       <label className="field">Teacher Name<input value={values.name} onChange={e=>changed("name",e.target.value)} required maxLength={120}/></label>
       <label className="field">Login Phone<input type="tel" value={values.phone} onChange={e=>changed("phone",e.target.value)} required/></label>
+       <label className="field">শিক্ষকের ছবির HTTPS লিংক<input type="url" value={values.photoUrl} onChange={e=>changed("photoUrl",e.target.value)} placeholder="https://..."/></label>
      </div>
      <Choices label="Teacher Roles" kind="roles" description="You can assign both roles to the same person."
       options={[{value:"teacher",label:"Teacher",description:"Teaches assigned subjects"},
