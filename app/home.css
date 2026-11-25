@@ -158,3 +158,35 @@
  .hmrs-home-section-flower,.hmrs-home-notice-mark{width:37px;height:37px}
 }
 @media(prefers-reduced-motion:reduce){.hmrs-home-quick-card:hover{transform:none}}
+
+/* School identity, real-photo gallery and leadership */
+.hmrs-home-redesign{background:#f7fbff;color:#19384b}
+.hmrs-school-masthead{position:relative;overflow:hidden;background:linear-gradient(115deg,#103e68,#126d73 56%,#4d4ca1);color:#fff}
+.hmrs-school-masthead-glow{position:absolute;inset:0;background:radial-gradient(circle at 15% 10%,#ffffff20,transparent 35%),radial-gradient(circle at 90% 90%,#ffcf6b26,transparent 30%)}
+.hmrs-school-masthead-inner{position:relative;display:flex;align-items:center;gap:24px;padding:34px 0}
+.hmrs-school-crest{display:grid;place-items:center;width:82px;height:82px;flex:none;border-radius:24px;background:#ffffff1c;border:1px solid #ffffff55;color:#ffdf92;box-shadow:0 12px 32px #001d3c40}
+.hmrs-school-heading{flex:1;min-width:0}.hmrs-school-heading .hmrs-home-eyebrow{color:#b8f0e2}
+.hmrs-school-heading h1{font-size:clamp(25px,4vw,47px);line-height:1.35;font-weight:900;letter-spacing:-.5px;margin:3px 0 8px;color:#fff}
+.hmrs-school-heading p{display:flex;align-items:center;gap:7px;margin:0;color:#e3f4f5;font-size:14px}
+.hmrs-school-eiin{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:30px;background:#ffffff20;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px}
+.hmrs-school-motto{display:flex;align-items:center;gap:8px;color:#ffe7a8;font-size:12px;font-weight:800;white-space:nowrap}
+.hmrs-welcome-panel{display:grid;grid-template-columns:1fr 1.04fr;gap:38px;align-items:center;padding-top:60px;padding-bottom:30px}
+.hmrs-welcome-copy h2{font-size:clamp(34px,4vw,54px);line-height:1.35;font-weight:900;color:#173b55;margin:12px 0}
+.hmrs-welcome-copy h2 span{background:linear-gradient(95deg,#07876e,#386bb7,#7755b8);color:transparent;background-clip:text}
+.hmrs-welcome-copy>p{max-width:520px;color:#627989;line-height:1.9;font-size:15px}
+.hmrs-school-gallery{display:grid;grid-template-columns:1.25fr .85fr;gap:14px;min-height:245px;align-items:center}
+.hmrs-school-gallery-photo{position:relative;overflow:hidden;margin:0;border:7px solid #fff;border-radius:20px;background:#e4edf5;box-shadow:0 18px 45px #17487024}
+.hmrs-school-gallery-photo.photo-1{margin-top:44px;transform:rotate(2deg)}.hmrs-school-gallery-photo.photo-0{transform:rotate(-1deg)}
+.hmrs-school-gallery-photo img{display:block;width:100%;height:260px;object-fit:cover}
+.hmrs-school-gallery-photo figcaption{position:absolute;bottom:0;left:0;right:0;padding:9px 12px;color:white;background:linear-gradient(transparent,#102d48d9);font-size:12px;font-weight:800}
+.hmrs-school-gallery-empty{grid-column:1/-1;min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:2px dashed #bdd1df;border-radius:22px;background:linear-gradient(135deg,#eaf7f5,#eef2ff);color:#4f7182;text-align:center;padding:25px}
+.hmrs-school-gallery-empty svg{width:42px;height:42px;color:#197f79}.hmrs-school-gallery-empty strong{font-size:17px;color:#25495c}.hmrs-school-gallery-empty span{font-size:12px;max-width:340px;line-height:1.7}
+.hmrs-leadership-section{padding-top:54px}.hmrs-leadership-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.hmrs-leader-card{display:flex;gap:15px;align-items:center;min-width:0;padding:20px;border:1px solid #e3ebf4;border-radius:20px;background:#fff;box-shadow:0 12px 35px #173d5c0c}
+.hmrs-leader-photo{display:grid;place-items:center;flex:none;width:92px;height:108px;overflow:hidden;border-radius:16px;background:linear-gradient(145deg,#d5f5ea,#e0eaff);color:#35718a}
+.hmrs-leader-photo img{width:100%;height:100%;object-fit:cover}.hmrs-leader-copy{min-width:0}
+.hmrs-leader-kicker{font-size:9px;letter-spacing:1.2px;color:#168477;font-weight:900}.hmrs-leader-copy h3{font-size:15px;font-weight:900;color:#1d3c53;margin:5px 0}
+.hmrs-leader-copy p{font-size:12px;color:#728795;margin:0 0 10px}.hmrs-leader-login{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 12px;background:#eaf7f4;color:#126b64;font-size:11px;font-weight:800}
+.hmrs-home-quick-grid-four{grid-template-columns:repeat(4,minmax(0,1fr))}.hmrs-home-quick-grid-four .hmrs-home-quick-card{gap:12px;min-height:145px}
+@media(max-width:900px){.hmrs-school-motto{display:none}.hmrs-leadership-grid{grid-template-columns:1fr}.hmrs-welcome-panel{grid-template-columns:1fr}.hmrs-school-gallery-photo img{height:230px}}
+@media(max-width:600px){.hmrs-school-masthead-inner{gap:14px;padding:25px 0}.hmrs-school-crest{width:58px;height:58px;border-radius:17px}.hmrs-school-crest svg{width:27px}.hmrs-school-heading h1{font-size:23px}.hmrs-school-heading p{font-size:11px;line-height:1.6}.hmrs-welcome-panel{padding-top:36px}.hmrs-school-gallery{min-height:190px;gap:8px}.hmrs-school-gallery-photo{border-width:4px;border-radius:13px}.hmrs-school-gallery-photo img{height:175px}.hmrs-school-gallery-empty{min-height:185px}.hmrs-leader-card{padding:14px}.hmrs-leader-photo{width:76px;height:90px}.hmrs-home-quick-grid-four{grid-template-columns:repeat(2,minmax(0,1fr))}.hmrs-home-quick-grid-four .hmrs-home-quick-card{min-height:132px}}
