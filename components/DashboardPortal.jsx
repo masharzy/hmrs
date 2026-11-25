@@ -67,6 +67,7 @@ export default function DashboardPortal() {
  const [activeApplicationId,setActiveApplicationId]=useState("");
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState("");
+ const [attendanceGrade,setAttendanceGrade]=useState(""),[attendanceGroup,setAttendanceGroup]=useState("");
  const [admissionGrade,setAdmissionGrade]=useState(""),[admissionGroup,setAdmissionGroup]=useState("");
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
@@ -246,8 +247,9 @@ export default function DashboardPortal() {
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
  const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||String(a.group||"").localeCompare(String(b.group||""))||Number(a.roll)-Number(b.roll)).filter(s=>
    (tab!=="students"||(!studentGrade||Number(s.grade)===Number(studentGrade))&&(!studentGroup||s.group===studentGroup))&&
+    (tab!=="attendance"||(!attendanceGrade||Number(s.grade)===Number(attendanceGrade))&&(!attendanceGroup||s.group===attendanceGroup))&&
    (s.name+" "+s.roll+" "+s.grade+" "+formatClassEnglish(s.grade,s.group)+" "+toAsciiDigits(s.roll)+" "+toAsciiDigits(s.grade)).toLowerCase().includes(query.toLowerCase())
- ),[students,query,tab,studentGrade,studentGroup]);
+ ),[students,query,tab,studentGrade,studentGroup,attendanceGrade,attendanceGroup]);
  const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
  const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
  const admissions=data.admissions||[];
@@ -471,8 +473,12 @@ export default function DashboardPortal() {
         <Pager total={filteredAdmissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
        </>}
        {tab==="attendance"&&<>
-        <div className="dashboard-toolbar"><h2 className="section-title">Attendance Register</h2><label className="field">Date <Input type="date" value={date} onChange={changeDate}/></label></div>
-        <label className="field dashboard-search">Search Students <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
+        <div className="dashboard-toolbar"><h2 className="section-title">শ্রেণিভিত্তিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
+        <div className="form-grid">
+         <Field label="শ্রেণি নির্বাচন"><Select value={attendanceGrade} onChange={v=>{setAttendanceGrade(v);setAttendanceGroup("");setPage(1)}} choices={options(gradeChoices,"সকল শ্রেণি")}/></Field>
+         {Number(attendanceGrade)>=9&&<Field label="বিভাগ নির্বাচন"><Select value={attendanceGroup} onChange={v=>{setAttendanceGroup(v);setPage(1)}} choices={options([["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]],"সকল বিভাগ")}/></Field>}
+        </div>
+        <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>No.</th><th>Student</th><th>Class / Roll</th><th>Status</th><th>Attendance</th><th>Guardian</th></tr></thead><tbody>{pageItems.map((s,i)=>{
          const record=attendanceByStudent.get(s.id);
          return <tr key={s.id}><td>{toAsciiDigits((visiblePage-1)*25+i+1)}</td><td className="font-bold">{s.name}</td><td>{toAsciiDigits(s.grade)} / {toAsciiDigits(s.roll)}</td>
