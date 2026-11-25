@@ -104,7 +104,7 @@ export async function GET(req) {
       return json({ items: asDocs(snap).filter(s => studentVisibleForTeaching(actor,s)) });
     }
     if (resource === "admissions") {
-      needRole(actor, ["class_teacher", "principal"]);
+      needRole(actor, ["class_teacher", "principal", "assistant_principal"]);
       const snap = await store.collection("admissions").orderBy("createdAt", "desc").limit(250).get();
       return json({ items: asDocs(snap).filter(a => canManageHomeroom(actor,a.grade)) });
     }
@@ -237,7 +237,7 @@ export async function GET(req) {
       return json({items:permitted,gpaByStudent,publishedIds});
     }
     if (resource === "ledger") {
-      needRole(actor, ["principal", "class_teacher"]);
+      needRole(actor, ["principal", "assistant_principal", "class_teacher"]);
       const snap = await store.collection("ledger").orderBy("createdAt", "desc").limit(600).get();
       return json({ items: asDocs(snap).filter(l => actor.role === "principal" || visible(actor, l)) });
     }
