@@ -166,7 +166,7 @@ export async function GET(req) {
       const page=Number.isSafeInteger(pageRaw)?Math.min(100,Math.max(1,pageRaw)):1;
       const q=cleanText(u.searchParams.get("q"),80).toLowerCase();
       // Only teacher roles are read; student accounts never leave the server.
-      const snap=await store.collection("users").where("role","in",["teacher","class_teacher","assistant_principal","staff_manager"]).limit(1000).get();
+      const snap=await store.collection("users").where("role","in",["teacher","class_teacher"]).limit(1000).get();
       const users=asDocs(snap).filter(item=>!item.deleting && (!q ||
         (String(item.name||"")+" "+String(item.phone||"")+" "+item.role).toLowerCase().includes(q)))
        .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"bn")||a.id.localeCompare(b.id));
@@ -750,22 +750,25 @@ export async function POST(req) {
       await audit(actor,action,id);return json({ok:true});
     }
     if (action === "account.create") {
-      needRole(actor, ["principal"]);
+      needRole(actor, ["principal","assistant_principal"]);
       const name=cleanText(body.name,120),phone=normalizePhone(body.phone),pin=normalizePin(body.pin);
       if(!name||!phone||!pin)return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const photoUrl=cleanText(body.photoUrl,1000);
       if(photoUrl&&!/^https:\/\/[^\s]+$/i.test(photoUrl))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
-      const assignments=teacherAssignments({...body,roles:Array.isArray(body.roles)?body.roles:[body.role]},{});
+      const chosenRoles=Array.isArray(body.roles)?body.roles:[body.role];
+      const privilegedRole=chosenRoles.length===1&&["assistant_principal","staff_manager"].includes(chosenRoles[0])?chosenRoles[0]:"";
+      if(privilegedRole&&actor.role!=="principal")return fail("প্রশাসনিক অ্যাকাউন্ট তৈরি করার অনুমতি শুধু প্রধান শিক্ষকের",403);
+      const assignments=privilegedRole?null:teacherAssignments({...body,roles:chosenRoles},{});
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
-        userPatch: { name, photoUrl, ...assignments, active: true, createdAt: iso() }
+        userPatch: { name, photoUrl, ...(privilegedRole?{role:privilegedRole}:{...assignments}), active: true, createdAt: iso() }
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });
     }
     if (action === "account.update") {
-      needRole(actor,["principal"]);
+      needRole(actor,["principal","assistant_principal"]);
       const uid=cleanText(body.uid,128),values=body.values||{};
       if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
       const userRef=store.collection("users").doc(uid),current=await userRef.get();
