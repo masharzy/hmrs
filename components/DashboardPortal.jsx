@@ -67,6 +67,7 @@ export default function DashboardPortal() {
  const [activeApplicationId,setActiveApplicationId]=useState("");
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
  const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState("");
+ const [attendanceGrade,setAttendanceGrade]=useState(""),[attendanceGroup,setAttendanceGroup]=useState("");
  const [admissionGrade,setAdmissionGrade]=useState(""),[admissionGroup,setAdmissionGroup]=useState("");
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
  const [busy,setBusy]=useState(true),[working,setWorking]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
@@ -79,7 +80,8 @@ export default function DashboardPortal() {
  const [selectedPublishedExam,setSelectedPublishedExam]=useState("");
  const [individualGrade,setIndividualGrade]=useState(""),[individualGroup,setIndividualGroup]=useState("");
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
- const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
+ const [photo,setPhoto]=useState(""),[photo2,setPhoto2]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
+ const [schoolProfiles,setSchoolProfiles]=useState({principalName:"",principalDesignation:"প্রধান শিক্ষক",principalPhotoUrl:"",assistantPrincipalName:"",assistantPrincipalDesignation:"সহকারী প্রধান শিক্ষক",assistantPrincipalPhotoUrl:"",staffManagerName:"",staffManagerDesignation:"স্টাফ ম্যানেজার",staffManagerPhotoUrl:""});
  const photoUploadInput=useRef(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"agriculture",fourthSubject:"agriculture",optionalId:"agriculture"});
 
@@ -108,7 +110,7 @@ export default function DashboardPortal() {
    if(cached.profile)setProfile(cached.profile);
    if(cached.data){
     setData(old=>({...old,...cached.data}));
-    if(cached.data.settings){setPhoto(cached.data.settings.photoUrl||"");setSubtitle(cached.data.settings.subtitle||"")}
+    if(cached.data.settings){setPhoto(cached.data.settings.photoUrl||"");setPhoto2(cached.data.settings.photoUrl2||"");setSubtitle(cached.data.settings.subtitle||"");setSchoolProfiles(old=>({...old,...Object.fromEntries(Object.keys(old).map(k=>[k,cached.data.settings[k]||old[k]]))}))}
    }
    return;
   }
@@ -125,7 +127,7 @@ export default function DashboardPortal() {
     if(r.profile)setProfile(r.profile);
     if(r.data){
      setData(old=>({...old,...r.data}));
-     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
+     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setPhoto2(r.data.settings.photoUrl2||"");setSubtitle(r.data.settings.subtitle||"");setSchoolProfiles(old=>({...old,...Object.fromEntries(Object.keys(old).map(k=>[k,r.data.settings[k]||old[k]]))}))}
     }
    }
   }finally{if(loadSequence.current===seq)setLoadingSection(false);if(activeRouteRequest.current===controller)activeRouteRequest.current=null}
@@ -147,7 +149,7 @@ export default function DashboardPortal() {
     if(p.profile)setProfile(p.profile);
     if(p.data){
      setData(old=>({...old,...p.data}));
-     if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setSubtitle(p.data.settings.subtitle||"")}
+     if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setPhoto2(p.data.settings.photoUrl2||"");setSubtitle(p.data.settings.subtitle||"");setSchoolProfiles(old=>({...old,...Object.fromEntries(Object.keys(old).map(k=>[k,p.data.settings[k]||old[k]]))}))}
     }
     routeCache.current.set(routeKey(tab,date,examId),{profile:p.profile,data:p.data});
     loadedRoutes.current.add(routeKey(tab,date,examId));
@@ -245,8 +247,9 @@ export default function DashboardPortal() {
  const attendanceByStudent=useMemo(()=>new Map((data.attendance||[]).map(a=>[a.studentId,a])),[data.attendance]);
  const filtered=useMemo(()=>[...students].sort((a,b)=>Number(a.grade)-Number(b.grade)||String(a.group||"").localeCompare(String(b.group||""))||Number(a.roll)-Number(b.roll)).filter(s=>
    (tab!=="students"||(!studentGrade||Number(s.grade)===Number(studentGrade))&&(!studentGroup||s.group===studentGroup))&&
+    (tab!=="attendance"||(!attendanceGrade||Number(s.grade)===Number(attendanceGrade))&&(!attendanceGroup||s.group===attendanceGroup))&&
    (s.name+" "+s.roll+" "+s.grade+" "+formatClassEnglish(s.grade,s.group)+" "+toAsciiDigits(s.roll)+" "+toAsciiDigits(s.grade)).toLowerCase().includes(query.toLowerCase())
- ),[students,query,tab,studentGrade,studentGroup]);
+ ),[students,query,tab,studentGrade,studentGroup,attendanceGrade,attendanceGroup]);
  const visiblePage=Math.min(page,Math.max(1,Math.ceil(filtered.length/25)));
  const pageItems=filtered.slice((visiblePage-1)*25,visiblePage*25);
  const admissions=data.admissions||[];
@@ -470,8 +473,12 @@ export default function DashboardPortal() {
         <Pager total={filteredAdmissions.length} page={admissionsCurrentPage} size={20} onChange={setAdmissionsPage}/>
        </>}
        {tab==="attendance"&&<>
-        <div className="dashboard-toolbar"><h2 className="section-title">Attendance Register</h2><label className="field">Date <Input type="date" value={date} onChange={changeDate}/></label></div>
-        <label className="field dashboard-search">Search Students <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
+        <div className="dashboard-toolbar"><h2 className="section-title">শ্রেণিভিত্তিক হাজিরা</h2><label className="field">তারিখ <Input type="date" value={date} onChange={changeDate}/></label></div>
+        <div className="form-grid">
+         <Field label="শ্রেণি নির্বাচন"><Select value={attendanceGrade} onChange={v=>{setAttendanceGrade(v);setAttendanceGroup("");setPage(1)}} choices={options(gradeChoices,"সকল শ্রেণি")}/></Field>
+         {Number(attendanceGrade)>=9&&<Field label="বিভাগ নির্বাচন"><Select value={attendanceGroup} onChange={v=>{setAttendanceGroup(v);setPage(1)}} choices={options([["science","বিজ্ঞান"],["business","ব্যবসায় শিক্ষা"],["humanities","মানবিক"]],"সকল বিভাগ")}/></Field>}
+        </div>
+        <label className="field dashboard-search">শিক্ষার্থী খুঁজুন <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>No.</th><th>Student</th><th>Class / Roll</th><th>Status</th><th>Attendance</th><th>Guardian</th></tr></thead><tbody>{pageItems.map((s,i)=>{
          const record=attendanceByStudent.get(s.id);
          return <tr key={s.id}><td>{toAsciiDigits((visiblePage-1)*25+i+1)}</td><td className="font-bold">{s.name}</td><td>{toAsciiDigits(s.grade)} / {toAsciiDigits(s.roll)}</td>
@@ -568,9 +575,19 @@ export default function DashboardPortal() {
         <Field label="Upload Home Photo (JPG, PNG, WebP; max 3 MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
         <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> Upload Photo</button>
         <Field label="Or HTTPS Photo URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
+        <Field label="বিদ্যালয়ের প্রথম ছবির HTTPS লিংক"><Input value={photo} onChange={setPhoto} placeholder="https://..."/></Field>
+        <Field label="বিদ্যালয়ের দ্বিতীয় ছবির HTTPS লিংক"><Input value={photo2} onChange={setPhoto2} placeholder="https://..."/></Field>
+        {photo&&<img key={photo} src={photo} alt="প্রথম ছবি" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
+        {photo2&&<img key={photo2} src={photo2} alt="দ্বিতীয় ছবি" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
+        <h3 className="font-bold mt-3">হোমপেজের দায়িত্বপ্রাপ্ত ব্যক্তিদের পরিচিতি</h3>
+        {["principal","assistantPrincipal","staffManager"].map((key,i)=><div key={key} className="panel p-4 grid gap-3">
+         <b>{["প্রধান শিক্ষক","সহকারী প্রধান শিক্ষক","স্টাফ ম্যানেজার"][i]}</b>
+         <Field label="নাম"><input value={schoolProfiles[key+"Name"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"Name"]:e.target.value}))} placeholder="নাম লিখুন"/></Field>
+         <Field label="পদবি"><input value={schoolProfiles[key+"Designation"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"Designation"]:e.target.value}))}/></Field>
+         <Field label="ছবির HTTPS লিংক"><input value={schoolProfiles[key+"PhotoUrl"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"PhotoUrl"]:e.target.value}))} placeholder="https://..."/></Field>
+        </div>)}
         <Field label="Short School Description"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
-        {photo&&<img key={photo} src={photo} alt="School Photo Preview" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
-        <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>Save Settings</button>
+        <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,photoUrl2:photo2,subtitle,...schoolProfiles})}>সব সেটিংস সংরক্ষণ</button>
        </div></>}
       </>}
     </>}

@@ -1,88 +1,34 @@
 import Link from "next/link";
-import {ArrowRight,ArrowUpRight,BookOpenCheck,FileText,GraduationCap,ShieldCheck,Sparkles,
- BadgeCheck,ClipboardList,UserRound,UsersRound,UserCog,Bell,Stars,CheckCircle2} from "lucide-react";
+import { ArrowRight, Bell, BookOpenCheck, GraduationCap, MapPin, ShieldCheck, Sparkles, Users, UserCog } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import NoticeBoard from "../components/NoticeBoard";
-import SchoolPhoto from "../components/SchoolPhoto";
+import SchoolGallery from "../components/SchoolGallery";
+import HomeLeadership from "../components/HomeLeadership";
 import "./home.css";
-
-const services=[
- {href:"/admission",title:"অনলাইন ভর্তি",desc:"সহজে ভর্তি আবেদন সম্পন্ন করুন",chip:"ADMISSION",icon:ClipboardList},
- {href:"/login/student",title:"শিক্ষার্থী পোর্টাল",desc:"নিজের ফলাফল ও হাজিরা দেখুন",chip:"STUDENTS",icon:UserRound},
- {href:"/login/teacher",title:"শিক্ষক পোর্টাল",desc:"শ্রেণি ও নম্বর ব্যবস্থাপনা",chip:"TEACHERS",icon:UsersRound},
- {href:"/login/principal",title:"প্রধান শিক্ষক",desc:"বিদ্যালয় পরিচালনা ও অনুমোদন",chip:"ADMIN",icon:UserCog},
- {href:"#notices",title:"নোটিশ বোর্ড",desc:"নতুন বিজ্ঞপ্তি ও প্রয়োজনীয় খবর",chip:"UPDATES",icon:Bell}
-];
-
 export default function Home(){
- return <><SiteHeader/><main className="hmrs-home">
-  <section className="hmrs-home-hero">
-   <div className="hmrs-home-decor hmrs-home-decor-one" aria-hidden="true"/>
-   <div className="hmrs-home-decor hmrs-home-decor-two" aria-hidden="true"/>
-   <div className="container hmrs-home-hero-grid">
-    <div className="hmrs-home-intro">
-     <div className="hmrs-home-pill"><Sparkles size={15}/> আমাদের ডিজিটাল বিদ্যালয়ে স্বাগতম <span className="hmrs-pill-spark" aria-hidden="true">✦</span></div>
-     <h1 className="hmrs-home-title">শিখব আনন্দে,<br/><span>এগিয়ে যাব একসাথে।</span></h1>
-     <p className="hmrs-home-lead">হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়—শিক্ষার্থী, শিক্ষক ও অভিভাবকের জন্য আরও সহজ ও সুন্দর ডিজিটাল অভিজ্ঞতা।</p>
-     <div className="hmrs-home-actions">
-      <Link className="btn hmrs-home-primary" href="/admission">ভর্তির আবেদন করুন <ArrowRight size={17}/></Link>
-      <Link className="btn hmrs-home-secondary" href="#services"><BookOpenCheck size={17}/> সকল সেবা দেখুন</Link>
-     </div>
-     <div className="hmrs-home-highlights">
-      <span><CheckCircle2 size={17}/> ৬ষ্ঠ–১০ম শ্রেণি</span>
-      <span><ShieldCheck size={17}/> নিরাপদ শিক্ষার্থী তথ্য</span>
-      <span><BadgeCheck size={17}/> সহজ অনলাইন সেবা</span>
-     </div>
-     <div className="hmrs-home-mini-stat" aria-label="School digital services"><span className="hmrs-stat-orb"><GraduationCap size={19}/></span>
-      <div><strong>এক জায়গায় সব সেবা</strong><small>Admission · Results · Notices</small></div>
-      <ArrowUpRight size={17} aria-hidden="true"/>
-     </div>
-    </div>
-    <div className="hmrs-home-visual">
-     <div className="hmrs-home-photo"><SchoolPhoto/></div>
-     <span className="hmrs-home-visual-orbit" aria-hidden="true"><GraduationCap size={28}/></span>
-     <div className="hmrs-home-school-badge">
-      <span className="hmrs-home-school-icon"><Sparkles size={20}/></span>
-      <span><strong>আলোকিত আগামীর পথে</strong><small>শিক্ষা • মূল্যবোধ • সৃজনশীলতা</small></span>
-     </div>
-     <span className="hmrs-home-dot-pattern" aria-hidden="true"/>
-    </div>
+ return <><SiteHeader/><main className="hmrs-home hmrs-home-redesign">
+  <section className="hmrs-school-masthead"><div className="hmrs-school-masthead-glow"/><div className="container hmrs-school-masthead-inner">
+   <div className="hmrs-school-crest"><GraduationCap size={36}/></div><div className="hmrs-school-heading">
+    <span className="hmrs-home-eyebrow">WELCOME TO OUR SCHOOL</span><h1>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</h1>
+    <p><MapPin size={17}/> পঞ্চবটি, আনন্দবাজার, সোনারগাঁ, নারায়ণগঞ্জ</p><span className="hmrs-school-eiin">EIIN: 112359</span>
+   </div><div className="hmrs-school-motto"><Sparkles size={18}/> শিক্ষা • শৃঙ্খলা • মানবিকতা</div>
+  </div></section>
+  <section className="container hmrs-welcome-panel"><div className="hmrs-welcome-copy">
+   <span className="hmrs-home-eyebrow">LEARN · LEAD · SUCCEED</span><h2>শিখব আনন্দে,<br/><span>গড়ব সুন্দর আগামী।</span></h2>
+   <p>শিক্ষার্থী, শিক্ষক ও অভিভাবকদের জন্য বিদ্যালয়ের প্রয়োজনীয় তথ্য ও ডিজিটাল সেবা এখন এক জায়গায়।</p>
+   <div className="hmrs-home-actions"><Link className="btn hmrs-home-primary" href="/admission">ভর্তির আবেদন <ArrowRight size={18}/></Link><Link className="btn hmrs-home-secondary" href="#school-photos"><BookOpenCheck size={17}/> বিদ্যালয় পরিচিতি</Link></div>
+   <div className="hmrs-home-highlights"><span><ShieldCheck size={16}/> নিরাপদ তথ্যব্যবস্থা</span><span><Users size={16}/> শিক্ষার্থী ও শিক্ষক সেবা</span></div>
+  </div><SchoolGallery/></section>
+  <section className="container hmrs-leadership-section"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">SCHOOL LEADERSHIP</span><h2 className="section-title">বিদ্যালয় পরিচালনায় দায়িত্বপ্রাপ্ত</h2><p>প্রধান শিক্ষক, সহকারী প্রধান শিক্ষক ও স্টাফ ম্যানেজমেন্ট</p></div></div><HomeLeadership/></section>
+  <section className="container hmrs-home-services" id="services"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">DIGITAL SERVICES</span><h2 className="section-title">বিদ্যালয়ের অনলাইন সেবা</h2><p>আপনার প্রয়োজনীয় সেবাটি নির্বাচন করুন</p></div></div>
+   <div className="hmrs-home-quick-grid hmrs-home-quick-grid-four">
+    <Link className="hmrs-home-quick-card hmrs-home-quick-1" href="/login/student"><span className="hmrs-home-quick-icon"><GraduationCap size={23}/></span><strong>শিক্ষার্থী পোর্টাল</strong><small>ফলাফল, হাজিরা ও ব্যক্তিগত তথ্য</small></Link>
+    <Link className="hmrs-home-quick-card hmrs-home-quick-2" href="/login/teacher"><span className="hmrs-home-quick-icon"><Users size={23}/></span><strong>শিক্ষক পোর্টাল</strong><small>শ্রেণি, হাজিরা ও নম্বর ব্যবস্থাপনা</small></Link>
+    <Link className="hmrs-home-quick-card hmrs-home-quick-3" href="/notices"><span className="hmrs-home-quick-icon"><Bell size={23}/></span><strong>নোটিশ বোর্ড</strong><small>বিদ্যালয়ের সর্বশেষ বিজ্ঞপ্তি</small></Link>
+    <Link className="hmrs-home-quick-card hmrs-home-quick-4" href="/login/principal"><span className="hmrs-home-quick-icon"><UserCog size={23}/></span><strong>প্রশাসনিক লগইন</strong><small>অনুমোদিত প্রশাসনিক অ্যাকাউন্ট</small></Link>
    </div>
   </section>
-
-  <section className="container hmrs-home-services" id="services">
-   <div className="hmrs-home-section-heading"><div>
-    <span className="hmrs-home-eyebrow">EXPLORE OUR SERVICES</span>
-    <h2 className="section-title">আপনার প্রয়োজনীয় সেবাগুলো</h2>
-    <p>যে কাজটি করতে চান, সেটি নির্বাচন করুন</p>
-   </div><span className="hmrs-home-section-flower" aria-hidden="true"><Sparkles size={21}/></span></div>
-   <div className="hmrs-home-quick-grid">
-    {services.map((item,index)=><Link className={"hmrs-home-quick-card hmrs-home-quick-"+index} href={item.href} key={item.href}>
-      <span className="hmrs-home-quick-top"><span className="hmrs-home-quick-icon"><item.icon size={23}/></span><ArrowUpRight className="hmrs-home-quick-arrow" size={17}/></span>
-      <span className="hmrs-home-quick-chip">{item.chip}</span>
-      <strong>{item.title}</strong><small>{item.desc}</small>
-     </Link>)}
-   </div>
-  </section>
-
-  <section className="container hmrs-home-notices" id="notices">
-   <div className="hmrs-home-section-heading"><div>
-    <span className="hmrs-home-eyebrow">LATEST UPDATES</span>
-    <h2 className="section-title">বিদ্যালয়ের সর্বশেষ খবর</h2>
-    <p>গুরুত্বপূর্ণ নোটিশ ও নতুন বিজ্ঞপ্তি</p>
-   </div><span className="hmrs-home-notice-mark"><Bell size={19}/></span></div>
-   <NoticeBoard full/>
-  </section>
-
-  <section className="container hmrs-home-final">
-   <div className="hmrs-home-final-card">
-    <span className="hmrs-home-final-icon"><GraduationCap size={29}/></span>
-    <div><span className="hmrs-home-final-kicker">YOUR NEXT CHAPTER STARTS HERE</span>
-      <h2>নতুন শিক্ষাবর্ষে তোমাকে স্বাগতম!</h2>
-      <p>ভর্তি আবেদন এখন অনলাইনে, মাত্র কয়েকটি সহজ ধাপে।</p></div>
-    <Link href="/admission" className="btn hmrs-home-final-button">ভর্তি আবেদন <ArrowRight size={16}/></Link>
-   </div>
-  </section>
+  <section className="container hmrs-home-notices" id="notices"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">LATEST UPDATES</span><h2 className="section-title">বিদ্যালয়ের নোটিশ</h2><p>গুরুত্বপূর্ণ নোটিশ ও ঘোষণা</p></div></div><NoticeBoard full/></section>
  </main><SiteFooter/></>;
 }

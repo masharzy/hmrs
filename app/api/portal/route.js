@@ -572,9 +572,16 @@ export async function POST(req) {
     }
     if (action === "settings.update") {
       needRole(actor, ["principal"]);
-      const photoUrl = cleanText(body.photoUrl, 1000), subtitle = cleanText(body.subtitle, 350);
-      if (photoUrl && (!/^https:\/\//i.test(photoUrl) || !/^https:\/\/[^\s]+$/i.test(photoUrl))) return fail("শুধুমাত্র HTTPS ছবি URL গ্রহণযোগ্য");
-      await store.collection("settings").doc("school").set({ photoUrl, subtitle, updatedAt: iso() }, { merge: true });
+      const keys=["photoUrl","photoUrl2","principalPhotoUrl","assistantPrincipalPhotoUrl","staffManagerPhotoUrl"];
+      const values={};
+      for(const key of keys){
+        const value=cleanText(body[key],1000);
+        if(value&&!/^https:\/\/[^\s]+$/i.test(value))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
+        values[key]=value;
+      }
+      for(const key of ["principalName","principalDesignation","assistantPrincipalName","assistantPrincipalDesignation","staffManagerName","staffManagerDesignation","subtitle"])
+        values[key]=cleanText(body[key],350);
+      await store.collection("settings").doc("school").set({ ...values, updatedAt: iso() }, { merge: true });
       await audit(actor, action, "school"); return json({ ok: true });
     }
     if (action === "account.create") {
@@ -585,7 +592,7 @@ export async function POST(req) {
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
-        userPatch: { name, ...assignments, active: true, createdAt: iso() }
+        userPatch: { name, photoUrl: cleanText(body.photoUrl,1000), ...assignments, active: true, createdAt: iso() }
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });
@@ -596,7 +603,8 @@ export async function POST(req) {
       if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
       const userRef=store.collection("users").doc(uid),current=await userRef.get();
       if(!current.exists)return fail("অ্যাকাউন্ট পাওয়া যায়নি",404);
-      const before=current.data(),name=cleanText(values.name,120);
+      const before=current.data(),name=cleanText(values.name,120),photoUrl=cleanText(values.photoUrl,1000);
+      if(photoUrl&&!/^https:\/\/[^\s]+$/i.test(photoUrl))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
       const staffAccount=["teacher","class_teacher"].includes(before.role);
       const assignments=staffAccount?teacherAssignments({...values,roles:Array.isArray(values.roles)?values.roles:[values.role]},before):null;
       const role=staffAccount?assignments.role:values.role,active=values.active===true;
@@ -633,7 +641,7 @@ export async function POST(req) {
           throw Object.assign(Error("এই লগইন নম্বর অন্য অ্যাকাউন্টে ব্যবহার হচ্ছে"),{status:409});
         if(studentRef&&(!studentSnap?.exists||studentSnap.data()?.deleting))
           throw Object.assign(Error("শিক্ষার্থীর অ্যাকাউন্ট পাওয়া যায়নি"),{status:404});
-        tx.set(userRef,{name,phone:phone||"",role,active,
+        tx.set(userRef,{name,photoUrl,phone:phone||"",role,active,
           assignedClasses,teachingSubjects,...(assignments?{roles:assignments.roles,teachingClasses:assignments.teachingClasses,classTeacherClasses:assignments.classTeacherClasses}:{}),pinEnabled:!!(existingCredential.exists||pin),updatedAt:now,updatedBy:actor.uid},{merge:true});
         if(newMapping&&(phoneChanged||!newMap?.exists))tx.set(newMapping,{uid,createdAt:now});
         if(phoneChanged&&oldMap?.exists&&oldMap.data()?.uid===uid)tx.delete(oldMapping);
