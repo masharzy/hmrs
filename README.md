@@ -89,3 +89,9 @@ GitHub Actions runs tests and a production build for pushes and pull requests.
 
 - Principal: Dashboard → Teachers → Add/Edit → **Upload photo** (JPG/PNG/WebP, ≤3 MB). Uploaded via `/api/staff-photo` to ImgBB (needs `IMGBB_API_KEY`), saved as `users/{uid}.photoUrl` on Save, and shown in the homepage "আমাদের শিক্ষকবৃন্দ" section. Only name, photo, class-teacher info and subjects are public.
 - The homepage notice list shows up to 100 published notices in a fixed-height scroll area with full-width rows.
+
+## Ticker, banner, admission switch, promotion
+
+- Homepage: a news ticker of the latest 10 notices (hover pauses, click opens the notice) sits above the admission banner.
+- Dashboard → Settings (principal): turn **online admission** and the **top banner** on/off and edit the banner text. Closing admission blocks new applications (existing applicants can still use their edit link).
+- Dashboard → Student (principal): **Promote** one student or **Promote Students** (all / one class) to the next class. Class 10 stays. Class 8 → 9 needs a group.

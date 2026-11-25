@@ -57,6 +57,11 @@ export async function POST(req){
    });
    return json({ok:true,applicationId:id,status:"pending",updated:true});
   }
+  // The principal can close online admission from the dashboard (settings/school.admissionOpen=false).
+  try{
+   const school=await db().collection("settings").doc("school").get();
+   if(school.exists&&school.data()?.admissionOpen===false)return fail("অনলাইন ভর্তির আবেদন বর্তমানে বন্ধ আছে",403);
+  }catch{}
   const values=normalizeAdmissionData(raw);
   const errors=validateAdmission(raw);
   if(Object.keys(errors).length){

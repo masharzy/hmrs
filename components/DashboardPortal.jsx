@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { ArrowUpCircle, Bell, BookOpen, CalendarCheck2, ClipboardCheck, CreditCard, FilePenLine, FileText, GraduationCap, LayoutDashboard, LogOut, MessageCircle, Printer, RefreshCw, School, Settings, ShieldCheck, Users, Wallet, Check, X, Plus, Send, Search, UserPlus, LockKeyhole, Pencil, Trash2, Menu, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 import { evaluateTranscript, getSubjects,FOURTH_SUBJECT_OPTIONS,fourthSubjectSelection,selectedFourthSubject } from "../lib/academic";
 import dynamic from "next/dynamic";
@@ -28,6 +28,8 @@ import { formatClass, groupNames } from "../lib/student-admin";
 import {storedAdmissionSession} from "../lib/admission-session.js";
 import { allowedSubjects } from "../lib/staff-permissions.js";
 import StudentResultCard from "./StudentResultCard";
+import StudentPromotion from "./StudentPromotion";
+import SchoolSwitches from "./SchoolSwitches";
 import {buildClassResultMetrics} from "../lib/result-metrics.js";
 import {examAppliesToStudent,examScopeGrade,examScopeLabel} from "../lib/exam-scope.js";
 const ExamCreateModal=dynamic(()=>import("./ExamCreateModal"),{ssr:false});
@@ -66,7 +68,7 @@ export default function DashboardPortal() {
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null);
  const [activeApplicationId,setActiveApplicationId]=useState("");
  const [page,setPage]=useState(1),[admissionsPage,setAdmissionsPage]=useState(1);
- const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState("");
+ const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState(""),[promoting,setPromoting]=useState(null);
  const [attendanceGrade,setAttendanceGrade]=useState(""),[attendanceGroup,setAttendanceGroup]=useState("");
  const [admissionGrade,setAdmissionGrade]=useState(""),[admissionGroup,setAdmissionGroup]=useState("");
  const [data,setData]=useState({students:[],admissions:[],attendance:[],exams:[],marks:[],ledger:[],notices:[],routines:[],users:[],settings:{}});
@@ -417,6 +419,7 @@ export default function DashboardPortal() {
            }} busy={working} principal={actor.role==="principal"}/>
          </section>}
         <div className="dashboard-toolbar"><div><h2 className="section-title">Student Records</h2><p className="muted text-xs">{toAsciiDigits(filtered.length)} students</p></div>
+         {actor.role==="principal"&&<button className="btn" onClick={()=>setPromoting({})}><ArrowUpCircle size={15}/> Promote Students</button>}
          <div className="hmrs-student-filters">
            <label className="field">Class<select value={studentGrade} onChange={e=>{setStudentGrade(e.target.value);setStudentGroup("");setPage(1)}}>
             <option value="">All Classes</option>{gradeChoices.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
@@ -433,6 +436,7 @@ export default function DashboardPortal() {
          <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> Edit</button>
            {pendingByStudent.get(s.id)&&<button className="btn sm" onClick={()=>setActiveApplicationId(pendingByStudent.get(s.id).id)}>Application</button>}
+           {actor.role==="principal"&&Number(s.grade)<10&&<button className="btn sm" onClick={()=>setPromoting({student:s})}><ArrowUpCircle size={14}/> Promote</button>}
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div></td>
         </tr>)}</tbody></table>{!filtered.length&&<p className="empty">No students found</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
@@ -442,6 +446,7 @@ export default function DashboardPortal() {
            <p className="muted text-xs mt-1">{formatClassEnglish(toAsciiDigits(s.grade),s.group)} · Roll {toAsciiDigits(s.roll)} · Dues BDT  {toAsciiDigits(s.due||0)}</p>
          <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> Edit</button>
+           {actor.role==="principal"&&Number(s.grade)<10&&<button className="btn sm" onClick={()=>setPromoting({student:s})}><ArrowUpCircle size={14}/> Promote</button>}
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div>
         </div>)}{!filtered.length&&<div className="panel empty">No students found</div>}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
@@ -570,7 +575,7 @@ export default function DashboardPortal() {
        {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
         
        {tab==="accounts"&&actor.role==="principal"&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}
-       {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2><div className="panel p-6 grid gap-4">
+       {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2>{actor.role==="principal"&&<SchoolSwitches key={JSON.stringify([data.settings?.admissionOpen,data.settings?.bannerEnabled,data.settings?.bannerText,data.settings?.bannerLinkText])} settings={data.settings} working={working} mutate={mutate}/>}<div className="panel p-6 grid gap-4">
         <div className="alert">Upload a school photo to ImgBB and it will appear on the home page. Use only your school's own images.</div>
         <Field label="Upload Home Photo (JPG, PNG, WebP; max 3 MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
         <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> Upload Photo</button>
@@ -593,6 +598,7 @@ export default function DashboardPortal() {
     </>}
    </section>
   </DashboardShell>
+  {promoting&&<StudentPromotion students={students} target={promoting} working={working} mutate={mutate} onClose={()=>setPromoting(null)}/>}
   {(creatingExam||editingExam)&&<ExamCreateModal key={editingExam?.id||"new"} actor={actor}
     exam={editingExam} working={working} onClose={()=>{setCreatingExam(false);setEditingExam(null)}}
     onCreate={async values=>{

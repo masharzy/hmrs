@@ -6,6 +6,7 @@ import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 import { toBanglaDigits, gradeLabel } from "../../lib/bangla-numbers";
 import PinInput from "../../components/PinInput";
+import { loadPublicData } from "../../lib/public-client";
 import {getAdmissionSessionYear,getAdmissionSessionOptions} from "../../lib/admission-session.js";
 import { ADMISSION_FIELDS, validateAdmissionStep, validateAdmission, firstInvalidStep, validateAdmissionPin } from "../../lib/admission-validation";
 
@@ -60,6 +61,8 @@ export default function Admission(){
  const [originalSession,setOriginalSession]=useState("");
  const [loadingEdit,setLoadingEdit]=useState(false);
  const [editLoadError,setEditLoadError]=useState("");
+ const [admissionClosed,setAdmissionClosed]=useState(false);
+ useEffect(()=>{let live=true;loadPublicData().then(d=>{if(live&&d?.settings?.admissionOpen===false)setAdmissionClosed(true)}).catch(()=>{});return()=>{live=false}},[]);
  const editUrl=editToken && (applicationId||editId) && typeof window!=="undefined"
   ? window.location.origin+"/admission#edit="+encodeURIComponent(applicationId||editId)+"&token="+encodeURIComponent(editToken)
   : "";
@@ -190,6 +193,13 @@ export default function Admission(){
  if(editMode && form.session && !sessionChoices.some(([value])=>value===form.session))
   sessionChoices.unshift([form.session,form.session+" (Previous session)"]);
  const StepIcon=steps[step].icon;
+ if(admissionClosed&&!editMode&&!editId&&!applicationId&&!loadingEdit)
+  return <><SiteHeader/><main className="admission-page"><section className="container" style={{maxWidth:640,padding:"72px 20px",textAlign:"center"}}>
+   <div className="panel" style={{padding:"40px 28px"}}><AlertCircle size={44} style={{margin:"0 auto 14px",color:"#d92d5b"}}/>
+    <h1 style={{fontSize:26,fontWeight:800,marginBottom:10}}>অনলাইন ভর্তি আবেদন বর্তমানে বন্ধ আছে</h1>
+    <p className="muted" style={{lineHeight:1.9}}>নতুন আবেদন গ্রহণ আপাতত বন্ধ। বিস্তারিত জানতে বিদ্যালয়ের সাথে যোগাযোগ করুন অথবা নোটিশ বোর্ড দেখুন।</p>
+    <Link className="btn primary" style={{marginTop:22,display:"inline-flex"}} href="/#notices"><ArrowLeft size={16}/> নোটিশ বোর্ডে যান</Link></div>
+  </section></main><SiteFooter/></>;
  return <><SiteHeader/><main className="admission-page">
   <div className="admission-container">
    <Link href="/" className="admission-back"><ArrowLeft size={15}/> হোমে ফিরুন</Link>
