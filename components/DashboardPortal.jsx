@@ -19,6 +19,7 @@ const NoticeManager=dynamic(()=>import("./NoticeManager"),{ssr:false});
 const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
 const ResultEntryGrid=dynamic(()=>import("./ResultEntryGrid"),{ssr:false});
 const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
+const AccountPinReset=dynamic(()=>import("./AccountPinReset"),{ssr:false});
 
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
@@ -38,12 +39,15 @@ const ResultPublishControls=dynamic(()=>import("./ResultPublishControls"),{ssr:f
 // Parameter-scoped keys keep attendance dates and exam results separate.
 const routeKey=(section,date,examId)=>section==="attendance"?"attendance:"+date:section;
 const today = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const roleNames={principal:"Head Teacher",class_teacher:"Class Teacher",teacher:"Teacher",student:"Student"};
+const roleNames={principal:"প্রধান শিক্ষক",assistant_principal:"সহকারী প্রধান শিক্ষক",staff_manager:"স্টাফ ম্যানেজার",class_teacher:"শ্রেণি শিক্ষক",teacher:"বিষয় শিক্ষক",student:"শিক্ষার্থী",guardian:"অভিভাবক"};
 const statusNames={present:"Present",absent:"Absent",left_early:"Left Early"};
 const roles={
  student: [["overview","My Dashboard",LayoutDashboard],["records","Attendance & Dues",CalendarCheck2],["results","Results & Marksheet",GraduationCap],["profile","My PIN",LockKeyhole]],
+ guardian: [["overview","সন্তানের তথ্য",LayoutDashboard],["records","হাজিরা ও বকেয়া",CalendarCheck2],["results","ফলাফল ও মার্কশিট",GraduationCap],["profile","আমার PIN",LockKeyhole]],
  teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["profile","My PIN",LockKeyhole]],
  class_teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Class Accounts",Wallet],["profile","My PIN",LockKeyhole]],
+ assistant_principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["accounts","Staff Accounts & PIN Reset",ShieldCheck],["security","Login Security",LockKeyhole],["profile","My PIN",LockKeyhole]],
+ staff_manager: [["overview","Overview",LayoutDashboard],["accounts","PIN Reset",ShieldCheck],["profile","My PIN",LockKeyhole]],
  principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["accounts","Staff Accounts",ShieldCheck],["security","Login Security",LockKeyhole],["settings","Website Settings",Settings],["profile","My PIN",LockKeyhole]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
@@ -362,9 +366,9 @@ export default function DashboardPortal() {
    {success&&<div role="status" className="alert mb-4">{success}</div>}
    <section className="hmrs-main-content dashboard-section-content">
     {showPlaceholder?<DashboardSkeleton kind={tab}/>:<>
-     {tab==="security"&&actor.role==="principal"&&<SecurityCenter/>}
+     {tab==="security"&&["principal","assistant_principal","staff_manager"].includes(actor.role)&&<SecurityCenter/>}
      {tab==="profile"&&<ChangePinForm actor={actor} mutate={mutate} working={working}/>}
-     {actor.role==="student"?<>
+     {["student","guardian"].includes(actor.role)?<>
        {tab==="overview"&&<DashboardStudentHome profile={profile}/>}
        {tab==="records"&&<><h2 className="section-title">Attendance & Outstanding Dues</h2><div className="panel stat"><div className="muted">Outstanding Balance</div><strong>BDT  {toAsciiDigits(profile?.dues||0)}</strong><p className="muted text-xs mb-0">Contact your class teacher if you notice any incorrect dues.</p></div>
         <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{(profile?.attendance||[]).sort((a,b)=>b.date.localeCompare(a.date)).map(a=><tr key={a.id}><td>{toAsciiDigits(a.date)}</td><td>{statusNames[a.status]}</td><td>{a.note||"—"}</td></tr>)}</tbody></table>{!profile?.attendance?.length&&<p className="empty">No attendance records found.</p>}</div></>}
@@ -502,7 +506,7 @@ export default function DashboardPortal() {
         })}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
        </>}
-       {tab==="exams"&&actor.role!=="student"&&
+       {tab==="exams"&&!["student","guardian"].includes(actor.role)&&
         <ExamManager actor={actor} exams={exams} working={working} onCreate={()=>setCreatingExam(true)}
          onEdit={item=>setEditingExam(item)}
          onSelect={id=>{changeExam(id)}}
@@ -574,7 +578,7 @@ export default function DashboardPortal() {
         <div className="panel table-wrap"><table><thead><tr><th>Date</th><th>Class</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>{(data.ledger||[]).map(l=><tr key={l.id}><td>{toAsciiDigits(l.createdAt?.slice(0,10))}</td><td>{toAsciiDigits(l.grade)}</td><td>{l.type==="income"?"Income":"Expense"}</td><td>{l.description}</td><td>BDT  {toAsciiDigits(l.amount)}</td></tr>)}</tbody></table></div></>}
        {tab==="notices"&&actor.role==="principal"&&<NoticeManager items={data.notices||[]} working={working} mutate={mutate}/>}
         
-       {tab==="accounts"&&actor.role==="principal"&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}
+       {tab==="accounts"&&<>{["principal","assistant_principal"].includes(actor.role)&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}<AccountPinReset/></>}
        {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2>{actor.role==="principal"&&<SchoolSwitches key={JSON.stringify([data.settings?.admissionOpen,data.settings?.bannerEnabled,data.settings?.bannerText,data.settings?.bannerLinkText])} settings={data.settings} working={working} mutate={mutate}/>}<div className="panel p-6 grid gap-4">
         <div className="alert">Upload a school photo to ImgBB and it will appear on the home page. Use only your school's own images.</div>
         <Field label="Upload Home Photo (JPG, PNG, WebP; max 3 MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
