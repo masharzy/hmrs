@@ -9,16 +9,15 @@ import SchoolPhoto from "../components/SchoolPhoto";
 import "./home.css";
 import { useLanguage } from "../components/LanguageProvider";
 
-const services=[
+export default function Home(){
+ const {language}=useLanguage(); const en=language==="en";
+ const services=[
  {href:"/admission",title:en?"Online Admission":"অনলাইন ভর্তি",desc:en?"Complete your admission application easily":"সহজে ভর্তি আবেদন সম্পন্ন করুন",chip:"ADMISSION",icon:ClipboardList},
  {href:"/login/student",title:en?"Student Portal":"শিক্ষার্থী পোর্টাল",desc:en?"View your results and attendance":"নিজের ফলাফল ও হাজিরা দেখুন",chip:"STUDENTS",icon:UserRound},
  {href:"/login/teacher",title:en?"Teacher Portal":"শিক্ষক পোর্টাল",desc:en?"Manage classes and marks":"শ্রেণি ও নম্বর ব্যবস্থাপনা",chip:"TEACHERS",icon:UsersRound},
  {href:"/login/principal",title:en?"Headteacher":"প্রধান শিক্ষক",desc:en?"School administration and approvals":"বিদ্যালয় পরিচালনা ও অনুমোদন",chip:"ADMIN",icon:UserCog},
  {href:"#notices",title:en?"Notice Board":"নোটিশ বোর্ড",desc:en?"Latest announcements and updates":"নতুন বিজ্ঞপ্তি ও প্রয়োজনীয় খবর",chip:"UPDATES",icon:Bell}
 ];
-
-export default function Home(){
- const {language}=useLanguage(); const en=language==="en";
  return <><SiteHeader/><main className="hmrs-home">
   <section className="hmrs-home-hero">
    <div className="hmrs-home-decor hmrs-home-decor-one" aria-hidden="true"/>
