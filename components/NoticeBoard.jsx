@@ -16,6 +16,11 @@ export default function NoticeBoard({compact=false,full=false}){
   return ()=>{alive=false};
  },[]);
  useEffect(()=>{
+  const openFromTicker=event=>{if(event.detail)setSelected(event.detail)};
+  window.addEventListener("hmrs-open-notice",openFromTicker);
+  return ()=>window.removeEventListener("hmrs-open-notice",openFromTicker);
+ },[]);
+ useEffect(()=>{
   if(!selected)return;
   const oldOverflow=document.body.style.overflow;
   document.body.style.overflow="hidden";

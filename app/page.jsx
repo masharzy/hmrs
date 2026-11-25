@@ -6,6 +6,7 @@ import NoticeBoard from "../components/NoticeBoard";
 import SchoolGallery from "../components/SchoolGallery";
 import HomeLeadership from "../components/HomeLeadership";
 import HomeTeachers from "../components/HomeTeachers";
+import HomeTopBar from "../components/HomeTopBar";
 import "./home.css";
 
 const services=[
@@ -31,7 +32,7 @@ const stats=[["৬ষ্ঠ–১০ম","শ্রেণি"],["৩টি","ব
 
 export default function Home(){
  return <><SiteHeader/><main className="hmrs-home hmrs-home-redesign">
-  <div className="hmrs-home-announce"><span>নতুন শিক্ষাবর্ষে ভর্তি আবেদন এখন অনলাইনে</span><Link href="/admission">আবেদন করুন →</Link></div>
+  <HomeTopBar/>
   <section className="hmrs-home-hero"><div className="container hmrs-home-hero-grid">
    <div>
     <div className="hmrs-home-identity"><MapPin size={16}/> পঞ্চবটি, আনন্দবাজার, সোনারগাঁ, নারায়ণগঞ্জ · EIIN: ১১২৩৫৯</div>

@@ -15,6 +15,7 @@ export default function Marksheet({student,marks,exam,printId="mark-print",repor
    <div className="hmrs-mark-address">Sonargaon, Narayanganj · EIIN: 112359</div>
    <h2>{exam.name} — Individual Marksheet</h2>
   </div>
+  {student.boardPromoted&&<div className="hmrs-board-promoted-banner">✔ PROMOTED TO BOARD EXAM</div>}
   <div className="hmrs-mark-student-grid">
    <div><b>Student</b><span>{student.name}</span></div>
    <div><b>Roll</b><span>{n(student.roll)}</span></div>

@@ -447,6 +447,116 @@ export async function POST(req) {
       });
       await audit(actor, action, id); return json({ok:true});
     }
+    if (action === "settings.switches") {
+      needRole(actor, ["principal"]);
+      const values = {};
+      for (const key of ["admissionOpen", "bannerEnabled"]) if (typeof body[key] === "boolean") values[key] = body[key];
+      for (const key of ["bannerText", "bannerLinkText"]) if (typeof body[key] === "string") values[key] = cleanText(body[key], 200);
+      if (!Object.keys(values).length) return fail("পরিবর্তনের তথ্য নেই");
+      await store.collection("settings").doc("school").set({ ...values, updatedAt: iso() }, { merge: true });
+      await audit(actor, action, Object.keys(values).join(","));
+      return json({ ok: true, settings: values });
+    }
+    if (action === "student.promote") {
+      needRole(actor, ["principal"]);
+      const all = body.all === true;
+      const ids = Array.isArray(body.studentIds) ? [...new Set(body.studentIds.map(v => cleanText(v, 120)).filter(Boolean))].slice(0, 950) : [];
+      if (!all && !ids.length) return fail("প্রমোশনের জন্য শিক্ষার্থী নির্বাচন করুন");
+      const fromGrade = all && body.grade ? parseBanglaNumber(body.grade) : null;
+      if (fromGrade !== null && !validGrade(fromGrade)) return fail("সঠিক শ্রেণি নির্বাচন করুন");
+      const groupFor9 = ["science","business","humanities"].includes(body.groupFor9) ? body.groupFor9 : "";
+      const snap = await store.collection("students").limit(950).get();
+      const everyone = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleting);
+      const wanted = new Set(ids);
+      const chosen = everyone.filter(x => (all ? (fromGrade === null || Number(x.grade) === fromGrade) : wanted.has(x.id)));
+      const taken = new Map(everyone.map(x => [studentKey(x.grade, x.roll, x.group), x.id]));
+      const revoke = body.revoke === true;
+      // Optional: give new rolls by merit in the chosen exam (complete results ranked by total marks;
+      // anyone without a complete result follows, in old-roll order).
+      const rankExamId = cleanText(body.rankExamId, 150);
+      const rankOf = new Map();
+      if (rankExamId && !rankExamId.includes("/") && !revoke) {
+        const examSnap = await store.collection("exams").doc(rankExamId).get();
+        if (!examSnap.exists || examSnap.data()?.deleted) return fail("র‍্যাঙ্কিংয়ের পরীক্ষা পাওয়া যায়নি", 404);
+        const marksSnap = await store.collection("marks").where("examId", "==", rankExamId).limit(5000).get();
+        const subjectMap = new Map();
+        for (const m of asDocs(marksSnap)) {
+          if (!subjectMap.has(m.studentId)) subjectMap.set(m.studentId, {});
+          subjectMap.get(m.studentId)[m.subjectId] = m.scores || {};
+        }
+        const reports = [];
+        for (const st of everyone) { try { reports.push({ student: st, report: evaluateTranscript(st, subjectMap.get(st.id) || {}) }); } catch {} }
+        const rankings = buildCohortRankings(reports);
+        for (const [id, r] of Object.entries(rankings)) if (r.rank) rankOf.set(id, r.rank);
+      }
+      const byRank = rankExamId && !revoke;
+      const counters = new Map();
+      const skipped = [];
+      const plans = [];
+      const boardPlans = [];
+      // Highest class first so the next class's rolls are freed before they are re-used.
+      for (const st of (revoke ? chosen.filter(x => Number(x.grade) >= 10) : chosen).sort((a, b) => Number(b.grade) - Number(a.grade)
+        || (byRank ? (rankOf.get(a.id) || 1e9) - (rankOf.get(b.id) || 1e9) : 0) || Number(a.roll) - Number(b.roll))) {
+        const grade = Number(st.grade);
+        if (grade >= 10) { boardPlans.push(st); continue; }
+        const nextGrade = grade + 1;
+        const group = nextGrade >= 9 ? (st.group || groupFor9) : "";
+        if (nextGrade >= 9 && !group) { skipped.push({ id: st.id, name: st.name, reason: "বিভাগ নেই" }); continue; }
+        const patch = { grade: nextGrade, group: nextGrade >= 9 ? group : "" };
+        if (nextGrade >= 9) {
+          try { Object.assign(patch, fourthSubjectSelection(group, selectedFourthSubject({ ...st, group }), st.elective)); }
+          catch { skipped.push({ id: st.id, name: st.name, reason: "৪র্থ বিষয় নির্ধারণ করা যায়নি" }); continue; }
+        }
+        const oldKey = studentKey(st.grade, st.roll, st.group);
+        let roll = Number(st.roll);
+        if (byRank) {
+          // Merit order: 1, 2, 3 … in the new class, skipping rolls already held by other students.
+          const bucket = nextGrade + "|" + patch.group;
+          roll = counters.get(bucket) || 1;
+          while (taken.has(studentKey(nextGrade, roll, patch.group))) roll++;
+          counters.set(bucket, roll + 1);
+        } else if (taken.get(studentKey(nextGrade, roll, patch.group)) && taken.get(studentKey(nextGrade, roll, patch.group)) !== st.id) {
+          roll = 1;
+          while (taken.has(studentKey(nextGrade, roll, patch.group))) roll++;
+        }
+        taken.delete(oldKey);
+        taken.set(studentKey(nextGrade, roll, patch.group), st.id);
+        plans.push({ st, oldKey, newKey: studentKey(nextGrade, roll, patch.group), patch: { ...patch, roll } });
+      }
+      let promoted = 0;
+      for (let i = 0; i < plans.length; i += 100) {
+        const chunk = plans.slice(i, i + 100);
+        await store.runTransaction(async tx => {
+          const reads = await Promise.all(chunk.map(pl => tx.get(store.collection("studentRolls").doc(pl.newKey))));
+          const oldReads = await Promise.all(chunk.map(pl => tx.get(store.collection("studentRolls").doc(pl.oldKey))));
+          chunk.forEach((pl, k) => {
+            const occupant = reads[k].exists ? reads[k].data()?.studentId : null;
+            if (occupant && occupant !== pl.st.id && !chunk.some(o => o.st.id === occupant)) {
+              skipped.push({ id: pl.st.id, name: pl.st.name, reason: "রোল দ্বন্দ্ব" }); pl.skip = true;
+            }
+          });
+          chunk.forEach((pl, k) => {
+            if (pl.skip) return;
+            tx.update(store.collection("students").doc(pl.st.id), { ...pl.patch, section: FieldValue.delete(), promotedAt: iso(), promotedFrom: Number(pl.st.grade), updatedBy: actor.uid });
+            if (oldReads[k].exists && oldReads[k].data()?.studentId === pl.st.id && pl.oldKey !== pl.newKey)
+              tx.delete(store.collection("studentRolls").doc(pl.oldKey));
+          });
+          chunk.forEach(pl => { if (!pl.skip) tx.set(store.collection("studentRolls").doc(pl.newKey), { studentId: pl.st.id, grade: pl.patch.grade, group: pl.patch.group, roll: pl.patch.roll }, { merge: true }); });
+        });
+        promoted += chunk.filter(pl => !pl.skip).length;
+      }
+      // Class 10 has no next class: "promotion" means cleared to sit the board (SSC) exam.
+      for (let i = 0; i < boardPlans.length; i += 400) {
+        const batch = store.batch();
+        for (const st of boardPlans.slice(i, i + 400))
+          batch.update(store.collection("students").doc(st.id), revoke
+            ? { boardPromoted: false, boardPromotedAt: FieldValue.delete(), updatedBy: actor.uid }
+            : { boardPromoted: true, boardPromotedAt: iso(), updatedBy: actor.uid });
+        await batch.commit();
+      }
+      await audit(actor, action, "count:" + promoted + (boardPlans.length ? ",board:" + boardPlans.length : ""));
+      return json({ ok: true, promoted, ranked: byRank ? plans.filter(pl => rankOf.has(pl.st.id)).length : 0, boardPromoted: revoke ? 0 : boardPlans.length, boardRevoked: revoke ? boardPlans.length : 0, skipped });
+    }
     if(action==="student.secondaryPin.set"||action==="student.secondaryPin.clear"){
       needRole(actor,["principal"]);
       const id=cleanText(body.studentId,120);
