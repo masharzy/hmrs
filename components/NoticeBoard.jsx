@@ -35,6 +35,7 @@ export default function NoticeBoard({compact=false,full=false}){
     :(full?notices:notices.slice(0,compact?4:12)).map((notice,index)=><button type="button" className="notice-title-row" key={notice.id} onClick={()=>setSelected(notice)}>
      <span className="notice-row-index">{toBanglaDigits(index+1)}</span>
      <span className="notice-row-title">{notice.title}</span>
+     {notice.createdAt&&<span className="notice-row-date">{new Date(notice.createdAt).toLocaleDateString("bn-BD",{day:"numeric",month:"short",year:"numeric"})}</span>}
      <span className="notice-open-icon" aria-hidden="true"><ChevronRight size={17}/></span>
     </button>)}
   </div>

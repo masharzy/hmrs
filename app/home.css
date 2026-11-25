@@ -1,65 +1,169 @@
-/* Public HMRS homepage only: bright, accessible colors without changing dashboard UI. */
-.hmrs-home{overflow:clip;background:#f9fbff}
-.hmrs-home-hero{position:relative;isolation:isolate;overflow:hidden;background:
- radial-gradient(ellipse 42% 60% at 98% 5%,#dbeafe 0,transparent 100%),
- radial-gradient(ellipse 40% 70% at 2% 100%,#dcfce7 0,transparent 100%),
- linear-gradient(117deg,#f2fbf8 0%,#ffffff 46%,#f3f3ff 100%);border-bottom:1px solid #e7edf7}
-.hmrs-home-hero:before{content:"";position:absolute;inset:0;z-index:-1;opacity:.28;
- background-image:radial-gradient(#a1bdc6 1px,transparent 1px);background-size:23px 23px;
- mask-image:linear-gradient(to right,transparent,black 75%)}
-.hmrs-home-hero-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);align-items:center;gap:clamp(22px,5vw,72px);padding-top:clamp(60px,7vw,100px);padding-bottom:clamp(66px,8vw,105px)}
-.hmrs-home-intro{position:relative;z-index:1}
-.hmrs-home-pill{display:inline-flex;align-items:center;gap:9px;border:1px solid #bce5d5;border-radius:100px;padding:9px 15px;background:#effbf4;color:#14725f;font-weight:750;font-size:12px;box-shadow:0 4px 16px #18765d0b}
-.hmrs-home-title{margin:20px 0;font-size:clamp(36px,4.8vw,68px);letter-spacing:-1.6px;line-height:1.32;font-weight:850;color:#163748}
-.hmrs-home-title span{background:linear-gradient(100deg,#0b876f 4%,#0d698b 52%,#6154bf 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hmrs-home-lead{font-size:clamp(14px,1.25vw,17px);line-height:2;max-width:560px;color:#526a79}
-.hmrs-home-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:29px}
-.hmrs-home .btn.hmrs-home-primary{background:linear-gradient(106deg,#0f8b78,#2169a8);color:#fff;border:0;border-radius:11px;padding:13px 19px;box-shadow:0 12px 24px #0b817e29}
-.hmrs-home .btn.hmrs-home-primary:hover{background:linear-gradient(106deg,#087663,#1d588d);transform:translateY(-1px)}
-.hmrs-home .btn.hmrs-home-secondary{border:1px solid #d8e4ec;background:#fff;color:#2b5665;border-radius:11px;padding:12px 18px}
-.hmrs-home .btn.hmrs-home-secondary:hover{background:#edf7ff}
-.hmrs-home-highlights{display:flex;gap:12px 21px;flex-wrap:wrap;margin-top:30px;color:#5b7582;font-size:11px;font-weight:700}
-.hmrs-home-highlights span{display:flex;align-items:center;gap:7px}
-.hmrs-home-highlights span:nth-child(1) svg{color:#10a473}.hmrs-home-highlights span:nth-child(2) svg{color:#5e68dd}.hmrs-home-highlights span:nth-child(3) svg{color:#df9516}
-.hmrs-home-visual{position:relative;min-width:0}
-.hmrs-home-photo{position:relative;overflow:hidden;border:9px solid #fff;border-radius:25px;box-shadow:0 26px 65px #1748702b;background:#dfebe7;transform:rotate(1.4deg)}
-.hmrs-home-photo img{display:block;width:100%;object-fit:cover}
-.hmrs-home-school-badge{position:absolute;bottom:-24px;left:-24px;max-width:calc(100% + 16px);display:flex;align-items:center;gap:12px;padding:15px 17px;background:#fff;border:1px solid #e4edf3;border-radius:15px;box-shadow:0 15px 40px #16385425}
-.hmrs-home-school-icon{width:41px;height:41px;display:grid;place-items:center;flex:none;border-radius:11px;background:linear-gradient(145deg,#c6fff0,#d8e7ff);color:#116a8a}
+/* Public HMRS homepage (colorful, clean). Scoped to .hmrs-home so dashboards are untouched. */
+.hmrs-home{--h-ink:#0e1330;--h-body:#4b5270;--h-line:#e3e7f5;--h-tint:#f5f7ff;--h-blue:#2549e8;--h-emer:#007a5e;--h-vio:#6a3de8;--h-amb:#ffb020;--h-cor:#d92d5b;
+ overflow-x:clip;background:#fff;color:var(--h-body)}
+.hmrs-home h1,.hmrs-home h2,.hmrs-home h3{font-family:"Anek Bangla","Hind Siliguri",system-ui,sans-serif;color:var(--h-ink)}
+.hmrs-home a{text-decoration:none}
+.hmrs-home-eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--h-blue);font-family:system-ui,sans-serif;font-size:12px;letter-spacing:2px;font-weight:800;margin-bottom:6px}
+.hmrs-home-eyebrow:before{content:"";width:22px;height:4px;border-radius:4px;background:currentColor}
+.hmrs-home-eyebrow.tone-violet{color:var(--h-vio)}.hmrs-home-eyebrow.tone-coral{color:var(--h-cor)}.hmrs-home-eyebrow.tone-amber{color:#b87400}
+.hmrs-home-section-heading{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;gap:16px}
+.hmrs-home-section-heading .section-title{font-size:clamp(28px,3.6vw,42px);line-height:1.4;font-weight:800;letter-spacing:-.4px;margin:6px 0 0}
+.hmrs-home-section-heading p{color:var(--h-body);font-size:16px;margin:2px 0 0}
+
+/* announcement bar */
+.hmrs-home-announce{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;padding:9px 16px;text-align:center;color:#fff;font-size:14px;font-weight:600;background:linear-gradient(90deg,#2549e8,#6a3de8 55%,#d92d5b)}
+.hmrs-home-announce a{color:#fff;font-weight:800;text-decoration:underline}
+
+/* hero */
+.hmrs-home-hero{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,#fff 0%,#f2f5ff 100%);padding:clamp(40px,6vw,76px) 0 clamp(70px,8vw,104px)}
+.hmrs-home-hero:before{content:"";position:absolute;z-index:-1;inset:0;opacity:.5;background-image:radial-gradient(#2549e822 1.4px,transparent 1.4px);background-size:26px 26px;-webkit-mask-image:linear-gradient(to left,#000,transparent 60%);mask-image:linear-gradient(to left,#000,transparent 60%)}
+.hmrs-home-hero:after{content:"";position:absolute;z-index:-1;width:520px;height:520px;border-radius:50%;background:#2549e8;opacity:.06;right:-160px;top:-200px}
+.hmrs-home-hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:center;gap:clamp(28px,5vw,64px)}
+.hmrs-home-identity{display:flex;align-items:center;gap:9px;margin-bottom:16px;color:var(--h-body);font-size:13px;font-weight:700}
+.hmrs-home-identity svg{color:var(--h-emer);flex:none}
+.hmrs-home-pill{display:inline-flex;align-items:center;gap:10px;padding:8px 16px 8px 12px;border-radius:99px;background:#fff;border:1px solid var(--h-line);font-weight:700;font-size:14px;color:var(--h-ink);box-shadow:0 4px 14px #0e13300d}
+.hmrs-home-pill:before{content:"";width:10px;height:10px;border-radius:50%;background:var(--h-emer)}
+.hmrs-home-title{font-weight:800;font-size:clamp(40px,6vw,76px);line-height:1.3;letter-spacing:-1px;margin:22px 0 0}
+.hmrs-home-title span{background:linear-gradient(100deg,var(--h-blue),var(--h-vio) 55%,var(--h-cor));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hmrs-home-lead{font-size:clamp(15px,1.4vw,18px);line-height:1.95;max-width:540px;margin:20px 0 0}
+.hmrs-home-actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:30px}
+.hmrs-home .btn.hmrs-home-primary{background:var(--h-blue);color:#fff;border:0;border-radius:14px;padding:15px 26px;font-size:17px;box-shadow:0 14px 28px #2549e84d}
+.hmrs-home .btn.hmrs-home-primary:hover{background:#1c3bc4;transform:translateY(-1px)}
+.hmrs-home .btn.hmrs-home-secondary{background:#fff;color:var(--h-ink);border:2px solid var(--h-ink);border-radius:14px;padding:13px 26px;font-size:17px}
+.hmrs-home .btn.hmrs-home-secondary:hover{background:#f2f5ff}
+.hmrs-home-highlights{display:flex;flex-wrap:wrap;gap:14px 28px;margin-top:36px}
+.hmrs-home-highlights span{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--h-ink)}
+.hmrs-home-highlights i{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;color:#fff;font-style:normal}
+.hmrs-home-visual{position:relative;min-width:0;padding:26px 26px 36px 0}
+.hmrs-home-photo{position:relative;height:460px;border-radius:32px;overflow:hidden;background:linear-gradient(145deg,#2549e8 0%,#6a3de8 55%,#00a98a 130%);box-shadow:0 30px 60px #2549e840}
+.hmrs-home-photo:before,.hmrs-home-photo:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+.hmrs-home-photo:before{width:420px;height:420px;border:2px solid #ffffff26;right:-120px;top:-120px}
+.hmrs-home-photo:after{width:320px;height:320px;background:#ffffff14;left:-100px;bottom:-130px}
+.hmrs-home-photo .hmrs-school-gallery{position:absolute;inset:0;z-index:1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;min-height:0}
+.hmrs-school-gallery-photo{position:relative;margin:0;overflow:hidden}
+.hmrs-school-gallery-photo img{display:block;width:100%;height:100%;object-fit:cover}
+.hmrs-school-gallery-photo figcaption{position:absolute;left:0;right:0;bottom:0;padding:34px 16px 14px;color:#fff;font-size:13px;font-weight:700;background:linear-gradient(transparent,#0e1330cc)}
+.hmrs-school-gallery-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;color:#fff}
+.hmrs-school-gallery-empty svg{width:68px;height:68px;padding:20px;box-sizing:content-box;border-radius:36px;background:#ffffff26;color:#fff}
+.hmrs-school-gallery-empty strong{font-size:17px;color:#fff}.hmrs-school-gallery-empty span{font-size:12px;max-width:300px;line-height:1.7;color:#ffffffd9}
+.hmrs-home-orbit{position:absolute;z-index:2;right:0;top:0;display:grid;place-items:center;width:88px;height:88px;border-radius:26px;background:var(--h-amb);color:var(--h-ink);box-shadow:0 16px 30px #ffb02080}
+.hmrs-home-chip{position:absolute;z-index:2;display:inline-flex;align-items:center;gap:10px;padding:11px 18px;border-radius:99px;font-weight:700;font-size:14px}
+.hmrs-home-chip-admission{right:-8px;top:46%;background:var(--h-cor);color:#fff;box-shadow:0 16px 30px #d92d5b59}
+.hmrs-home-chip-results{left:-16px;top:104px;background:#fff;color:var(--h-ink);box-shadow:0 16px 30px #0e133030}
+.hmrs-home-chip-results:before{content:"";width:10px;height:10px;border-radius:50%;background:var(--h-emer)}
+.hmrs-home-school-badge{position:absolute;z-index:2;left:-18px;bottom:0;display:flex;align-items:center;gap:14px;padding:16px 22px;background:#fff;border-radius:20px;box-shadow:0 20px 40px #0e133030}
+.hmrs-home-school-icon{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:14px;background:var(--h-emer);color:#fff}
 .hmrs-home-school-badge strong,.hmrs-home-school-badge small{display:block}
-.hmrs-home-school-badge strong{font-size:12px;font-weight:850;color:#213f50}
-.hmrs-home-school-badge small{font-size:10px;color:#718794;margin-top:3px}
-.hmrs-home-visual-orbit{position:absolute;display:grid;place-items:center;width:68px;height:68px;right:-26px;top:-24px;border:5px solid #fff;border-radius:19px;background:#fef3c7;color:#bd7918;box-shadow:0 10px 28px #bf8b3926;transform:rotate(12deg)}
-.hmrs-home-services,.hmrs-home-notices{padding-top:66px}
-.hmrs-home-section-heading{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:16px}
-.hmrs-home-eyebrow{display:block;color:#167d75;font-family:system-ui,sans-serif;font-size:11px;letter-spacing:1.8px;font-weight:850;margin-bottom:8px}
-.hmrs-home-section-heading .section-title{font-size:clamp(23px,2.2vw,30px);letter-spacing:-.3px;color:#243f52;margin:0}
-.hmrs-home-section-heading p{color:#738792;font-size:13px;margin:5px 0 0}
-.hmrs-home-quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
-.hmrs-home-quick-card{--card-ink:#235a87;--card-bg:#e2f1fe;display:flex;flex-direction:column;gap:7px;position:relative;overflow:hidden;min-width:0;min-height:171px;padding:22px 17px;border:1px solid #e5ecf5;border-radius:18px;background:#fff;box-shadow:0 7px 23px #1c45630b;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
-.hmrs-home-quick-card:before{content:"";position:absolute;right:-31px;bottom:-60px;width:115px;height:115px;border-radius:50%;background:var(--card-bg);opacity:.65;pointer-events:none}
-.hmrs-home-quick-card:hover{transform:translateY(-4px);box-shadow:0 17px 30px #1c45631a;border-color:#cbdde9}
-.hmrs-home-quick-top{display:flex;align-items:start;justify-content:space-between;margin-bottom:17px}
-.hmrs-home-quick-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:12px;background:var(--card-bg);color:var(--card-ink)}
-.hmrs-home-quick-arrow{color:var(--card-ink);opacity:.55}
-.hmrs-home-quick-card strong{z-index:1;font-size:13px;color:#263c4d;font-weight:850}
-.hmrs-home-quick-card small{z-index:1;color:#6f8490;font-size:11px;line-height:1.6}
-.hmrs-home-quick-0{--card-bg:#dcfce7;--card-ink:#117856;background:linear-gradient(155deg,#f3fff8,#fff 65%)}
-.hmrs-home-quick-1{--card-bg:#dbeafe;--card-ink:#216bb3;background:linear-gradient(155deg,#f4f8ff,#fff 65%)}
-.hmrs-home-quick-2{--card-bg:#ede9fe;--card-ink:#6950b2;background:linear-gradient(155deg,#f8f6ff,#fff 65%)}
-.hmrs-home-quick-3{--card-bg:#fff0ca;--card-ink:#a96c08;background:linear-gradient(155deg,#fffcf1,#fff 65%)}
-.hmrs-home-quick-4{--card-bg:#ffebeb;--card-ink:#b65359;background:linear-gradient(155deg,#fff7f6,#fff 65%)}
-.hmrs-home-notices{scroll-margin-top:25px}
-.hmrs-home-notices .notice-board{border:1px solid #e4ebf3;border-radius:19px;box-shadow:0 8px 32px #2745600c;overflow:hidden}
-.hmrs-home-routines{margin-top:55px}
-.hmrs-home-final{padding:36px 0 72px}
-.hmrs-home-final-card{display:flex;align-items:center;gap:22px;padding:28px 32px;border-radius:21px;background:linear-gradient(112deg,#173f68,#256f79 70%,#148875);color:white;box-shadow:0 16px 42px #16536b2b}
-.hmrs-home-final-icon{display:grid;place-items:center;flex:none;width:62px;height:62px;border-radius:17px;background:#ffffff24;color:#fff}
-.hmrs-home-final-kicker{font-size:10px;letter-spacing:1.5px;color:#b9ebdf;font-family:system-ui,sans-serif;font-weight:850}
-.hmrs-home-final-card h2{font-size:21px;font-weight:850;margin:3px 0}
-.hmrs-home-final-card p{font-size:12px;color:#d6eceb;margin:0}
-.hmrs-home .btn.hmrs-home-final-button{margin-left:auto;background:#fff;color:#13615d;border:0;border-radius:11px;white-space:nowrap;padding:12px 17px}
-.hmrs-home .btn.hmrs-home-final-button:hover{background:#eafcf7}
+.hmrs-home-school-badge strong{font-size:16px;color:var(--h-ink);line-height:1.4}.hmrs-home-school-badge small{font-size:12px;color:var(--h-body)}
+
+/* stats */
+.hmrs-home-stats{position:relative;margin-top:-46px;z-index:3}
+.hmrs-home-stats-card{display:flex;flex-wrap:wrap;gap:18px 0;padding:26px 8px;background:#fff;border-radius:24px;border:1px solid var(--h-line);box-shadow:0 18px 40px #0e13301a}
+.hmrs-home-stat{flex:1 1 200px;padding:6px 26px}
+.hmrs-home-stat+.hmrs-home-stat{border-left:1px solid var(--h-line)}
+.hmrs-home-stat strong{display:block;font-family:"Anek Bangla","Hind Siliguri",sans-serif;font-weight:800;font-size:34px;line-height:1.3}
+.hmrs-home-stat span{font-size:14px;font-weight:600}
+.hmrs-home-stat:nth-child(1) strong{color:var(--h-blue)}.hmrs-home-stat:nth-child(2) strong{color:var(--h-emer)}.hmrs-home-stat:nth-child(3) strong{color:var(--h-vio)}.hmrs-home-stat:nth-child(4) strong{color:var(--h-cor)}
+
+/* service cards */
+.hmrs-home-services{scroll-margin-top:84px;padding-top:clamp(64px,8vw,96px)}
+.hmrs-home-quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}
+.hmrs-home-quick-card{position:relative;overflow:hidden;display:flex;flex-direction:column;min-width:0;min-height:228px;padding:24px;border-radius:24px;color:#fff;background:var(--c);box-shadow:0 14px 30px color-mix(in srgb,var(--c) 28%,transparent);transition:transform .18s,box-shadow .18s}
+.hmrs-home-quick-card:before{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:currentColor;opacity:.09;right:-46px;top:-46px}
+.hmrs-home-quick-card:hover{transform:translateY(-5px);box-shadow:0 22px 38px color-mix(in srgb,var(--c) 38%,transparent)}
+.hmrs-home-quick-icon{position:relative;display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:#ffffff2e}
+.hmrs-home-quick-chip{position:relative;margin-top:auto;font-family:system-ui,sans-serif;font-size:11px;font-weight:800;letter-spacing:1.8px;opacity:.9}
+.hmrs-home-quick-card strong{position:relative;font-family:"Anek Bangla","Hind Siliguri",sans-serif;font-size:23px;line-height:1.35;font-weight:700;color:inherit}
+.hmrs-home-quick-card small{position:relative;font-size:14px;line-height:1.6;opacity:.95}
+.hmrs-home-quick-arrow{position:absolute;right:20px;bottom:20px;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:currentColor}
+.hmrs-home-quick-arrow svg{color:var(--c)}
+.hmrs-home-quick-0{--c:#2549e8}.hmrs-home-quick-1{--c:#007a5e}.hmrs-home-quick-2{--c:#6a3de8}.hmrs-home-quick-3{--c:#ffb020;color:var(--h-ink)}.hmrs-home-quick-4{--c:#d92d5b}
+
+/* portal features */
+.hmrs-home-portal{padding-top:clamp(64px,8vw,96px)}
+.hmrs-home-portal-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);gap:24px;align-items:stretch}
+.hmrs-home-portal-lead{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:40px 34px;border-radius:30px;color:#fff;background:linear-gradient(150deg,#0b1f8f,#2549e8 55%,#6a3de8)}
+.hmrs-home-portal-lead:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;border:2px solid #ffffff26;right:-90px;bottom:-90px}
+.hmrs-home-portal-lead:after{content:"";position:absolute;width:120px;height:120px;border-radius:50%;background:var(--h-amb);right:26px;top:-40px;opacity:.95}
+.hmrs-home-portal-lead>*{position:relative;z-index:1}
+.hmrs-home-portal-lead .hmrs-home-eyebrow{color:#ffd580}
+.hmrs-home-portal-lead h2{color:#fff;font-size:clamp(28px,3.2vw,38px);font-weight:800;line-height:1.45;margin:8px 0 0}
+.hmrs-home-portal-lead p{font-size:16px;line-height:1.9;margin:10px 0 0;color:#e6ebff}
+.hmrs-home .btn.hmrs-home-amber{align-self:flex-start;margin-top:24px;background:var(--h-amb);color:var(--h-ink);border:0;border-radius:14px;padding:14px 24px;font-size:16px}
+.hmrs-home-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.hmrs-home-feature{padding:24px;border-radius:22px;background:#fff;border:1px solid var(--h-line);box-shadow:0 10px 26px #0e133012}
+.hmrs-home-feature-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;color:#fff;background:var(--c);box-shadow:0 10px 20px color-mix(in srgb,var(--c) 33%,transparent)}
+.hmrs-home-feature h3{font-size:20px;font-weight:700;line-height:1.5;margin:18px 0 0}.hmrs-home-feature p{font-size:14px;line-height:1.7;margin:2px 0 0}
+
+/* classes and groups */
+.hmrs-home-classes{margin-top:clamp(64px,8vw,96px);padding:clamp(56px,7vw,92px) 0;background:var(--h-tint)}
+.hmrs-home-class-row{display:flex;flex-wrap:wrap;gap:16px}
+.hmrs-home-class{flex:1 1 130px;padding:22px 16px;border-radius:20px;text-align:center;color:#fff;background:var(--c)}
+.hmrs-home-class strong{display:block;font-family:"Anek Bangla","Hind Siliguri",sans-serif;font-size:32px;font-weight:800;line-height:1.2;color:inherit}.hmrs-home-class span{font-size:14px;font-weight:600;opacity:.92}
+.hmrs-home-groups-label{margin:36px 0 14px;color:var(--h-ink);font-size:16px;font-weight:700}
+.hmrs-home-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.hmrs-home-group{padding:24px;border-radius:22px;background:var(--bg)}
+.hmrs-home-group h3{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:700;margin:0}.hmrs-home-group h3:before{content:"";width:12px;height:12px;border-radius:50%;background:var(--c)}
+.hmrs-home-group div{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.hmrs-home-group span{padding:6px 12px;border-radius:99px;background:#fff;border:1px solid var(--h-line);color:var(--h-ink);font-size:13px;font-weight:600}
+
+/* leadership (principal / assistant / staff manager, from school settings) */
+.hmrs-leadership-section{padding-top:clamp(64px,8vw,96px)}
+.hmrs-leadership-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.hmrs-leader-card{position:relative;overflow:hidden;display:flex;gap:18px;align-items:center;min-width:0;padding:22px;border-radius:24px;background:#fff;border:1px solid var(--h-line);box-shadow:0 12px 30px #0e13301a}
+.hmrs-leader-card:before{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:var(--c);opacity:.09;right:-50px;top:-50px}
+.hmrs-leader-card.leader-0{--c:#2549e8}.hmrs-leader-card.leader-1{--c:#6a3de8}.hmrs-leader-card.leader-2{--c:#007a5e}
+.hmrs-leader-photo{display:grid;place-items:center;flex:none;width:96px;height:112px;overflow:hidden;border-radius:18px;background:color-mix(in srgb,var(--c) 14%,#fff);color:var(--c)}
+.hmrs-leader-photo img{width:100%;height:100%;object-fit:cover}
+.hmrs-leader-copy{position:relative;min-width:0}
+.hmrs-leader-kicker{font-family:system-ui,sans-serif;font-size:10px;letter-spacing:1.4px;color:var(--c);font-weight:800}
+.hmrs-leader-copy h3{font-size:17px;font-weight:700;margin:4px 0 2px}.hmrs-leader-copy p{font-size:14px;color:var(--h-body);margin:0 0 12px;overflow-wrap:anywhere}
+.hmrs-leader-login{display:inline-flex;align-items:center;gap:6px;border:0!important;border-radius:10px!important;padding:8px 14px!important;background:var(--c)!important;color:#fff!important;font-size:12px;font-weight:700}
+
+/* teachers */
+.hmrs-home-teachers{padding-top:clamp(64px,8vw,96px)}
+.hmrs-teacher-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
+.hmrs-teacher-card{padding:28px 18px 24px;border-radius:24px;text-align:center;background:#fff;border:1px solid var(--h-line);box-shadow:0 10px 26px #0e133012;transition:transform .18s,box-shadow .18s}
+.hmrs-teacher-card:hover{transform:translateY(-4px);box-shadow:0 18px 36px #0e133022}
+.hmrs-teacher-avatar{display:inline-grid;place-items:center;width:104px;height:104px;border-radius:50%;overflow:hidden;color:#fff;background:var(--c);box-shadow:0 0 0 5px #fff,0 0 0 8px var(--c),0 14px 24px color-mix(in srgb,var(--c) 40%,transparent)}
+.hmrs-teacher-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.hmrs-teacher-avatar b{font-family:"Anek Bangla","Hind Siliguri",sans-serif;font-size:42px;font-weight:800}
+.hmrs-teacher-avatar.tone-blue{--c:#2549e8}.hmrs-teacher-avatar.tone-emerald{--c:#007a5e}.hmrs-teacher-avatar.tone-violet{--c:#6a3de8}.hmrs-teacher-avatar.tone-amber{--c:#d98a00}.hmrs-teacher-avatar.tone-coral{--c:#d92d5b}
+.hmrs-teacher-card h3{font-size:19px;font-weight:700;line-height:1.5;margin:20px 0 8px;overflow-wrap:anywhere}
+.hmrs-teacher-role{display:inline-block;padding:5px 12px;border-radius:99px;background:#eef2ff;color:#2549e8;font-size:12px;font-weight:700}
+.hmrs-teacher-role.is-homeroom{background:#fff1d6;color:#8a5500}
+.hmrs-teacher-card p{margin:10px 0 0;font-size:13px;line-height:1.7;color:var(--h-body)}
+
+/* notices: every notice, fixed-height scroll area, full-width rows (not cards) */
+.hmrs-home-notices{padding-top:clamp(64px,8vw,96px);scroll-margin-top:25px}
+.hmrs-home-notices .notice-board{margin:0;border-radius:24px;border:1px solid var(--h-line);box-shadow:0 16px 40px #0e133018;background:#fff}
+.hmrs-home-notices .notice-board-head{padding:20px 26px;background:linear-gradient(100deg,#fff5f8,#f3f0ff);border-bottom:1px solid var(--h-line)}
+.hmrs-home-notices .notice-board-heading>span{width:46px;height:46px;border-radius:14px;background:var(--h-cor);color:#fff}
+.hmrs-home-notices .notice-board-heading h2{font-size:20px;color:var(--h-ink)}
+.hmrs-home-notices .notice-count{background:var(--h-cor);color:#fff;font-size:12px;padding:7px 14px;border-radius:99px}
+.hmrs-home-notices .notice-board-list{display:block;max-height:min(520px,68vh);overflow-y:auto;overscroll-behavior:contain;padding:0;scrollbar-width:thin;scrollbar-color:#b5bfee #f1f3fb}
+.hmrs-home-notices .notice-board-list::-webkit-scrollbar{width:8px}.hmrs-home-notices .notice-board-list::-webkit-scrollbar-track{background:#f1f3fb}.hmrs-home-notices .notice-board-list::-webkit-scrollbar-thumb{background:#b5bfee;border-radius:8px}
+.hmrs-home-notices .notice-title-row{display:flex;width:100%;align-items:center;gap:16px;padding:16px 26px;min-height:64px;border:0;border-bottom:1px solid #eef0fa;border-radius:0;background:#fff;transition:background .14s,padding-left .14s}
+.hmrs-home-notices .notice-title-row:hover,.hmrs-home-notices .notice-title-row:focus-visible{background:#f6f8ff;padding-left:32px;color:var(--h-ink)}
+.hmrs-home-notices .notice-row-index{width:38px;height:38px;border-radius:12px;font-size:13px;background:#e8edff;color:#2549e8}
+.hmrs-home-notices .notice-title-row:nth-child(5n+2) .notice-row-index{background:#ddf5ee;color:#007a5e}
+.hmrs-home-notices .notice-title-row:nth-child(5n+3) .notice-row-index{background:#efe8ff;color:#6a3de8}
+.hmrs-home-notices .notice-title-row:nth-child(5n+4) .notice-row-index{background:#fff1d6;color:#8a5500}
+.hmrs-home-notices .notice-title-row:nth-child(5n+5) .notice-row-index{background:#ffe6ec;color:#d92d5b}
+.hmrs-home-notices .notice-row-title{font-size:16px;font-weight:600;color:var(--h-ink)}
+.hmrs-home-notices .notice-open-icon{color:#8e98cf}
+
+/* final call to action */
+.hmrs-home-final{padding:clamp(64px,8vw,96px) 0 clamp(56px,7vw,88px)}
+.hmrs-home-final-card{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:26px;padding:48px 44px;border-radius:32px;background:linear-gradient(120deg,#0b1f8f 0%,#2549e8 45%,#6a3de8 100%);color:#fff}
+.hmrs-home-final-card:before{content:"";position:absolute;z-index:-1;width:320px;height:320px;border-radius:50%;border:2px solid #ffffff26;right:-80px;top:-120px}
+.hmrs-home-final-icon{display:grid;place-items:center;flex:none;width:76px;height:76px;border-radius:22px;background:var(--h-amb);color:var(--h-ink)}
+.hmrs-home-final-kicker{font-family:system-ui,sans-serif;font-size:12px;letter-spacing:2px;color:#ffd580;font-weight:800}
+.hmrs-home-final-card h2{color:#fff;font-size:clamp(28px,3.4vw,40px);font-weight:800;line-height:1.4;margin:4px 0 0}
+.hmrs-home-final-card p{font-size:17px;color:#e6ebff;margin:2px 0 0}
+.hmrs-home .btn.hmrs-home-final-button{margin-left:auto;background:var(--h-amb);color:var(--h-ink);border:0;border-radius:14px;white-space:nowrap;padding:16px 28px;font-size:18px}
+.hmrs-home .btn.hmrs-home-final-button:hover{background:#ffc04d}
+
 .hmrs-notice-attachment{margin-top:18px}
 .hmrs-notice-attachment-label{display:flex;align-items:center;gap:7px;margin-bottom:9px;color:#54768a;font-size:12px;font-weight:750}
 .hmrs-notice-attachment img{max-width:100%;max-height:470px;object-fit:contain;border:1px solid #e5ebf4;border-radius:12px}
@@ -67,31 +171,28 @@
 .hmrs-notice-pdf-link>svg:first-child{flex:none;color:#287eac}.hmrs-notice-pdf-link>svg:last-child{margin-left:auto;flex:none}
 .hmrs-notice-pdf-link strong,.hmrs-notice-pdf-link small{display:block}
 .hmrs-notice-pdf-link strong{font-size:13px}.hmrs-notice-pdf-link small{font-size:11px;color:#688998;margin-top:3px;overflow-wrap:anywhere}
-@media(max-width:1050px){.hmrs-home-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:850px){.hmrs-home-hero-grid{grid-template-columns:1fr!important;padding-top:48px;padding-bottom:70px;gap:46px}.hmrs-home-intro{max-width:680px}.hmrs-home-visual{max-width:650px;width:100%;margin:auto}.hmrs-home-school-badge{left:8px}.hmrs-home-visual-orbit{right:-7px;top:-20px}}
-@media(max-width:600px){.hmrs-home-hero-grid{padding-top:30px;padding-bottom:52px;gap:35px}
- .hmrs-home-title{font-size:clamp(32px,8.2vw,44px);line-height:1.38;letter-spacing:-.6px;margin:15px 0}
- .hmrs-home-pill{font-size:10px;padding:8px 11px}
- .hmrs-home-lead{font-size:13px;line-height:1.9}.hmrs-home-actions{gap:9px;margin-top:23px}
- .hmrs-home-actions .btn{flex:1;font-size:11px;padding:11px 10px!important}
- .hmrs-home-highlights{gap:10px;margin-top:23px;font-size:10px}
- .hmrs-home-photo{border-width:6px;border-radius:17px;transform:none}
- .hmrs-home-school-badge{position:relative;left:auto;bottom:auto;margin:-24px 12px 0;border-radius:12px;padding:10px;max-width:none}
- .hmrs-home-school-badge strong{font-size:11px}.hmrs-home-school-badge small{font-size:9px}
- .hmrs-home-visual-orbit{width:48px;height:48px;border-width:3px;border-radius:12px;right:-3px;top:-12px}
- .hmrs-home-visual-orbit svg{width:22px;height:22px}
- .hmrs-home-services,.hmrs-home-notices{padding-top:41px}
- .hmrs-home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
- .hmrs-home-quick-card{min-height:147px;padding:16px 12px;border-radius:14px}
- .hmrs-home-quick-top{margin-bottom:10px}.hmrs-home-quick-icon{width:37px;height:37px}
- .hmrs-home-quick-card strong{font-size:12px}.hmrs-home-quick-card small{font-size:10px}
- .hmrs-home-final{padding:30px 0 42px}
- .hmrs-home-final-card{flex-wrap:wrap;gap:14px;padding:20px;border-radius:16px}
- .hmrs-home-final-icon{width:44px;height:44px;border-radius:12px}
- .hmrs-home-final-card h2{font-size:17px}.hmrs-home-final-card p{font-size:11px}
+
+@media(max-width:1100px){.hmrs-home-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hmrs-home-portal-grid{grid-template-columns:1fr}}
+@media(max-width:900px){
+ .hmrs-home-hero-grid{grid-template-columns:1fr}.hmrs-home-visual{max-width:640px;width:100%;margin:0 auto;padding-left:14px}
+ .hmrs-leadership-grid,.hmrs-home-groups{grid-template-columns:1fr}.hmrs-home-stat+.hmrs-home-stat{border-left:0}
+}
+@media(max-width:600px){
+ .hmrs-home-announce{font-size:12px}
+ .hmrs-home-title{font-size:clamp(34px,10vw,46px)}.hmrs-home-actions{gap:10px}.hmrs-home-actions .btn{flex:1 1 100%}
+ .hmrs-home-photo{height:320px;border-radius:24px}.hmrs-home-orbit{width:62px;height:62px;border-radius:18px}.hmrs-home-orbit svg{width:30px;height:30px}
+ .hmrs-home-chip{font-size:12px;padding:9px 13px}.hmrs-home-chip-admission{right:-4px}.hmrs-home-chip-results{left:-8px;top:78px}
+ .hmrs-home-school-badge{left:-6px;padding:12px 16px}.hmrs-home-school-badge strong{font-size:14px}
+ .hmrs-home-stat{flex-basis:46%;padding:6px 14px}.hmrs-home-stat strong{font-size:26px}
+ .hmrs-home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.hmrs-home-quick-card{min-height:190px;padding:18px}.hmrs-home-quick-card strong{font-size:18px}.hmrs-home-quick-card small{font-size:12px}
+ .hmrs-home-feature-grid{grid-template-columns:1fr}.hmrs-home-portal-lead{padding:30px 24px}
+ .hmrs-leader-photo{width:78px;height:92px}
+ .hmrs-teacher-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.hmrs-teacher-card{padding:20px 12px}.hmrs-teacher-avatar{width:80px;height:80px}.hmrs-teacher-avatar b{font-size:32px}.hmrs-teacher-card h3{font-size:16px}
+ .hmrs-home-notices .notice-board-head{padding:16px}.hmrs-home-notices .notice-title-row{padding:14px 16px;gap:12px}.hmrs-home-notices .notice-title-row:hover{padding-left:16px}.hmrs-home-notices .notice-row-title{font-size:14px}.hmrs-home-notices .notice-open-icon{display:none}
+ .hmrs-home-final-card{flex-wrap:wrap;gap:16px;padding:28px 22px;border-radius:24px}.hmrs-home-final-icon{width:56px;height:56px;border-radius:16px}
  .hmrs-home .btn.hmrs-home-final-button{width:100%;margin:0}
 }
-@media(prefers-reduced-motion:reduce){.hmrs-home-quick-card,.hmrs-home .btn.hmrs-home-primary{transition:none}.hmrs-home-quick-card:hover,.hmrs-home .btn.hmrs-home-primary:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){.hmrs-home-quick-card,.hmrs-teacher-card,.hmrs-home .btn.hmrs-home-primary,.hmrs-home-notices .notice-title-row{transition:none}.hmrs-home-quick-card:hover,.hmrs-teacher-card:hover,.hmrs-home .btn.hmrs-home-primary:hover{transform:none}}
 
 /* Compact header brand: do not split the school title into two hard-coded fragments. */
 .hmrs-site-brand-text{display:flex;flex-direction:column;min-width:0;max-width:400px}
@@ -100,93 +201,3 @@
 @media(max-width:550px){.hmrs-site-brand-text strong{font-size:clamp(9px,2.65vw,12px)}.site-header .container{gap:8px!important}.site-header .container>a:first-child{gap:7px}}
 
 
-/* Vibrant micro-details and friendly, compact cards; scoped strictly to public home. */
-.hmrs-home-hero{background:
- radial-gradient(circle at 97% 2%,#cfe8ff 0,transparent 30%),
- radial-gradient(circle at 4% 95%,#c9f8dd 0,transparent 35%),
- radial-gradient(circle at 58% 40%,#f6eaff 0,transparent 35%),
- linear-gradient(120deg,#f2fff8,#fff 48%,#eff5ff)}
-.hmrs-home-decor{position:absolute;z-index:0;pointer-events:none;border:1px solid #ffffffad}
-.hmrs-home-decor-one{width:210px;height:210px;left:-135px;top:20px;border-radius:45%;background:#bef8e22b;transform:rotate(28deg)}
-.hmrs-home-decor-two{width:155px;height:155px;right:-80px;bottom:-74px;border-radius:36%;background:#cfcbff5a;transform:rotate(-24deg)}
-.hmrs-home-pill{background:#e6f8ec;color:#15735d;border-color:#b9e8d0;box-shadow:0 6px 20px #178e7418}
-.hmrs-pill-spark{color:#efab27;font-size:15px}
-.hmrs-home-mini-stat{display:inline-flex;align-items:center;gap:11px;margin-top:25px;padding:10px 13px 10px 10px;background:#ffffffde;
- box-shadow:0 10px 28px #37688417;border:1px solid #e2e9f5;border-radius:15px;min-width:245px}
-.hmrs-stat-orb{width:37px;height:37px;display:grid;place-items:center;background:#efe9ff;color:#7756cb;border-radius:11px}
-.hmrs-home-mini-stat>div{display:grid;gap:3px;flex:1}
-.hmrs-home-mini-stat strong{font-size:11px;color:#244757}
-.hmrs-home-mini-stat small{color:#7890a0;font-size:9px;letter-spacing:.4px}
-.hmrs-home-mini-stat>svg{color:#77a7ad}
-.hmrs-home-visual{z-index:1}
-.hmrs-home-photo{border:8px solid white;box-shadow:0 29px 75px #35547830;transform:rotate(1.2deg)}
-.hmrs-home-dot-pattern{position:absolute;z-index:-1;right:-20px;bottom:-35px;width:160px;height:160px;
- background-image:radial-gradient(#69a5be 2px,transparent 2px);background-size:17px 17px;opacity:.5}
-.hmrs-home-section-flower,.hmrs-home-notice-mark{display:grid;place-items:center;flex:none;width:42px;height:42px;
- border-radius:14px;background:#fff0dc;color:#db9044;box-shadow:0 4px 17px #ebae7020}
-.hmrs-home-notice-mark{background:#ffe1e8;color:#b94565}
-.hmrs-home-services{scroll-margin-top:84px}
-.hmrs-home-quick-grid{gap:13px}
-.hmrs-home-quick-card{min-height:163px;padding:18px 15px 17px;gap:6px;
- border:1px solid color-mix(in srgb,var(--card-ink) 14%,white);
- box-shadow:0 7px 18px #283f630e}
-.hmrs-home-quick-card::before{bottom:-44px;right:-17px;width:104px;height:104px;opacity:.7}
-.hmrs-home-quick-card::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--card-ink);opacity:.7}
-.hmrs-home-quick-card strong{font-size:13px;margin-top:2px}
-.hmrs-home-quick-card small{max-width:170px}
-.hmrs-home-quick-top{margin-bottom:4px}
-.hmrs-home-quick-icon{width:44px;height:44px;box-shadow:inset 0 0 0 1px #ffffff90}
-.hmrs-home-quick-chip{align-self:flex-start;color:var(--card-ink);font-family:system-ui,sans-serif;
- font-size:8px;font-weight:850;letter-spacing:1.2px;line-height:1.1;opacity:.85}
-.hmrs-home-quick-0{--card-bg:#baf2d4;--card-ink:#0c8461;background:linear-gradient(145deg,#dcfbed 0%,#f3fff8 80%)}
-.hmrs-home-quick-1{--card-bg:#bfdffe;--card-ink:#2866ac;background:linear-gradient(145deg,#e5f1ff 0%,#f8fbff 80%)}
-.hmrs-home-quick-2{--card-bg:#dccfff;--card-ink:#7353c1;background:linear-gradient(145deg,#eee8ff 0%,#fdfaff 80%)}
-.hmrs-home-quick-3{--card-bg:#ffe2a4;--card-ink:#b77a18;background:linear-gradient(145deg,#fff1cc 0%,#fffcf3 80%)}
-.hmrs-home-quick-4{--card-bg:#ffcbd7;--card-ink:#bf4e72;background:linear-gradient(145deg,#ffe6ee 0%,#fff9fa 80%)}
-.hmrs-home-quick-card:hover{box-shadow:0 15px 30px #1c45631c;border-color:color-mix(in srgb,var(--card-ink) 28%,white)}
-.hmrs-home-notices .notice-board{border-color:#dfe9f3}
-.hmrs-home-notices .notice-board-heading>span{background:#e8f1ff;color:#3472bb}
-.hmrs-home-final-card{background:linear-gradient(107deg,#214b98 0%,#247d93 51%,#159574 100%);
- position:relative;isolation:isolate;overflow:hidden}
-.hmrs-home-final-card:before{content:"";position:absolute;width:230px;height:230px;right:10%;top:-150px;border:35px solid #ffffff13;border-radius:50%;z-index:-1}
-@media(max-width:600px){
- .hmrs-home-mini-stat{width:100%;margin-top:18px}
- .hmrs-home-quick-grid{gap:10px}
- .hmrs-home-quick-card{min-height:148px;padding:15px 12px}
- .hmrs-home-quick-chip{font-size:7.5px}
- .hmrs-home-school-badge{margin-top:-20px}
- .hmrs-home-section-flower,.hmrs-home-notice-mark{width:37px;height:37px}
-}
-@media(prefers-reduced-motion:reduce){.hmrs-home-quick-card:hover{transform:none}}
-
-/* School identity, real-photo gallery and leadership */
-.hmrs-home-redesign{background:#f7fbff;color:#19384b}
-.hmrs-school-masthead{position:relative;overflow:hidden;background:linear-gradient(115deg,#103e68,#126d73 56%,#4d4ca1);color:#fff}
-.hmrs-school-masthead-glow{position:absolute;inset:0;background:radial-gradient(circle at 15% 10%,#ffffff20,transparent 35%),radial-gradient(circle at 90% 90%,#ffcf6b26,transparent 30%)}
-.hmrs-school-masthead-inner{position:relative;display:flex;align-items:center;gap:24px;padding:34px 0}
-.hmrs-school-crest{display:grid;place-items:center;width:82px;height:82px;flex:none;border-radius:24px;background:#ffffff1c;border:1px solid #ffffff55;color:#ffdf92;box-shadow:0 12px 32px #001d3c40}
-.hmrs-school-heading{flex:1;min-width:0}.hmrs-school-heading .hmrs-home-eyebrow{color:#b8f0e2}
-.hmrs-school-heading h1{font-size:clamp(25px,4vw,47px);line-height:1.35;font-weight:900;letter-spacing:-.5px;margin:3px 0 8px;color:#fff}
-.hmrs-school-heading p{display:flex;align-items:center;gap:7px;margin:0;color:#e3f4f5;font-size:14px}
-.hmrs-school-eiin{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:30px;background:#ffffff20;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px}
-.hmrs-school-motto{display:flex;align-items:center;gap:8px;color:#ffe7a8;font-size:12px;font-weight:800;white-space:nowrap}
-.hmrs-welcome-panel{display:grid;grid-template-columns:1fr 1.04fr;gap:38px;align-items:center;padding-top:60px;padding-bottom:30px}
-.hmrs-welcome-copy h2{font-size:clamp(34px,4vw,54px);line-height:1.35;font-weight:900;color:#173b55;margin:12px 0}
-.hmrs-welcome-copy h2 span{background:linear-gradient(95deg,#07876e,#386bb7,#7755b8);color:transparent;background-clip:text}
-.hmrs-welcome-copy>p{max-width:520px;color:#627989;line-height:1.9;font-size:15px}
-.hmrs-school-gallery{display:grid;grid-template-columns:1.25fr .85fr;gap:14px;min-height:245px;align-items:center}
-.hmrs-school-gallery-photo{position:relative;overflow:hidden;margin:0;border:7px solid #fff;border-radius:20px;background:#e4edf5;box-shadow:0 18px 45px #17487024}
-.hmrs-school-gallery-photo.photo-1{margin-top:44px;transform:rotate(2deg)}.hmrs-school-gallery-photo.photo-0{transform:rotate(-1deg)}
-.hmrs-school-gallery-photo img{display:block;width:100%;height:260px;object-fit:cover}
-.hmrs-school-gallery-photo figcaption{position:absolute;bottom:0;left:0;right:0;padding:9px 12px;color:white;background:linear-gradient(transparent,#102d48d9);font-size:12px;font-weight:800}
-.hmrs-school-gallery-empty{grid-column:1/-1;min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:2px dashed #bdd1df;border-radius:22px;background:linear-gradient(135deg,#eaf7f5,#eef2ff);color:#4f7182;text-align:center;padding:25px}
-.hmrs-school-gallery-empty svg{width:42px;height:42px;color:#197f79}.hmrs-school-gallery-empty strong{font-size:17px;color:#25495c}.hmrs-school-gallery-empty span{font-size:12px;max-width:340px;line-height:1.7}
-.hmrs-leadership-section{padding-top:54px}.hmrs-leadership-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.hmrs-leader-card{display:flex;gap:15px;align-items:center;min-width:0;padding:20px;border:1px solid #e3ebf4;border-radius:20px;background:#fff;box-shadow:0 12px 35px #173d5c0c}
-.hmrs-leader-photo{display:grid;place-items:center;flex:none;width:92px;height:108px;overflow:hidden;border-radius:16px;background:linear-gradient(145deg,#d5f5ea,#e0eaff);color:#35718a}
-.hmrs-leader-photo img{width:100%;height:100%;object-fit:cover}.hmrs-leader-copy{min-width:0}
-.hmrs-leader-kicker{font-size:9px;letter-spacing:1.2px;color:#168477;font-weight:900}.hmrs-leader-copy h3{font-size:15px;font-weight:900;color:#1d3c53;margin:5px 0}
-.hmrs-leader-copy p{font-size:12px;color:#728795;margin:0 0 10px}.hmrs-leader-login{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 12px;background:#eaf7f4;color:#126b64;font-size:11px;font-weight:800}
-.hmrs-home-quick-grid-four{grid-template-columns:repeat(4,minmax(0,1fr))}.hmrs-home-quick-grid-four .hmrs-home-quick-card{gap:12px;min-height:145px}
-@media(max-width:900px){.hmrs-school-motto{display:none}.hmrs-leadership-grid{grid-template-columns:1fr}.hmrs-welcome-panel{grid-template-columns:1fr}.hmrs-school-gallery-photo img{height:230px}}
-@media(max-width:600px){.hmrs-school-masthead-inner{gap:14px;padding:25px 0}.hmrs-school-crest{width:58px;height:58px;border-radius:17px}.hmrs-school-crest svg{width:27px}.hmrs-school-heading h1{font-size:23px}.hmrs-school-heading p{font-size:11px;line-height:1.6}.hmrs-welcome-panel{padding-top:36px}.hmrs-school-gallery{min-height:190px;gap:8px}.hmrs-school-gallery-photo{border-width:4px;border-radius:13px}.hmrs-school-gallery-photo img{height:175px}.hmrs-school-gallery-empty{min-height:185px}.hmrs-leader-card{padding:14px}.hmrs-leader-photo{width:76px;height:90px}.hmrs-home-quick-grid-four{grid-template-columns:repeat(2,minmax(0,1fr))}.hmrs-home-quick-grid-four .hmrs-home-quick-card{min-height:132px}}

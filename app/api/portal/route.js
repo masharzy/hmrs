@@ -588,11 +588,13 @@ export async function POST(req) {
       needRole(actor, ["principal"]);
       const name=cleanText(body.name,120),phone=normalizePhone(body.phone),pin=normalizePin(body.pin);
       if(!name||!phone||!pin)return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
+      const photoUrl=cleanText(body.photoUrl,1000);
+      if(photoUrl&&!/^https:\/\/[^\s]+$/i.test(photoUrl))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
       const assignments=teacherAssignments({...body,roles:Array.isArray(body.roles)?body.roles:[body.role]},{});
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
-        userPatch: { name, photoUrl: cleanText(body.photoUrl,1000), ...assignments, active: true, createdAt: iso() }
+        userPatch: { name, photoUrl, ...assignments, active: true, createdAt: iso() }
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });

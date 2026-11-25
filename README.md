@@ -84,3 +84,8 @@ GitHub Actions runs tests and a production build for pushes and pull requests.
 - **Home → Notices:** rows show the title only, and full notice content opens on selection.
 - **Site header:** on Firebase authentication confirmation, a signed-in visitor sees the Dashboard link instead of Portal Login. While checking session state, a neutral placeholder prevents flashing the wrong button.
 - **Student removal:** the principal uses a clear confirm/cancel modal; the API requires `confirmed: true` rather than retyping the student name. Existing permission and record-deletion safeguards remain in place.
+
+## Homepage: teacher photos & notices
+
+- Principal: Dashboard → Teachers → Add/Edit → **Upload photo** (JPG/PNG/WebP, ≤3 MB). Uploaded via `/api/staff-photo` to ImgBB (needs `IMGBB_API_KEY`), saved as `users/{uid}.photoUrl` on Save, and shown in the homepage "আমাদের শিক্ষকবৃন্দ" section. Only name, photo, class-teacher info and subjects are public.
+- The homepage notice list shows up to 100 published notices in a fixed-height scroll area with full-width rows.
