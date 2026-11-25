@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@500;600;700;800&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -319,6 +319,8 @@ tr:last-child td{border-bottom:none}
 .notice-row-index{display:grid;place-items:center;width:31px;height:31px;border-radius:8px;flex:none;font-size:11px;font-weight:800;color:#528276;background:#edf6f2;font-family:system-ui,sans-serif}
 .notice-row-title{flex:1;font-size:13px;font-weight:750;line-height:1.7;overflow-wrap:anywhere}
 .notice-open-icon{color:#92aaa3;flex:none}
+.notice-row-date{flex:none;color:#7a8c86;font-size:12px;font-weight:600;white-space:nowrap}
+@media(max-width:480px){.notice-row-date{display:none}}
 .notice-dialog-backdrop{position:fixed;inset:0;z-index:110;padding:18px;background:#0a231db8;display:flex;align-items:center;justify-content:center}
 .notice-dialog{display:flex;flex-direction:column;width:min(100%,710px);max-height:min(90dvh,840px);overflow:hidden;background:white;border-radius:15px;box-shadow:0 26px 100px #0003}
 .notice-dialog-head{display:flex;align-items:flex-start;gap:13px;padding:25px;border-bottom:1px solid #e7eeea}
@@ -424,3 +426,12 @@ tr:last-child td{border-bottom:none}
  .hmrs-admission-pin .pin-grid{gap:6px}
  .hmrs-admission-pin .pin-cell{height:46px;font-size:19px}
 }
+
+/* Teacher photo upload field (account form) */
+.hmrs-photo-field-row{display:flex;align-items:center;gap:16px}
+.hmrs-photo-preview{width:72px;height:72px;border-radius:50%;object-fit:cover;flex:none;background:#eef3f1;border:1px solid #dce5e5}
+.hmrs-photo-preview.is-empty{display:grid;place-items:center;color:#8aa09a}
+.hmrs-photo-field-actions{display:flex;flex-wrap:wrap;gap:8px}
+.hmrs-photo-upload{position:relative;cursor:pointer}
+.hmrs-photo-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.hmrs-photo-upload.is-busy{opacity:.7;pointer-events:none}

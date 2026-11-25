@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search, Check, BookOpen, Users } from "lucide-react";
+import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search, Check, BookOpen, Users, Upload, UserRound } from "lucide-react";
+import { firebaseAuth } from "../lib/firebase-client";
 import { toAsciiDigits } from "../lib/bangla-numbers";
 import { CLASS_OPTIONS, TEACHER_SUBJECT_OPTIONS } from "../lib/teacher-subjects";
 import {enSubject} from "../lib/result-english.js";
@@ -38,6 +39,7 @@ export default function AccountManager({actor,request,mutate,working,error}){
  const [page,setPage]=useState(1),[items,setItems]=useState([]),[total,setTotal]=useState(0);
  const [loading,setLoading]=useState(true),[revision,setRevision]=useState(0);
  const [modal,setModal]=useState(null),[values,setValues]=useState(empty),[localError,setLocalError]=useState("");
+ const [photoBusy,setPhotoBusy]=useState(false);
  useEffect(()=>{const timer=setTimeout(()=>{setDebounced(search.trim());setPage(1)},280);return()=>clearTimeout(timer)},[search]);
  useEffect(()=>{
   let active=true;setLoading(true);
@@ -59,8 +61,22 @@ export default function AccountManager({actor,request,mutate,working,error}){
    classTeacherClasses:roles.includes("class_teacher")?(user.classTeacherClasses||user.assignedClasses||[]).map(String):[],
    teachingSubjects:(user.teachingSubjects||[]).map(String),photoUrl:user.photoUrl||"",active:user.active!==false});
  }
- function close(){if(working)return;setModal(null);setLocalError("")}
+ function close(){if(working||photoBusy)return;setModal(null);setLocalError("")}
  function changed(key,value){setValues(v=>({...v,[key]:value}));setLocalError("")}
+ async function uploadPhoto(file){
+  if(!file)return;
+  setLocalError("");
+  if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>3*1024*1024){setLocalError("Choose a JPG, PNG or WebP photo up to 3 MB");return}
+  setPhotoBusy(true);
+  try{
+   const body=new FormData();body.append("file",file);
+   const token=await firebaseAuth().currentUser.getIdToken();
+   const response=await fetch("/api/staff-photo",{method:"POST",headers:{Authorization:"Bearer "+token},body});
+   const output=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(output.error||"Photo upload failed");
+   changed("photoUrl",output.photoUrl);
+  }catch(e){setLocalError(e.message)}finally{setPhotoBusy(false)}
+ }
  async function submit(e){
   e.preventDefault();if(working)return;setLocalError("");
   if(values.photoUrl&&!/^https:\/\/[^\s]+$/i.test(values.photoUrl)){setLocalError("Enter a valid HTTPS photo URL");return}
@@ -115,7 +131,18 @@ export default function AccountManager({actor,request,mutate,working,error}){
      <div className="form-grid">
       <label className="field">Teacher Name<input value={values.name} onChange={e=>changed("name",e.target.value)} required maxLength={120}/></label>
       <label className="field">Login Phone<input type="tel" value={values.phone} onChange={e=>changed("phone",e.target.value)} required/></label>
-       <label className="field">শিক্ষকের ছবির HTTPS লিংক<input type="url" value={values.photoUrl} onChange={e=>changed("photoUrl",e.target.value)} placeholder="https://..."/></label>
+       <div className="field record-wide hmrs-photo-field"><span>Teacher Photo (shown on the home page)</span>
+        <div className="hmrs-photo-field-row">
+         {values.photoUrl?<img className="hmrs-photo-preview" src={values.photoUrl} alt="Teacher photo preview" onError={e=>{e.currentTarget.style.visibility="hidden"}}/>:<span className="hmrs-photo-preview is-empty"><UserRound size={30}/></span>}
+         <div className="hmrs-photo-field-actions">
+          <label className={"btn sm hmrs-photo-upload"+(photoBusy?" is-busy":"")}><Upload size={14}/> {photoBusy?"Uploading…":values.photoUrl?"Replace photo":"Upload photo"}
+           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={photoBusy||working} onChange={e=>{uploadPhoto(e.target.files?.[0]);e.target.value=""}}/></label>
+          {values.photoUrl&&<button type="button" className="btn sm danger" disabled={photoBusy||working} onClick={()=>changed("photoUrl","")}>Remove</button>}
+         </div>
+        </div>
+        <small className="muted">JPG, PNG or WebP, up to 3 MB. Click Save to publish it on the home page.</small>
+       </div>
+       <label className="field record-wide">Or photo HTTPS link<input type="url" value={values.photoUrl} onChange={e=>changed("photoUrl",e.target.value)} placeholder="https://..."/></label>
      </div>
      <Choices label="Teacher Roles" kind="roles" description="You can assign both roles to the same person."
       options={[{value:"teacher",label:"Teacher",description:"Teaches assigned subjects"},
@@ -140,7 +167,7 @@ export default function AccountManager({actor,request,mutate,working,error}){
       <span className="hmrs-teacher-switch-knob"/><span>Account {values.active?"Active":"Inactive"}</span>
      </button>}
     </div><div className="record-modal-actions"><button type="button" className="btn" disabled={working} onClick={close}>Cancel</button>
-     <button className="btn primary" disabled={working} type="submit">{working?"Saving…":modal.kind==="create"?"Add Teacher":"Save Changes"}</button></div></form>
+     <button className="btn primary" disabled={working||photoBusy} type="submit">{working?"Saving…":photoBusy?"Uploading photo…":modal.kind==="create"?"Add Teacher":"Save Changes"}</button></div></form>
    </section>}
   </div>}
  </section>;
