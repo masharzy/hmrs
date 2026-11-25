@@ -1,3 +1,4 @@
+"use client";
 import { toBanglaDigits } from "../lib/bangla-numbers";
 import Link from "next/link";
 import { MapPin, ShieldCheck } from "lucide-react";
