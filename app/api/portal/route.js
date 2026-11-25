@@ -572,9 +572,16 @@ export async function POST(req) {
     }
     if (action === "settings.update") {
       needRole(actor, ["principal"]);
-      const photoUrl = cleanText(body.photoUrl, 1000), subtitle = cleanText(body.subtitle, 350);
-      if (photoUrl && (!/^https:\/\//i.test(photoUrl) || !/^https:\/\/[^\s]+$/i.test(photoUrl))) return fail("শুধুমাত্র HTTPS ছবি URL গ্রহণযোগ্য");
-      await store.collection("settings").doc("school").set({ photoUrl, subtitle, updatedAt: iso() }, { merge: true });
+      const keys=["photoUrl","photoUrl2","principalPhotoUrl","assistantPrincipalPhotoUrl","staffManagerPhotoUrl"];
+      const values={};
+      for(const key of keys){
+        const value=cleanText(body[key],1000);
+        if(value&&!/^https:\/\/[^\s]+$/i.test(value))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
+        values[key]=value;
+      }
+      for(const key of ["principalName","principalDesignation","assistantPrincipalName","assistantPrincipalDesignation","staffManagerName","staffManagerDesignation","subtitle"])
+        values[key]=cleanText(body[key],350);
+      await store.collection("settings").doc("school").set({ ...values, updatedAt: iso() }, { merge: true });
       await audit(actor, action, "school"); return json({ ok: true });
     }
     if (action === "account.create") {
