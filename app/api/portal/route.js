@@ -470,12 +470,33 @@ export async function POST(req) {
       const wanted = new Set(ids);
       const chosen = everyone.filter(x => (all ? (fromGrade === null || Number(x.grade) === fromGrade) : wanted.has(x.id)));
       const taken = new Map(everyone.map(x => [studentKey(x.grade, x.roll, x.group), x.id]));
+      const revoke = body.revoke === true;
+      // Optional: give new rolls by merit in the chosen exam (complete results ranked by total marks;
+      // anyone without a complete result follows, in old-roll order).
+      const rankExamId = cleanText(body.rankExamId, 150);
+      const rankOf = new Map();
+      if (rankExamId && !rankExamId.includes("/") && !revoke) {
+        const examSnap = await store.collection("exams").doc(rankExamId).get();
+        if (!examSnap.exists || examSnap.data()?.deleted) return fail("র‍্যাঙ্কিংয়ের পরীক্ষা পাওয়া যায়নি", 404);
+        const marksSnap = await store.collection("marks").where("examId", "==", rankExamId).limit(5000).get();
+        const subjectMap = new Map();
+        for (const m of asDocs(marksSnap)) {
+          if (!subjectMap.has(m.studentId)) subjectMap.set(m.studentId, {});
+          subjectMap.get(m.studentId)[m.subjectId] = m.scores || {};
+        }
+        const reports = [];
+        for (const st of everyone) { try { reports.push({ student: st, report: evaluateTranscript(st, subjectMap.get(st.id) || {}) }); } catch {} }
+        const rankings = buildCohortRankings(reports);
+        for (const [id, r] of Object.entries(rankings)) if (r.rank) rankOf.set(id, r.rank);
+      }
+      const byRank = rankExamId && !revoke;
+      const counters = new Map();
       const skipped = [];
       const plans = [];
       const boardPlans = [];
-      const revoke = body.revoke === true;
       // Highest class first so the next class's rolls are freed before they are re-used.
-      for (const st of (revoke ? chosen.filter(x => Number(x.grade) >= 10) : chosen).sort((a, b) => Number(b.grade) - Number(a.grade) || Number(a.roll) - Number(b.roll))) {
+      for (const st of (revoke ? chosen.filter(x => Number(x.grade) >= 10) : chosen).sort((a, b) => Number(b.grade) - Number(a.grade)
+        || (byRank ? (rankOf.get(a.id) || 1e9) - (rankOf.get(b.id) || 1e9) : 0) || Number(a.roll) - Number(b.roll))) {
         const grade = Number(st.grade);
         if (grade >= 10) { boardPlans.push(st); continue; }
         const nextGrade = grade + 1;
@@ -488,7 +509,13 @@ export async function POST(req) {
         }
         const oldKey = studentKey(st.grade, st.roll, st.group);
         let roll = Number(st.roll);
-        if (taken.get(studentKey(nextGrade, roll, patch.group)) && taken.get(studentKey(nextGrade, roll, patch.group)) !== st.id) {
+        if (byRank) {
+          // Merit order: 1, 2, 3 … in the new class, skipping rolls already held by other students.
+          const bucket = nextGrade + "|" + patch.group;
+          roll = counters.get(bucket) || 1;
+          while (taken.has(studentKey(nextGrade, roll, patch.group))) roll++;
+          counters.set(bucket, roll + 1);
+        } else if (taken.get(studentKey(nextGrade, roll, patch.group)) && taken.get(studentKey(nextGrade, roll, patch.group)) !== st.id) {
           roll = 1;
           while (taken.has(studentKey(nextGrade, roll, patch.group))) roll++;
         }
@@ -528,7 +555,7 @@ export async function POST(req) {
         await batch.commit();
       }
       await audit(actor, action, "count:" + promoted + (boardPlans.length ? ",board:" + boardPlans.length : ""));
-      return json({ ok: true, promoted, boardPromoted: revoke ? 0 : boardPlans.length, boardRevoked: revoke ? boardPlans.length : 0, skipped });
+      return json({ ok: true, promoted, ranked: byRank ? plans.filter(pl => rankOf.has(pl.st.id)).length : 0, boardPromoted: revoke ? 0 : boardPlans.length, boardRevoked: revoke ? boardPlans.length : 0, skipped });
     }
     if(action==="student.secondaryPin.set"||action==="student.secondaryPin.clear"){
       needRole(actor,["principal"]);

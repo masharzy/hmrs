@@ -39,3 +39,10 @@ test("class 10 promotion means promoted to board exam and shows green on results
   assert.match(read("components/Marksheet.jsx"), /student\.boardPromoted/);
   assert.match(read("app/globals.css"), /hmrs-board-promoted-banner\{[^}]*#007a5e/);
 });
+test("promotion can assign new rolls by merit rank of a chosen exam", () => {
+  const api = read("app/api/portal/route.js");
+  assert.match(api, /rankExamId/);
+  assert.match(api, /buildCohortRankings\(reports\)/);
+  assert.match(read("components/StudentPromotion.jsx"), /By merit rank in/);
+  assert.match(read("components/DashboardPortal.jsx"), /<StudentPromotion students=\{students\} exams=\{exams\}/);
+});

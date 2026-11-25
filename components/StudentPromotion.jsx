@@ -7,10 +7,11 @@ import { toAsciiDigits } from "../lib/bangla-numbers";
 const label = s => `${s.name} (${enGrade(s.grade)}${s.group ? " · " + enStream(s.group) : ""}, Roll ${toAsciiDigits(s.roll)})`;
 
 /** Promote one student, or everyone (optionally only one class), to the next class. Principal only. */
-export default function StudentPromotion({ students, target, working, mutate, onClose }) {
+export default function StudentPromotion({ students, exams = [], target, working, mutate, onClose }) {
   const one = target?.student || null;
   const [grade, setGrade] = useState("");
   const [groupFor9, setGroupFor9] = useState("");
+  const [rankExamId, setRankExamId] = useState("");
   const [result, setResult] = useState(null);
   const pool = one ? [one] : students.filter(s => !grade || Number(s.grade) === Number(grade));
   const movable = pool.filter(s => Number(s.grade) < 10);
@@ -18,14 +19,14 @@ export default function StudentPromotion({ students, target, working, mutate, on
   const undo = one && Number(one.grade) >= 10 && one.boardPromoted;
   const needsGroup = movable.some(s => Number(s.grade) === 8 && !s.group);
   async function run() {
-    const r = await mutate("student.promote", one ? { studentIds: [one.id], groupFor9, revoke: !!undo } : { all: true, grade: grade || undefined, groupFor9 });
+    const r = await mutate("student.promote", one ? { studentIds: [one.id], groupFor9, revoke: !!undo } : { all: true, grade: grade || undefined, groupFor9, rankExamId: rankExamId || undefined });
     if (r) setResult(r);
   }
   return <div className="record-modal-backdrop" role="dialog" aria-modal="true"><div className="record-modal">
     <div className="flex justify-between items-center gap-3 mb-3"><h3 className="font-bold flex items-center gap-2"><ArrowUpCircle size={18}/> {one ? "Promote Student" : "Promote Students"}</h3>
       <button type="button" className="btn sm" onClick={onClose} aria-label="Close"><X size={15}/></button></div>
     {result ? <div className="grid gap-3">
-      {(result.promoted>0||!(result.boardPromoted||result.boardRevoked))&&<div className="alert">{toAsciiDigits(result.promoted)} students promoted to the next class.</div>}
+      {(result.promoted>0||!(result.boardPromoted||result.boardRevoked))&&<div className="alert">{toAsciiDigits(result.promoted)} students promoted to the next class.{result.ranked>0&&" New rolls were given by merit rank for "+toAsciiDigits(result.ranked)+" students."}</div>}
       {result.boardPromoted>0&&<div className="alert">{toAsciiDigits(result.boardPromoted)} Class 10 students marked “Promoted to Board Exam”.</div>}
       {result.boardRevoked>0&&<div className="alert">Board-exam promotion removed.</div>}
       {!!result.skipped?.length && <div className="alert danger"><b>{toAsciiDigits(result.skipped.length)} not promoted:</b>
@@ -40,6 +41,11 @@ export default function StudentPromotion({ students, target, working, mutate, on
       {needsGroup && <label className="field">Group for students entering Class 9 (Class 8 has no group)
         <select value={groupFor9} onChange={e => setGroupFor9(e.target.value)}>
           <option value="">Select group…</option><option value="science">Science</option><option value="business">Business Studies</option><option value="humanities">Humanities</option></select></label>}
+      {!one && <label className="field">New roll numbers
+        <select value={rankExamId} onChange={e => setRankExamId(e.target.value)}>
+          <option value="">Keep current roll numbers (next free roll if taken)</option>
+          {exams.filter(e => !e.deleted).map(e => <option key={e.id} value={e.id}>By merit rank in: {e.name}</option>)}</select>
+        <small className="muted">Merit order uses total marks (complete results only). Students without a complete result get the following rolls in old-roll order. You can still edit any roll afterwards.</small></label>}
       <div className="alert">Roll numbers are kept when free, otherwise the next free roll is given. Old marks and attendance stay as they are. This cannot be undone automatically.</div>
       <div className="inline-actions"><button className="btn primary" disabled={working || !(movable.length || board.length || undo) || (needsGroup && !groupFor9)} onClick={run}>
         <ArrowUpCircle size={15}/> {working ? "Promoting…" : one ? "Promote" : "Promote " + toAsciiDigits(movable.length + board.length) + " students"}</button>

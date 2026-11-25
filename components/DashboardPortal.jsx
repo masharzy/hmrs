@@ -598,7 +598,7 @@ export default function DashboardPortal() {
     </>}
    </section>
   </DashboardShell>
-  {promoting&&<StudentPromotion students={students} target={promoting} working={working} mutate={mutate} onClose={()=>setPromoting(null)}/>}
+  {promoting&&<StudentPromotion students={students} exams={exams} target={promoting} working={working} mutate={mutate} onClose={()=>setPromoting(null)}/>}
   {(creatingExam||editingExam)&&<ExamCreateModal key={editingExam?.id||"new"} actor={actor}
     exam={editingExam} working={working} onClose={()=>{setCreatingExam(false);setEditingExam(null)}}
     onCreate={async values=>{
