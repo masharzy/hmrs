@@ -7,7 +7,7 @@ import {
  describeDevice,maskedIp,nextFailureState,publicDeviceId
 } from "../../../../lib/login-security";
 export const runtime="nodejs",dynamic="force-dynamic";
-const roles=new Set(["student","teacher","class_teacher","principal"]);
+const roles=new Set(["student","guardian","teacher","class_teacher","principal","assistant_principal","staff_manager"]);
 function reply(deviceId,body,status=200,until=0,clearBan=false){
  const r=Response.json(body,{status,headers:{"Cache-Control":"no-store"}});
  r.headers.append("Set-Cookie",deviceCookie(deviceId));
@@ -28,7 +28,7 @@ export async function POST(req){
   if(!phone||!pin||!roles.has(role))
     return reply(id,{error:"সঠিক মোবাইল নম্বর ও ৫ সংখ্যার PIN দিন"},400);
   const store=db(),deviceRef=store.collection("loginDevices").doc(id);
-  const mapping=await store.collection("loginPhones").doc(phone).get();
+  const mapping=await store.collection(role==="guardian"?"guardianLoginPhones":"loginPhones").doc(phone).get();
   const owners=mapping.exists?studentPhoneOwners(mapping.data()):[];
   const shared=role==="student"&&owners.length>1;
   let uid=mapping.exists?mapping.data()?.uid:null;
