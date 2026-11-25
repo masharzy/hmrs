@@ -19,16 +19,16 @@ export default function SiteHeader(){
   }catch{setSignedIn(false)}
   return ()=>unsubscribe();
  },[]);
- const mobileItems=signedIn===true?[...items.filter(([label])=>label!==(en?"Results":"ফলাফল")),["ড্যাশবোর্ড","/dashboard/overview"]]
-  :signedIn===false?[...items,["শিক্ষার্থী লগইন","/login/student"],["শিক্ষক লগইন","/login/teacher"],["প্রধান শিক্ষক","/login/principal"]]:items;
+ const mobileItems=signedIn===true?[...items.filter(([label])=>label!==(en?"Results":"ফলাফল")),[en?"Dashboard":"ড্যাশবোর্ড","/dashboard/overview"]]
+  :signedIn===false?[...items,[en?"Student Login":"শিক্ষার্থী লগইন","/login/student"],[en?"Teacher Login":"শিক্ষক লগইন","/login/teacher"],[en?"Principal":"প্রধান শিক্ষক","/login/principal"]]:items;
  return <header className="site-header" style={{background:"white",borderBottom:"1px solid #e7eceb",position:"sticky",top:0,zIndex:30}}>
   <div className="container flex items-center justify-between" style={{height:72,gap:20}}>
    <Link href="/" className="flex items-center gap-3" aria-label={en?"School home page":"বিদ্যালয়ের হোম পেজ"}>
     <div style={{height:43,width:43,borderRadius:8,background:"#176b61",color:"white"}} className="flex items-center justify-center"><GraduationCap size={24}/></div>
     <div className="hmrs-site-brand-text"><strong>{en?"Haji Matiur Rahman Sarker High School":"হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়"}</strong><small>EIIN 112359</small></div>
    </Link>
-   <nav className="desktop-only flex items-center gap-6" aria-label="মূল নেভিগেশন">
-    {items.filter(([label])=>signedIn!==true||label!=="ফলাফল").map(([label,href])=><Link key={href} className="text-sm font-semibold hover:text-primary" href={href}>{label}</Link>)}
+   <nav className="desktop-only flex items-center gap-6" aria-label={en?"Main navigation":"মূল নেভিগেশন"}>
+    {items.filter(([label])=>signedIn!==true||label!==(en?"Results":"ফলাফল")).map(([label,href])=><Link key={href} className="text-sm font-semibold hover:text-primary" href={href}>{label}</Link>)}
    </nav>
    <div className="desktop-only flex items-center gap-2">
     <button type="button" className="btn sm" onClick={toggleLanguage}><Languages size={16}/>{en?"বাংলা":"English"}</button>
