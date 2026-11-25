@@ -1,3 +1,4 @@
+ "use client";
 import Link from "next/link";
 import {ArrowRight,ArrowUpRight,BookOpenCheck,FileText,GraduationCap,ShieldCheck,Sparkles,
  BadgeCheck,ClipboardList,UserRound,UsersRound,UserCog,Bell,Stars,CheckCircle2} from "lucide-react";
@@ -5,7 +6,8 @@ import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import NoticeBoard from "../components/NoticeBoard";
 import SchoolPhoto from "../components/SchoolPhoto";
-undefined./home.css";
+import "./home.css";
+import { useLanguage } from "../components/LanguageProvider";
 
 const services=[
  {href:"/admission",title:en?"Online Admission":"অনলাইন ভর্তি",desc:en?"Complete your admission application easily":"সহজে ভর্তি আবেদন সম্পন্ন করুন",chip:"ADMISSION",icon:ClipboardList},
