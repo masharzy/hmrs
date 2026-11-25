@@ -20,6 +20,7 @@ const ChangePinForm=dynamic(()=>import("./ChangePinForm"),{ssr:false});
 const ResultEntryGrid=dynamic(()=>import("./ResultEntryGrid"),{ssr:false});
 const AccountManager=dynamic(()=>import("./AccountManager"),{ssr:false});
 const AccountPinReset=dynamic(()=>import("./AccountPinReset"),{ssr:false});
+const GuardianRequestManager=dynamic(()=>import("./GuardianRequestManager"),{ssr:false});
 
 import { Pager, PrincipalRecordEditor, DeleteStudentModal } from "./PrincipalRecordEditor";
 import { toBanglaDigits, toAsciiDigits, gradeLabel } from "../lib/bangla-numbers";
@@ -475,7 +476,7 @@ export default function DashboardPortal() {
            <span className={"chip "+(a.status==="pending"?"":"gray")}>{({pending:"Pending",approved:"Approved",rejected:"Rejected"})[a.status]||a.status}</span>
           </div>
           {actor.role==="principal"&&a.status!=="approved"&&<button className="btn sm hmrs-admission-edit" type="button" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> Edit Application</button>}
-          {a.status==="pending"&&<div className="hmrs-admission-actions"><AdmissionApproval item={a} busy={working} mutate={mutate} principal={actor.role==="principal"}/></div>}
+          {a.status==="pending"&&<div className="hmrs-admission-actions"><AdmissionApproval item={a} busy={working} mutate={mutate} principal={["principal","assistant_principal"].includes(actor.role)}/></div>}
          </article>)}
          {!filteredAdmissions.length&&<p className="panel empty">No applications match these filters.</p>}
         </div>
