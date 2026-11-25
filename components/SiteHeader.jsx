@@ -2,12 +2,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { BookOpen, GraduationCap, LayoutDashboard, Menu, X } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutDashboard, Menu, X, Languages } from "lucide-react";
+import { useLanguage } from "./LanguageProvider";
 import { firebaseAuth } from "../lib/firebase-client";
 
-const items=[["হোম","/"],["নোটিশ","/notices"],["ফলাফল","/login/student"]];
+const items=language==="en"?[["Home","/"],["Notices","/notices"],["Results","/login/student"]]:[["হোম","/"],["নোটিশ","/notices"],["ফলাফল","/login/student"]];
 export default function SiteHeader(){
  const [open,setOpen]=useState(false);
+ const {language,toggleLanguage}=useLanguage();
+ const en=language==="en";
  const [signedIn,setSignedIn]=useState(null);
  useEffect(()=>{
   let unsubscribe=()=>{};
@@ -22,17 +25,18 @@ export default function SiteHeader(){
   <div className="container flex items-center justify-between" style={{height:72,gap:20}}>
    <Link href="/" className="flex items-center gap-3" aria-label="বিদ্যালয়ের হোম পেজ">
     <div style={{height:43,width:43,borderRadius:8,background:"#176b61",color:"white"}} className="flex items-center justify-center"><GraduationCap size={24}/></div>
-    <div className="hmrs-site-brand-text"><strong>হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়</strong><small>EIIN ১১২৩৫৯</small></div>
+    <div className="hmrs-site-brand-text"><strong>{en?"Haji Matiur Rahman Sarker High School":"হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়"}</strong><small>EIIN 112359</small></div>
    </Link>
    <nav className="desktop-only flex items-center gap-6" aria-label="মূল নেভিগেশন">
     {items.filter(([label])=>signedIn!==true||label!=="ফলাফল").map(([label,href])=><Link key={href} className="text-sm font-semibold hover:text-primary" href={href}>{label}</Link>)}
    </nav>
-   <div className="desktop-only">
-    {signedIn===true?<Link href="/dashboard/overview" className="btn sm primary"><LayoutDashboard size={16}/> ড্যাশবোর্ড</Link>
-     :signedIn===false?<Link href="/login/student" className="btn sm"><BookOpen size={16}/> পোর্টাল লগইন</Link>
+   <div className="desktop-only flex items-center gap-2">
+    <button type="button" className="btn sm" onClick={toggleLanguage}><Languages size={16}/>{en?"বাংলা":"English"}</button>
+    {signedIn===true?<Link href="/dashboard/overview" className="btn sm primary"><LayoutDashboard size={16}/> {en?"Dashboard":"ড্যাশবোর্ড"}</Link>
+     :signedIn===false?<Link href="/login/student" className="btn sm"><BookOpen size={16}/> {en?"Portal Login":"পোর্টাল লগইন"}</Link>
      :<span className="site-header-auth-pending" aria-hidden="true"/>}
    </div>
-   <button aria-label={open?"মেনু বন্ধ করুন":"মেনু খুলুন"} aria-expanded={open} className="md:hidden btn sm" onClick={()=>setOpen(v=>!v)}>{open?<X size={20}/>:<Menu size={20}/>}</button>
+   <div className="md:hidden flex items-center gap-2"><button type="button" className="btn sm" onClick={toggleLanguage}>{en?"বাংলা":"EN"}</button><button aria-label={open?"মেনু বন্ধ করুন":"মেনু খুলুন"} aria-expanded={open} className="md:hidden btn sm" onClick={()=>setOpen(v=>!v)}>{open?<X size={20}/>:<Menu size={20}/>}</button></div>
   </div>
   {open&&<nav className="container pb-4 grid gap-2" aria-label="মোবাইল নেভিগেশন">{mobileItems.map(([name,href])=><Link key={href} href={href} onClick={()=>setOpen(false)} className="p-2 rounded hover:bg-canvas">{name}</Link>)}</nav>}
  </header>;
