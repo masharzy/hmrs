@@ -79,7 +79,8 @@ export default function DashboardPortal() {
  const [selectedPublishedExam,setSelectedPublishedExam]=useState("");
  const [individualGrade,setIndividualGrade]=useState(""),[individualGroup,setIndividualGroup]=useState("");
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
- const [photo,setPhoto]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
+ const [photo,setPhoto]=useState(""),[photo2,setPhoto2]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
+ const [schoolProfiles,setSchoolProfiles]=useState({principalName:"",principalDesignation:"প্রধান শিক্ষক",principalPhotoUrl:"",assistantPrincipalName:"",assistantPrincipalDesignation:"সহকারী প্রধান শিক্ষক",assistantPrincipalPhotoUrl:"",staffManagerName:"",staffManagerDesignation:"স্টাফ ম্যানেজার",staffManagerPhotoUrl:""});
  const photoUploadInput=useRef(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"agriculture",fourthSubject:"agriculture",optionalId:"agriculture"});
 
@@ -108,7 +109,7 @@ export default function DashboardPortal() {
    if(cached.profile)setProfile(cached.profile);
    if(cached.data){
     setData(old=>({...old,...cached.data}));
-    if(cached.data.settings){setPhoto(cached.data.settings.photoUrl||"");setSubtitle(cached.data.settings.subtitle||"")}
+    if(cached.data.settings){setPhoto(cached.data.settings.photoUrl||"");setPhoto2(cached.data.settings.photoUrl2||"");setSubtitle(cached.data.settings.subtitle||"");setSchoolProfiles(old=>({...old,...Object.fromEntries(Object.keys(old).map(k=>[k,cached.data.settings[k]||old[k]]))}))}
    }
    return;
   }
@@ -125,7 +126,7 @@ export default function DashboardPortal() {
     if(r.profile)setProfile(r.profile);
     if(r.data){
      setData(old=>({...old,...r.data}));
-     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setSubtitle(r.data.settings.subtitle||"")}
+     if(r.data.settings){setPhoto(r.data.settings.photoUrl||"");setPhoto2(r.data.settings.photoUrl2||"");setSubtitle(r.data.settings.subtitle||"");setSchoolProfiles(old=>({...old,...Object.fromEntries(Object.keys(old).map(k=>[k,r.data.settings[k]||old[k]]))}))}
     }
    }
   }finally{if(loadSequence.current===seq)setLoadingSection(false);if(activeRouteRequest.current===controller)activeRouteRequest.current=null}
@@ -147,7 +148,7 @@ export default function DashboardPortal() {
     if(p.profile)setProfile(p.profile);
     if(p.data){
      setData(old=>({...old,...p.data}));
-     if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setSubtitle(p.data.settings.subtitle||"")}
+     if(p.data.settings){setPhoto(p.data.settings.photoUrl||"");setPhoto2(p.data.settings.photoUrl2||"");setSubtitle(p.data.settings.subtitle||"");setSchoolProfiles(old=>({...old,...Object.fromEntries(Object.keys(old).map(k=>[k,p.data.settings[k]||old[k]]))}))}
     }
     routeCache.current.set(routeKey(tab,date,examId),{profile:p.profile,data:p.data});
     loadedRoutes.current.add(routeKey(tab,date,examId));
@@ -568,9 +569,19 @@ export default function DashboardPortal() {
         <Field label="Upload Home Photo (JPG, PNG, WebP; max 3 MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
         <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> Upload Photo</button>
         <Field label="Or HTTPS Photo URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
+        <Field label="বিদ্যালয়ের প্রথম ছবির HTTPS লিংক"><Input value={photo} onChange={setPhoto} placeholder="https://..."/></Field>
+        <Field label="বিদ্যালয়ের দ্বিতীয় ছবির HTTPS লিংক"><Input value={photo2} onChange={setPhoto2} placeholder="https://..."/></Field>
+        {photo&&<img key={photo} src={photo} alt="প্রথম ছবি" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
+        {photo2&&<img key={photo2} src={photo2} alt="দ্বিতীয় ছবি" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
+        <h3 className="font-bold mt-3">হোমপেজের দায়িত্বপ্রাপ্ত ব্যক্তিদের পরিচিতি</h3>
+        {["principal","assistantPrincipal","staffManager"].map((key,i)=><div key={key} className="panel p-4 grid gap-3">
+         <b>{["প্রধান শিক্ষক","সহকারী প্রধান শিক্ষক","স্টাফ ম্যানেজার"][i]}</b>
+         <Field label="নাম"><input value={schoolProfiles[key+"Name"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"Name"]:e.target.value}))} placeholder="নাম লিখুন"/></Field>
+         <Field label="পদবি"><input value={schoolProfiles[key+"Designation"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"Designation"]:e.target.value}))}/></Field>
+         <Field label="ছবির HTTPS লিংক"><input value={schoolProfiles[key+"PhotoUrl"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"PhotoUrl"]:e.target.value}))} placeholder="https://..."/></Field>
+        </div>)}
         <Field label="Short School Description"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
-        {photo&&<img key={photo} src={photo} alt="School Photo Preview" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
-        <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,subtitle})}>Save Settings</button>
+        <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,photoUrl2:photo2,subtitle,...schoolProfiles})}>সব সেটিংস সংরক্ষণ</button>
        </div></>}
       </>}
     </>}
