@@ -6,11 +6,11 @@ import { BookOpen, GraduationCap, LayoutDashboard, Menu, X, Languages } from "lu
 import { useLanguage } from "./LanguageProvider";
 import { firebaseAuth } from "../lib/firebase-client";
 
-const items=language==="en"?[["Home","/"],["Notices","/notices"],["Results","/login/student"]]:[["হোম","/"],["নোটিশ","/notices"],["ফলাফল","/login/student"]];
 export default function SiteHeader(){
  const [open,setOpen]=useState(false);
  const {language,toggleLanguage}=useLanguage();
  const en=language==="en";
+ const items=en?[["Home","/"],["Notices","/notices"],["Results","/login/student"]]:[["হোম","/"],["নোটিশ","/notices"],["ফলাফল","/login/student"]];
  const [signedIn,setSignedIn]=useState(null);
  useEffect(()=>{
   let unsubscribe=()=>{};
@@ -19,11 +19,11 @@ export default function SiteHeader(){
   }catch{setSignedIn(false)}
   return ()=>unsubscribe();
  },[]);
- const mobileItems=signedIn===true?[...items.filter(([label])=>label!=="ফলাফল"),["ড্যাশবোর্ড","/dashboard/overview"]]
+ const mobileItems=signedIn===true?[...items.filter(([label])=>label!==(en?"Results":"ফলাফল")),["ড্যাশবোর্ড","/dashboard/overview"]]
   :signedIn===false?[...items,["শিক্ষার্থী লগইন","/login/student"],["শিক্ষক লগইন","/login/teacher"],["প্রধান শিক্ষক","/login/principal"]]:items;
  return <header className="site-header" style={{background:"white",borderBottom:"1px solid #e7eceb",position:"sticky",top:0,zIndex:30}}>
   <div className="container flex items-center justify-between" style={{height:72,gap:20}}>
-   <Link href="/" className="flex items-center gap-3" aria-label="বিদ্যালয়ের হোম পেজ">
+   <Link href="/" className="flex items-center gap-3" aria-label={en?"School home page":"বিদ্যালয়ের হোম পেজ"}>
     <div style={{height:43,width:43,borderRadius:8,background:"#176b61",color:"white"}} className="flex items-center justify-center"><GraduationCap size={24}/></div>
     <div className="hmrs-site-brand-text"><strong>{en?"Haji Matiur Rahman Sarker High School":"হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়"}</strong><small>EIIN 112359</small></div>
    </Link>
