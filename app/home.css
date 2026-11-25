@@ -201,3 +201,13 @@
 @media(max-width:550px){.hmrs-site-brand-text strong{font-size:clamp(9px,2.65vw,12px)}.site-header .container{gap:8px!important}.site-header .container>a:first-child{gap:7px}}
 
 
+
+/* loading placeholders (shimmer) */
+@keyframes hmrs-shimmer{to{background-position:-200% 0}}
+.hmrs-skeleton,.hmrs-leadership-grid.is-loading .hmrs-leader-photo,.hmrs-leadership-grid.is-loading .hmrs-leader-copy h3,.hmrs-leadership-grid.is-loading .hmrs-leader-copy p{background:linear-gradient(100deg,#ffffff1f 30%,#ffffff55 50%,#ffffff1f 70%);background-size:200% 100%;animation:hmrs-shimmer 1.3s linear infinite}
+.hmrs-gallery-skeleton{grid-column:1/-1;display:grid;place-items:center;color:#ffffffb3}
+.hmrs-gallery-skeleton svg{width:64px;height:64px;opacity:.7}
+.hmrs-leadership-grid.is-loading .hmrs-leader-photo,.hmrs-leadership-grid.is-loading .hmrs-leader-copy h3,.hmrs-leadership-grid.is-loading .hmrs-leader-copy p{background:linear-gradient(100deg,#e8ecfa 30%,#f6f8ff 50%,#e8ecfa 70%);background-size:200% 100%;color:transparent;border-radius:10px}
+.hmrs-leadership-grid.is-loading .hmrs-leader-photo svg,.hmrs-leadership-grid.is-loading .hmrs-leader-login{visibility:hidden}
+.hmrs-leadership-grid.is-loading .hmrs-leader-copy h3{width:70%;min-height:20px}.hmrs-leadership-grid.is-loading .hmrs-leader-copy p{width:50%;min-height:16px}
+@media(prefers-reduced-motion:reduce){.hmrs-skeleton,.hmrs-leadership-grid.is-loading *{animation:none}}
