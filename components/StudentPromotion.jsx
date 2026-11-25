@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowUpCircle, X } from "lucide-react";
 import { enGrade, enStream } from "../lib/result-english.js";
 import { toAsciiDigits } from "../lib/bangla-numbers";
+import { examAppliesToGrade, examScopeGrade } from "../lib/exam-scope.js";
 
 const label = s => `${s.name} (${enGrade(s.grade)}${s.group ? " · " + enStream(s.group) : ""}, Roll ${toAsciiDigits(s.roll)})`;
 
@@ -17,6 +18,9 @@ export default function StudentPromotion({ students, exams = [], target, working
   const movable = pool.filter(s => Number(s.grade) < 10);
   const board = pool.filter(s => Number(s.grade) >= 10 && !s.boardPromoted);
   const undo = one && Number(one.grade) >= 10 && one.boardPromoted;
+  // Only exams that belong to the chosen class can rank it; with "All classes" any exam is allowed.
+  const rankable = exams.filter(e => !e.deleted && (!grade || examAppliesToGrade(e, grade)));
+  const rankExam = rankable.find(e => e.id === rankExamId);
   const needsGroup = movable.some(s => Number(s.grade) === 8 && !s.group);
   async function run() {
     const r = await mutate("student.promote", one ? { studentIds: [one.id], groupFor9, revoke: !!undo } : { all: true, grade: grade || undefined, groupFor9, rankExamId: rankExamId || undefined });
@@ -34,7 +38,7 @@ export default function StudentPromotion({ students, exams = [], target, working
       <button className="btn primary justify-self-start" onClick={onClose}>Done</button>
     </div> : <div className="grid gap-3">
       {one ? <p>{label(one)} {Number(one.grade) >= 10 ? (undo ? "is marked “Promoted to Board Exam”. Remove this status?" : "will be marked “Promoted to Board Exam” (shown in green on the result).") : "will move to " + enGrade(Number(one.grade) + 1) + "."}</p> : <>
-        <label className="field">Which class?<select value={grade} onChange={e => setGrade(e.target.value)}>
+        <label className="field">Which class?<select value={grade} onChange={e => { setGrade(e.target.value); setRankExamId(""); }}>
           <option value="">All classes (6–9 move up one class)</option>
           {[6, 7, 8, 9, 10].map(g => <option key={g} value={g}>{enGrade(g)}</option>)}</select></label>
         <p className="muted text-sm">{toAsciiDigits(movable.length)} students move up one class. {toAsciiDigits(board.length)} Class 10 students will be marked “Promoted to Board Exam”.</p></>}
@@ -44,7 +48,8 @@ export default function StudentPromotion({ students, exams = [], target, working
       {!one && <label className="field">New roll numbers
         <select value={rankExamId} onChange={e => setRankExamId(e.target.value)}>
           <option value="">Keep current roll numbers (next free roll if taken)</option>
-          {exams.filter(e => !e.deleted).map(e => <option key={e.id} value={e.id}>By merit rank in: {e.name}</option>)}</select>
+          {rankable.map(e => <option key={e.id} value={e.id}>By merit rank in: {e.name} ({examScopeGrade(e) ? enGrade(examScopeGrade(e)) : "All classes"})</option>)}</select>
+        {rankExam && <small className="alert" style={{display:"block"}}>New rolls will follow merit rank in <b>{rankExam.name}</b> for {grade ? enGrade(grade) : "every class that has results in this exam"}. Students without a complete result in it get the later rolls.</small>}
         <small className="muted">Merit order uses total marks (complete results only). Students without a complete result get the following rolls in old-roll order. You can still edit any roll afterwards.</small></label>}
       <div className="alert">Roll numbers are kept when free, otherwise the next free roll is given. Old marks and attendance stay as they are. This cannot be undone automatically.</div>
       <div className="inline-actions"><button className="btn primary" disabled={working || !(movable.length || board.length || undo) || (needsGroup && !groupFor9)} onClick={run}>
