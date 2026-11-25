@@ -25,10 +25,17 @@ test("student promotion is principal-only and skips class 10", () => {
   const i = api.indexOf('action === "student.promote"');
   assert.ok(i > 0);
   assert.match(api.slice(i, i + 300), /needRole\(actor, \["principal"\]\)/);
-  assert.match(api.slice(i, i + 3000), /grade >= 10/);
+  assert.match(api.slice(i, i + 4000), /grade >= 10/);
   assert.match(read("components/DashboardPortal.jsx"), /<StudentPromotion/);
 });
 test("attendance keeps class and group (9-10) filters", () => {
   const d = read("components/DashboardPortal.jsx");
   assert.match(d, /Number\(attendanceGrade\)>=9&&<Field label="বিভাগ নির্বাচন"/);
+});
+test("class 10 promotion means promoted to board exam and shows green on results", () => {
+  const api = read("app/api/portal/route.js");
+  assert.match(api, /boardPromoted: true/);
+  assert.match(read("components/StudentResultCard.jsx"), /PROMOTED TO BOARD EXAM/);
+  assert.match(read("components/Marksheet.jsx"), /student\.boardPromoted/);
+  assert.match(read("app/globals.css"), /hmrs-board-promoted-banner\{[^}]*#007a5e/);
 });

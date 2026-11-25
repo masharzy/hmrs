@@ -6,10 +6,11 @@ import {enNumber} from "../lib/result-english.js";
 import {formatResultGpa} from "../lib/result-display.js";
 const n=v=>enNumber(v??0);
 const score=x=>x.max?n(x.obtained)+" / "+n(x.max):"—";
-export default function StudentResultCard({exam,result,metrics,marks,onPrint,isAdmin=false}){
+export default function StudentResultCard({exam,result,metrics,marks,onPrint,isAdmin=false,boardPromoted=false}){
  const rows=reportSubjectRows(result,marks||{},metrics);
  const [expanded,setExpanded]=useState({});
  return <section className="panel hmrs-student-result-card" aria-label={exam.name+" result"}>
+  {boardPromoted&&<div className="hmrs-board-promoted-banner" role="status">✔ PROMOTED TO BOARD EXAM<small>বোর্ড পরীক্ষার জন্য উত্তীর্ণ — অভিনন্দন!</small></div>}
   <div className="hmrs-student-result-top">
    <div><h2>{exam.name}</h2><p>{isAdmin?"Selected student's result":"Your personal result"} · Subject-wise grades</p></div>
    <button className="btn sm" type="button" onClick={onPrint}><Printer size={14}/> Save PDF / Print</button>

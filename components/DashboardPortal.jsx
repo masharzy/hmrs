@@ -381,7 +381,7 @@ export default function DashboardPortal() {
            <ChevronLeft size={15}/> All Exams</button>
           {profile.results.filter(x=>x.exam.id===selectedPublishedExam).map(({exam:ex,result,metrics,marks})=>
            <React.Fragment key={ex.id}>
-            <StudentResultCard exam={ex} result={result} metrics={metrics} marks={marks}
+            <StudentResultCard boardPromoted={!!profile.student?.boardPromoted} exam={ex} result={result} metrics={metrics} marks={marks}
              onPrint={()=>printMarksheet(ex.id)}/>
             <Marksheet printId={"mark-print-"+ex.id} student={profile.student}
              exam={ex} report={result} metrics={metrics} marks={marks}/>
@@ -428,7 +428,7 @@ export default function DashboardPortal() {
            <label className="field dashboard-search">Search <Input value={query} onChange={v=>{setQuery(v);setPage(1)}} placeholder="Name, class or roll"/></label>
           </div></div>
         <div className="panel table-wrap dashboard-desktop-table"><table><thead><tr><th>No.</th><th>Name</th><th>Class / Group</th><th>Roll</th><th>Dues</th><th>Actions</th></tr></thead><tbody>{pageItems.map((s,i)=><tr key={s.id}><td>{toAsciiDigits((visiblePage-1)*25+i+1)}</td>
-         <td className="font-bold">{s.name}{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||missingFieldsFor(s).length>0)&&
+         <td className="font-bold">{s.name}{s.boardPromoted&&<span className="hmrs-board-chip">Promoted to Board Exam</span>}{pendingByStudent.get(s.id)&&<span className="hmrs-application-status">Application Pending</span>}{(s.importIncomplete||s.loginPending||missingFieldsFor(s).length>0)&&
            <button type="button" title={"Missing information: "+missingFieldsFor(s).join(", ")} className="hmrs-student-incomplete-icon" onClick={()=>setEditing({type:"student",item:s})}>
             <AlertTriangle size={15}/><span className="sr-only">Incomplete information · Edit</span></button>}</td>
          <td>{formatClassEnglish(toAsciiDigits(s.grade),s.group)}</td>
@@ -436,7 +436,7 @@ export default function DashboardPortal() {
          <td><div className="inline-actions"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> Edit</button>
            {pendingByStudent.get(s.id)&&<button className="btn sm" onClick={()=>setActiveApplicationId(pendingByStudent.get(s.id).id)}>Application</button>}
-           {actor.role==="principal"&&Number(s.grade)<10&&<button className="btn sm" onClick={()=>setPromoting({student:s})}><ArrowUpCircle size={14}/> Promote</button>}
+           {actor.role==="principal"&&<button className="btn sm" onClick={()=>setPromoting({student:s})}><ArrowUpCircle size={14}/> {Number(s.grade)>=10?(s.boardPromoted?"Board ✓":"Promote to Board"):"Promote"}</button>}
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div></td>
         </tr>)}</tbody></table>{!filtered.length&&<p className="empty">No students found</p>}</div>
         <div className="dashboard-mobile-records">{pageItems.map(s=><div className="panel dashboard-mobile-record" key={s.id}>
@@ -446,7 +446,7 @@ export default function DashboardPortal() {
            <p className="muted text-xs mt-1">{formatClassEnglish(toAsciiDigits(s.grade),s.group)} · Roll {toAsciiDigits(s.roll)} · Dues BDT  {toAsciiDigits(s.due||0)}</p>
          <div className="inline-actions mt-3"><button className="btn sm" onClick={()=>{chooseStudent(s.id);window.history.pushState(null,"","/dashboard/marks")}}><FilePenLine size={14}/> Marks</button>
           <><button className="btn sm" onClick={()=>setEditing({type:"student",item:s})}><Pencil size={14}/> Edit</button>
-           {actor.role==="principal"&&Number(s.grade)<10&&<button className="btn sm" onClick={()=>setPromoting({student:s})}><ArrowUpCircle size={14}/> Promote</button>}
+           {actor.role==="principal"&&<button className="btn sm" onClick={()=>setPromoting({student:s})}><ArrowUpCircle size={14}/> {Number(s.grade)>=10?(s.boardPromoted?"Board ✓":"Promote to Board"):"Promote"}</button>}
            {actor.role==="principal"&&<button className="btn sm danger" onClick={()=>setDeleting(s)}><Trash2 size={14}/> Delete</button>}</></div>
         </div>)}{!filtered.length&&<div className="panel empty">No students found</div>}</div>
         <Pager total={filtered.length} page={visiblePage} size={25} onChange={setPage}/>
@@ -540,7 +540,7 @@ export default function DashboardPortal() {
            </div>
            {exam&&<p className="hmrs-individual-context">{examScopeGrade(exam)?enGrade(examScopeGrade(exam)):"All Classes"} · {enNumber(individualStudents.length)} students</p>}
           </div>
-          {chosen&&exam&&individualReport&&<StudentResultCard isAdmin exam={exam}
+          {chosen&&exam&&individualReport&&<StudentResultCard isAdmin boardPromoted={!!chosen.boardPromoted} exam={exam}
            result={individualReport} marks={resultMap} metrics={individualMetrics} onPrint={()=>printMarksheet(exam.id)}/>}
          {chosen&&exam&&<>
           <div className="hmrs-individual-entry panel">

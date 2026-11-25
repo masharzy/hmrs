@@ -435,3 +435,8 @@ tr:last-child td{border-bottom:none}
 .hmrs-photo-upload{position:relative;cursor:pointer}
 .hmrs-photo-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
 .hmrs-photo-upload.is-busy{opacity:.7;pointer-events:none}
+
+/* Class 10: promoted to board exam */
+.hmrs-board-promoted-banner{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 16px;padding:18px 16px;border-radius:16px;text-align:center;font-weight:900;font-size:clamp(20px,4vw,30px);letter-spacing:1.5px;color:#fff;background:linear-gradient(120deg,#007a5e,#10b981);box-shadow:0 10px 24px #007a5e4d;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.hmrs-board-promoted-banner small{font-size:14px;font-weight:600;letter-spacing:0;opacity:.95}
+.hmrs-board-chip{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:99px;background:#d9f5ea;color:#007a5e;font-size:11px;font-weight:800;vertical-align:middle}

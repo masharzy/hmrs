@@ -94,4 +94,4 @@ GitHub Actions runs tests and a production build for pushes and pull requests.
 
 - Homepage: a news ticker of the latest 10 notices (hover pauses, click opens the notice) sits above the admission banner.
 - Dashboard → Settings (principal): turn **online admission** and the **top banner** on/off and edit the banner text. Closing admission blocks new applications (existing applicants can still use their edit link).
-- Dashboard → Student (principal): **Promote** one student or **Promote Students** (all / one class) to the next class. Class 10 stays. Class 8 → 9 needs a group.
+- Dashboard → Student (principal): **Promote** one student or **Promote Students** (all / one class) to the next class. Class 10 is marked "Promoted to Board Exam" (green banner on the result). Class 8 → 9 needs a group.

@@ -472,10 +472,12 @@ export async function POST(req) {
       const taken = new Map(everyone.map(x => [studentKey(x.grade, x.roll, x.group), x.id]));
       const skipped = [];
       const plans = [];
+      const boardPlans = [];
+      const revoke = body.revoke === true;
       // Highest class first so the next class's rolls are freed before they are re-used.
-      for (const st of chosen.sort((a, b) => Number(b.grade) - Number(a.grade) || Number(a.roll) - Number(b.roll))) {
+      for (const st of (revoke ? chosen.filter(x => Number(x.grade) >= 10) : chosen).sort((a, b) => Number(b.grade) - Number(a.grade) || Number(a.roll) - Number(b.roll))) {
         const grade = Number(st.grade);
-        if (grade >= 10) { skipped.push({ id: st.id, name: st.name, reason: "১০ম শ্রেণি" }); continue; }
+        if (grade >= 10) { boardPlans.push(st); continue; }
         const nextGrade = grade + 1;
         const group = nextGrade >= 9 ? (st.group || groupFor9) : "";
         if (nextGrade >= 9 && !group) { skipped.push({ id: st.id, name: st.name, reason: "বিভাগ নেই" }); continue; }
@@ -516,8 +518,17 @@ export async function POST(req) {
         });
         promoted += chunk.filter(pl => !pl.skip).length;
       }
-      await audit(actor, action, "count:" + promoted);
-      return json({ ok: true, promoted, skipped });
+      // Class 10 has no next class: "promotion" means cleared to sit the board (SSC) exam.
+      for (let i = 0; i < boardPlans.length; i += 400) {
+        const batch = store.batch();
+        for (const st of boardPlans.slice(i, i + 400))
+          batch.update(store.collection("students").doc(st.id), revoke
+            ? { boardPromoted: false, boardPromotedAt: FieldValue.delete(), updatedBy: actor.uid }
+            : { boardPromoted: true, boardPromotedAt: iso(), updatedBy: actor.uid });
+        await batch.commit();
+      }
+      await audit(actor, action, "count:" + promoted + (boardPlans.length ? ",board:" + boardPlans.length : ""));
+      return json({ ok: true, promoted, boardPromoted: revoke ? 0 : boardPlans.length, boardRevoked: revoke ? boardPlans.length : 0, skipped });
     }
     if(action==="student.secondaryPin.set"||action==="student.secondaryPin.clear"){
       needRole(actor,["principal"]);
