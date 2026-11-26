@@ -15,7 +15,7 @@ function Choices({label,options,values,onChange,kind="classes",description="",se
  const [query,setQuery]=useState("");
  const filtered=searchable?options.filter(o=>(o.label||o.name||"").toLowerCase().includes(query.trim().toLowerCase())):options;
  const toggle=value=>onChange(values.includes(value)?values.filter(v=>v!==value):[...values,value]);
- return <section className={"hmrs-teacher-picker hmrs-teacher-picker-"+kind} aria-label={label}>
+ return <section className={"hmrs-teacher-picker hmrs-teacher-picker-"+kind} aria-label={kind==="roles"?"Teacher Roles":label}>
   <div className="hmrs-teacher-picker-heading"><div><h3>{label}</h3>{description&&<p>{description}</p>}</div>
    <span className="hmrs-teacher-selected-count">{toAsciiDigits(values.length)} selected</span></div>
   {searchable&&<div className="hmrs-teacher-picker-search"><Search size={15}/><input type="search" aria-label={label+" search"}
