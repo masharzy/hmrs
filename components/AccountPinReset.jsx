@@ -15,14 +15,14 @@ export default function AccountPinReset(){
   try{const t=await token(),r=await fetch("/api/account-reset",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({uid,pin})}),d=await r.json();if(!r.ok)throw Error(d.error||"PIN রিসেট হয়নি");setSuccess("নতুন PIN সেট হয়েছে। পুরোনো সেশন বাতিল করা হয়েছে।");setPin("");}
   catch(e){setError(e.message)}finally{setBusy(false)}
  }
- return <section className="panel p-5 mt-5"><div className="flex items-center gap-3 mb-2"><span className="rounded-xl bg-slate-100 p-3"><ShieldCheck size={21}/></span><div><h2 className="font-bold text-lg">সবার PIN রিসেট</h2><p className="muted text-xs mb-0">শুধু প্রধান শিক্ষক, সহকারী প্রধান শিক্ষক ও স্টাফ ম্যানেজার ব্যবহার করতে পারবেন।</p></div>
+ return <section className="panel p-5 mt-5"><div className="flex items-center gap-3 mb-2"><span className="rounded-xl bg-slate-100 p-3"><ShieldCheck size={21}/></span><div><h2 className="font-bold text-lg">প্রশাসনিক PIN তৈরি / পরিবর্তন</h2><p className="muted text-xs mb-0">প্রধান শিক্ষক, সহকারী প্রধান শিক্ষক ও স্টাফ ম্যানেজার অন্য সক্রিয় অ্যাকাউন্টের PIN তৈরি বা পরিবর্তন করতে পারবেন।</p></div>
  <button type="button" className="btn sm ml-auto" onClick={load} disabled={loading}><RefreshCw size={14}/> রিফ্রেশ</button></div>
  <form onSubmit={submit} className="grid gap-3 mt-4">
   <label className="field">নাম / মোবাইল দিয়ে খুঁজুন<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="নাম বা মোবাইল নম্বর"/></label>
   <label className="field">অ্যাকাউন্ট নির্বাচন<select value={uid} onChange={e=>setUid(e.target.value)} required><option value="">ব্যবহারকারী নির্বাচন করুন</option>{filtered.map(x=><option key={x.id} value={x.id}>{x.name} · {labels[x.role]||x.role} · {x.phone}</option>)}</select></label>
-  <label className="field">নতুন ৫ সংখ্যার PIN</label><PinInput value={pin} onChange={setPin} disabled={busy}/>
+  <label className="field">নতুন ৫ সংখ্যার PIN (প্রথমবার তৈরি বা পরিবর্তন)</label><PinInput value={pin} onChange={setPin} disabled={busy}/>
   {error&&<p className="alert error" role="alert">{error}</p>}{success&&<p className="alert" role="status">{success}</p>}
   <button className="btn primary" disabled={busy||loading||!uid||pin.length!==5}><KeyRound size={16}/>{busy?"রিসেট হচ্ছে...":"PIN রিসেট করুন"}</button>
-  <p className="muted text-xs mb-0">{loading?"অ্যাকাউন্ট তালিকা আনা হচ্ছে...":filtered.length+"টি সক্রিয় অ্যাকাউন্ট"} · রিসেট করলে সংশ্লিষ্ট ব্যবহারকারীর পুরোনো লগইন সেশন বাতিল হবে।</p>
+  <p className="muted text-xs mb-0">{loading?"অ্যাকাউন্ট তালিকা আনা হচ্ছে...":filtered.length+"টি সক্রিয় অ্যাকাউন্ট"} · আগে PIN সেট না থাকলেও এখানে প্রথমবার PIN তৈরি হবে। পরিবর্তনের পর পুরোনো লগইন সেশন বাতিল হবে।</p>
  </form></section>
 }
