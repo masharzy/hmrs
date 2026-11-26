@@ -39,7 +39,7 @@ export default function Home(){
     <span className="hmrs-home-pill">আমাদের ডিজিটাল বিদ্যালয়ে স্বাগতম</span>
     <h1 className="hmrs-home-title">শিখব আনন্দে,<br/><span>এগিয়ে যাব একসাথে।</span></h1>
     <p className="hmrs-home-lead">হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়ের শিক্ষার্থী, শিক্ষক ও অভিভাবকদের জন্য প্রয়োজনীয় তথ্য ও ডিজিটাল সেবা এখন এক জায়গায়।</p>
-    <div className="hmrs-home-actions"><Link className="btn hmrs-home-primary" href={admissionLink.href}>ভর্তির আবেদন করুন <ArrowRight size={18}/></Link><Link className="btn hmrs-home-secondary" href="#services"><BookOpenCheck size={17}/> সকল সেবা দেখুন</Link></div>
+    <div className="hmrs-home-actions"><Link className="btn hmrs-home-primary" href="/admission">ভর্তির আবেদন করুন <ArrowRight size={18}/></Link><Link className="btn hmrs-home-secondary" href="#services"><BookOpenCheck size={17}/> সকল সেবা দেখুন</Link></div>
     <div className="hmrs-home-highlights">
      <span><i style={{background:"#2549e8"}}><ShieldCheck size={18}/></i> নিরাপদ তথ্যব্যবস্থা</span>
      <span><i style={{background:"#007a5e"}}><Users size={18}/></i> শিক্ষার্থী ও শিক্ষক সেবা</span>
