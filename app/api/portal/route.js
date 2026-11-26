@@ -94,7 +94,8 @@ export async function GET(req) {
       });
       return json({actor,...result});
     }
-    needRole(actor, allowedStaff);
+    if(resource==="admissions") needRole(actor,["class_teacher","principal","assistant_principal","staff_manager"]);
+    else needRole(actor, allowedStaff);
     if (resource === "overview.summary") {
       needRole(actor, allowedStaff);
       return json({summary:await getDashboardSummary(actor,store)});
