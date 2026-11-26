@@ -104,7 +104,7 @@ export async function GET(req) {
       return json({ items: asDocs(snap).filter(s => studentVisibleForTeaching(actor,s)) });
     }
     if (resource === "admissions") {
-      needRole(actor, ["class_teacher", "principal", "assistant_principal"]);
+      needRole(actor, ["class_teacher", "principal", "assistant_principal", "staff_manager"]);
       const snap = await store.collection("admissions").orderBy("createdAt", "desc").limit(250).get();
       return json({ items: asDocs(snap).filter(a => canManageHomeroom(actor,a.grade)) });
     }
@@ -369,10 +369,10 @@ export async function POST(req) {
       return json({ok:true,relogin:true});
     }
     if (action === "application.update") {
-      needRole(actor, ["principal"]);
+      needRole(actor, ["principal","assistant_principal","staff_manager","class_teacher"]);
       const id = cleanText(body.id, 150), ref = store.collection("admissions").doc(id);
       const snap = await ref.get();
-      if (!snap.exists) return fail("আবেদন পাওয়া যায়নি", 404);
+      if (!snap.exists || !canManageHomeroom(actor,snap.data()?.grade)) return fail("আবেদন পাওয়া যায়নি বা সম্পাদনার অনুমতি নেই", 404);
       if (!["pending","rejected"].includes(snap.data().status)) return fail("শুধু অনিষ্পন্ন/বাতিল আবেদন সম্পাদনা করা যাবে", 409);
       const existingSession=storedAdmissionSession(snap.data());
       const values = normalizeAdmissionData({ ...snap.data(),session:existingSession, ...(body.values || {}) });
@@ -854,7 +854,7 @@ export async function POST(req) {
       await audit(actor,action,uid);return json({ok:true});
     }
     if (action === "application.approve") {
-      needRole(actor, ["principal", "class_teacher"]);
+      needRole(actor, ["principal","assistant_principal","staff_manager","class_teacher"]);
       const id=cleanText(body.id,150),ref=store.collection("admissions").doc(id);
       const snap=await ref.get();
       if(!snap.exists)return fail("আবেদন পাওয়া যায়নি",404);
@@ -865,9 +865,12 @@ export async function POST(req) {
       const phone=normalizePhone(body.phone||application.studentPhone||application.fatherPhone);
       if(!/^[1-9][0-9]{0,3}$/.test(roll)||!phone)
         return fail("রোল ও মোবাইল নম্বর সঠিকভাবে দিন");
-      if(!/^[a-f0-9]{32}$/.test(application.studentPinCredential?.salt||"")||
-         !/^[a-f0-9]{128}$/.test(application.studentPinCredential?.hash||""))
-        return fail("আবেদনকারীর নিজের ৫ সংখ্যার PIN এখনো সেট করা হয়নি। আবেদন Edit লিংক থেকে PIN সেট করতে বলুন।",409);
+      const suppliedPin=body.pin===undefined||body.pin===""?null:normalizePin(body.pin);
+      if(body.pin!==undefined&&body.pin!==""&&!suppliedPin)return fail("নতুন PIN অবশ্যই ৫ সংখ্যার হতে হবে");
+      const storedPin=application.studentPinCredential;
+      const storedPinValid=/^[a-f0-9]{32}$/.test(storedPin?.salt||"")&&/^[a-f0-9]{128}$/.test(storedPin?.hash||"");
+      if(!suppliedPin&&!storedPinValid)return fail("শিক্ষার্থীর জন্য অনুমোদনের সময় নতুন ৫ সংখ্যার PIN দিন।",409);
+      const approvalCredential=suppliedPin?makePinCredential(suppliedPin):storedPin;
       const roster=await store.collection("students").where("grade","==",Number(application.grade)).limit(950).get();
       const rosterStudents=asDocs(roster);
       const found=findApplicantRosterMatch(application,rosterStudents,roll);
@@ -917,10 +920,10 @@ export async function POST(req) {
         loginPending:false,importIncomplete:missing.length>0,missingFields:missing});
        tx.set(rollRef,{studentId,grade:selected.grade,group:selected.group,roll:selected.roll},{merge:true});
        tx.set(phoneRef,addStudentPhoneOwner(phoneNow.data(),newUser.uid));
-       const applicantPin=appNow.data()?.studentPinCredential;
+       const applicantPin=suppliedPin?approvalCredential:appNow.data()?.studentPinCredential;
        if(!/^[a-f0-9]{32}$/.test(applicantPin?.salt||"")||
           !/^[a-f0-9]{128}$/.test(applicantPin?.hash||""))
-         throw Object.assign(Error("আবেদনে PIN সেট করা হয়নি।"),{status:409});
+         throw Object.assign(Error("শিক্ষার্থীর PIN সেট করা হয়নি।"),{status:409});
        tx.create(credentialRef,{...applicantPin,phone,createdAt:at});
        tx.create(userRef,{role:"student",name,phone,active:true,pinEnabled:true,studentId,createdAt:at});
        tx.update(ref,{studentPinCredential:FieldValue.delete(),status:"approved",studentId,approvedBy:actor.uid,approvedAt:at,
@@ -931,7 +934,7 @@ export async function POST(req) {
       return json({ok:true,studentId,linkedExisting:!!found.match});
     }
     if (action === "application.reject") {
-      needRole(actor, ["class_teacher", "principal"]);
+      needRole(actor, ["class_teacher","principal","assistant_principal","staff_manager"]);
       const ref = store.collection("admissions").doc(cleanText(body.id, 150));
       const snap = await ref.get();
       if (!snap.exists || !canManageHomeroom(actor,snap.data().grade)) return fail("আবেদন পাওয়া যায়নি");
