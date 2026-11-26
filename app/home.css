@@ -96,7 +96,7 @@
 .hmrs-home-feature h3{font-size:20px;font-weight:700;line-height:1.5;margin:18px 0 0}.hmrs-home-feature p{font-size:14px;line-height:1.7;margin:2px 0 0}
 
 /* classes and groups */
-.hmrs-home-classes{margin-top:clamp(36px,4vw,56px);padding:clamp(56px,7vw,92px) 0;background:var(--h-tint)}
+.hmrs-home-classes{margin-top:clamp(36px,4vw,56px);padding:clamp(40px,4.5vw,60px) 0;background:var(--h-tint)}
 .hmrs-home-class-row{display:flex;flex-wrap:wrap;gap:16px}
 .hmrs-home-class{flex:1 1 130px;padding:22px 16px;border-radius:20px;text-align:center;color:#fff;background:var(--c)}
 .hmrs-home-class strong{display:block;font-family:"Anek Bangla","Hind Siliguri",sans-serif;font-size:32px;font-weight:800;line-height:1.2;color:inherit}.hmrs-home-class span{font-size:14px;font-weight:600;opacity:.92}
