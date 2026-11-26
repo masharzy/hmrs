@@ -647,13 +647,13 @@ export default function DashboardPortal() {
 
 function AdmissionApproval({item,mutate,busy,principal}){
  const [roll,setRoll]=useState(String(item.requestedRoll||"")),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||""),[pin,setPin]=useState("");
- const pinReady=item.pinConfigured||/^\\d{5}$/.test(pin);
+ const pinReady=item.pinConfigured||/^\d{5}$/.test(pin);
  return <div className="flex flex-wrap gap-3 mt-4 items-end">
   <label className="field" style={{maxWidth:90}}>Roll <input value={roll} onChange={e=>setRoll(e.target.value)} inputMode="numeric" required/></label>
   <label className="field" style={{maxWidth:230}}>Login Phone <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+8801712345678" required/></label>
   <label className="field" style={{maxWidth:190}}> {item.pinConfigured?"নতুন PIN (ঐচ্ছিক)":"শিক্ষার্থীর নতুন ৫ সংখ্যার PIN"}
    <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={5} value={pin}
-    onChange={e=>setPin(toAsciiDigits(e.target.value).replace(/\\D/g,"").slice(0,5))}
+    onChange={e=>setPin(toAsciiDigits(e.target.value).replace(/\D/g,"").slice(0,5))}
     placeholder={item.pinConfigured?"পরিবর্তন না করলে ফাঁকা রাখুন":"৫ সংখ্যার PIN"} required={!item.pinConfigured}/>
   </label>
   <div className="hmrs-approval-pin-state"><ShieldCheck size={17}/>
