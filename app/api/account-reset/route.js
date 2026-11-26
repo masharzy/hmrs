@@ -21,7 +21,7 @@ export async function POST(req){
   if(!uid||uid.includes("/")||!pin)return fail("অ্যাকাউন্ট নির্বাচন করে পাঁচ সংখ্যার PIN দিন");
   if(uid===actor.uid)return fail("নিজের PIN পরিবর্তনের জন্য প্রোফাইলের PIN পরিবর্তন ব্যবহার করুন");
   const store=db(),userRef=store.collection("users").doc(uid),credentialRef=store.collection("loginCredentials").doc(uid);
-  const [user,credential]=await Promise.all([userRef.get(),credentialRef.get()]);
+  const user=await userRef.get();
   if(!user.exists||user.data()?.active!==true)return fail("সক্রিয় অ্যাকাউন্ট পাওয়া যায়নি",404);
   const phone=normalizePhone(user.data()?.phone||"");
   if(!phone)return fail("অ্যাকাউন্টে সঠিক লগইন মোবাইল নম্বর নেই",409);
