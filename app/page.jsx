@@ -59,10 +59,6 @@ export default function Home(){
    <div className="hmrs-home-quick-grid">{services.map(({href,tag,title,text,Icon},i)=><Link className={"hmrs-home-quick-card hmrs-home-quick-"+i} href={href} key={href}>
     <span className="hmrs-home-quick-icon"><Icon size={26}/></span><span className="hmrs-home-quick-chip">{tag}</span><strong>{title}</strong><small>{text}</small><span className="hmrs-home-quick-arrow"><ArrowRight size={16}/></span></Link>)}</div>
   </section>
-  <section className="container hmrs-home-portal"><div className="hmrs-home-portal-grid">
-   <div className="hmrs-home-portal-lead"><span className="hmrs-home-eyebrow">ONE PORTAL</span><h2>এক পোর্টালে সবকিছু</h2><p>ফলাফল, হাজিরা, রুটিন ও নোটিশ — প্রয়োজনীয় সব তথ্য নিরাপদে ও সহজে।</p><Link className="btn hmrs-home-amber" href="/login/guardian">অভিভাবক পোর্টালে প্রবেশ <ArrowRight size={17}/></Link></div>
-   <div className="hmrs-home-feature-grid">{features.map(({c,Icon,title,text})=><div className="hmrs-home-feature" key={title} style={{"--c":c}}><span className="hmrs-home-feature-icon"><Icon size={24}/></span><h3>{title}</h3><p>{text}</p></div>)}</div>
-  </div></section>
   <section className="hmrs-home-classes"><div className="container">
    <div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-violet">CLASSES &amp; GROUPS</span><h2 className="section-title">শ্রেণি ও বিভাগ</h2><p>ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত পাঠদান</p></div></div>
    <div className="hmrs-home-class-row">{classes.map(([n,c])=><div className="hmrs-home-class" key={n} style={{"--c":c}}><strong>{n}</strong><span>শ্রেণি</span></div>)}</div>
