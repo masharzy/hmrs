@@ -3,7 +3,7 @@ import { useEffect,useState } from "react";
 import Link from "next/link";
 import { UserRound,LogIn } from "lucide-react";
 import { loadPublicData } from "../lib/public-client";
-const defaults=[{key:"principal",title:"প্রধান শিক্ষক",href:"/login/principal"},{key:"assistantPrincipal",title:"সহকারী প্রধান শিক্ষক",href:"/login/principal"},{key:"staffManager",title:"স্টাফ ম্যানেজার",href:"/login/principal"}];
+const defaults=[{key:"principal",title:"প্রধান শিক্ষক",href:"/login/principal"},{key:"assistantPrincipal",title:"সহকারী প্রধান শিক্ষক",href:"/login/assistant_principal"},{key:"staffManager",title:"স্টাফ ম্যানেজার",href:"/login/staff_manager"}];
 export default function HomeLeadership(){
  const [items,setItems]=useState(defaults),[ready,setReady]=useState(false);
  useEffect(()=>{let live=true;loadPublicData().then(data=>{const s=data?.settings||{};const next=defaults.map(p=>({...p,name:typeof s[p.key+"Name"]==="string"&&s[p.key+"Name"].trim()?s[p.key+"Name"]:p.title+"-এর নাম",designation:typeof s[p.key+"Designation"]==="string"&&s[p.key+"Designation"].trim()?s[p.key+"Designation"]:p.title,photo:typeof s[p.key+"PhotoUrl"]==="string"&&/^https:\/\/[^\s]+$/i.test(s[p.key+"PhotoUrl"])?s[p.key+"PhotoUrl"]:""}));if(live){setItems(next);setReady(true)}}).catch(()=>{if(live)setReady(true)});return()=>{live=false}},[]);
