@@ -15,6 +15,7 @@ const services=[
  {href:"/login/student",tag:"STUDENT",title:"শিক্ষার্থী লগইন",text:"ফলাফল, হাজিরা ও ব্যক্তিগত তথ্য",Icon:GraduationCap},
  {href:"#notices",tag:"NOTICE",title:"নোটিশ বোর্ড",text:"বিদ্যালয়ের সর্বশেষ বিজ্ঞপ্তি",Icon:Bell}
 ];
+const admissionLink={href:"/admission"};
 const features=[
  {c:"#2549e8",Icon:FileText,title:"ফলাফল ও মার্কশিট",text:"পরীক্ষার ফলাফল ও মার্কশিট নিরাপদে দেখুন।"},
  {c:"#007a5e",Icon:CalendarCheck,title:"হাজিরা",text:"শিক্ষার্থীর উপস্থিতির হালনাগাদ তথ্য।"},
@@ -30,7 +31,7 @@ const groups=[
 const stats=[["৬ষ্ঠ–১০ম","শ্রেণি"],["৩টি","বিভাগ"],["১১২৩৫৯","EIIN"],["সোনারগাঁ","নারায়ণগঞ্জ"]];
 
 export default function Home(){
- return <><SiteHeader/><main className="hmrs-home hmrs-home-redesign">
+ return <><SiteHeader/><main className="hmrs-home hmrs-home-redesign hmrs-home-final">
   <HomeTopBar/>
   <section className="hmrs-home-hero"><div className="container hmrs-home-hero-grid">
    <div>
@@ -38,7 +39,7 @@ export default function Home(){
     <span className="hmrs-home-pill">আমাদের ডিজিটাল বিদ্যালয়ে স্বাগতম</span>
     <h1 className="hmrs-home-title">শিখব আনন্দে,<br/><span>এগিয়ে যাব একসাথে।</span></h1>
     <p className="hmrs-home-lead">হাজী মতিউর রহমান সরকার উচ্চ বিদ্যালয়ের শিক্ষার্থী, শিক্ষক ও অভিভাবকদের জন্য প্রয়োজনীয় তথ্য ও ডিজিটাল সেবা এখন এক জায়গায়।</p>
-    <div className="hmrs-home-actions"><Link className="btn hmrs-home-primary" href="/admission">ভর্তির আবেদন করুন <ArrowRight size={18}/></Link><Link className="btn hmrs-home-secondary" href="#services"><BookOpenCheck size={17}/> সকল সেবা দেখুন</Link></div>
+    <div className="hmrs-home-actions"><Link className="btn hmrs-home-primary" href={admissionLink.href}>ভর্তির আবেদন করুন <ArrowRight size={18}/></Link><Link className="btn hmrs-home-secondary" href="#services"><BookOpenCheck size={17}/> সকল সেবা দেখুন</Link></div>
     <div className="hmrs-home-highlights">
      <span><i style={{background:"#2549e8"}}><ShieldCheck size={18}/></i> নিরাপদ তথ্যব্যবস্থা</span>
      <span><i style={{background:"#007a5e"}}><Users size={18}/></i> শিক্ষার্থী ও শিক্ষক সেবা</span>
