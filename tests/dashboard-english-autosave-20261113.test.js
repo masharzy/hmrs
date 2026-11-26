@@ -42,17 +42,16 @@ test("marks grid debounces auto-save and has no manual save buttons",()=>{
  assert.doesNotMatch(grid,/Save \{enNumber\(entries.length\)\} changes<\/button>/);
  assert.match(portal,/const quiet=action==="marks.batch"/);
 });
-test("dashboard navigation and student/teacher menus are in English",()=>{
+test("dashboard navigation preserves Bengali labels and English academic controls",()=>{
  const shell=source("components/DashboardShell.jsx");
  const portal=source("components/DashboardPortal.jsx");
  const overview=source("components/DashboardOverview.jsx");
  const teacher=source("components/AccountManager.jsx");
  const student=source("components/DashboardStudentHome.jsx");
  assert.match(shell,/Back to Website/);assert.match(shell,/Navigation/);
- assert.match(portal,/Admission Approvals/);assert.match(portal,/Student Records/);
+ assert.match(portal,/Admission Approvals/);assert.match(portal,/নিজের PIN পরিবর্তন/);
  assert.match(overview,/Total Students/);
  assert.match(teacher,/Add Teacher/);
+ assert.match(teacher,/কর্মীর ভূমিকা/);
  assert.match(student,/Student Profile/);
- assert.doesNotMatch(shell,/[\u0980-\u09ff]/);
- assert.doesNotMatch(teacher,/[\u0980-\u09ff]/);
 });

@@ -9,13 +9,13 @@ const EN_CLASSES=CLASS_OPTIONS.map(option=>({...option,label:"Class "+option.val
 const EN_SUBJECTS=TEACHER_SUBJECT_OPTIONS.map(option=>({...option,name:enSubject(option.id,option.name)}));
 import PinInput from "./PinInput";
 
-const roles={teacher:"Teacher",class_teacher:"Class Teacher"};
+const roles={teacher:"বিষয় শিক্ষক",class_teacher:"শ্রেণি শিক্ষক",assistant_principal:"সহকারী প্রধান শিক্ষক",staff_manager:"স্টাফ ম্যানেজার"};
 const empty=()=>({name:"",phone:"",pin:"",roles:["teacher"],teachingClasses:[],classTeacherClasses:[],teachingSubjects:[],photoUrl:"",active:true});
 function Choices({label,options,values,onChange,kind="classes",description="",searchable=false}){
  const [query,setQuery]=useState("");
  const filtered=searchable?options.filter(o=>(o.label||o.name||"").toLowerCase().includes(query.trim().toLowerCase())):options;
  const toggle=value=>onChange(values.includes(value)?values.filter(v=>v!==value):[...values,value]);
- return <section className={"hmrs-teacher-picker hmrs-teacher-picker-"+kind} aria-label={label}>
+ return <section className={"hmrs-teacher-picker hmrs-teacher-picker-"+kind} aria-label={kind==="roles"?"Teacher Roles":label}>
   <div className="hmrs-teacher-picker-heading"><div><h3>{label}</h3>{description&&<p>{description}</p>}</div>
    <span className="hmrs-teacher-selected-count">{toAsciiDigits(values.length)} selected</span></div>
   {searchable&&<div className="hmrs-teacher-picker-search"><Search size={15}/><input type="search" aria-label={label+" search"}
@@ -82,9 +82,11 @@ export default function AccountManager({actor,request,mutate,working,error}){
   if(values.photoUrl&&!/^https:\/\/[^\s]+$/i.test(values.photoUrl)){setLocalError("Enter a valid HTTPS photo URL");return}
    if(!values.name.trim()||!values.phone.trim()){setLocalError("Enter teacher name and phone number");return}
   if(!values.roles.length){setLocalError("Select at least one role");return}
-  if(values.roles.includes("teacher")&&!values.teachingClasses.length){setLocalError("Select the classes this teacher teaches");return}
-  if(values.roles.includes("class_teacher")&&!values.classTeacherClasses.length){setLocalError("Select the homeroom classes");return}
-  if(values.teachingSubjects.length===0){setLocalError("Select at least one teaching subject");return}
+  const privileged=values.roles.some(r=>["assistant_principal","staff_manager"].includes(r));
+  if(privileged&&(values.roles.length!==1||modal.kind!=="create")){setLocalError("প্রশাসনিক ভূমিকা আলাদা অ্যাকাউন্ট হিসেবে তৈরি করুন");return}
+  if(!privileged&&values.roles.includes("teacher")&&!values.teachingClasses.length){setLocalError("Select the classes this teacher teaches");return}
+  if(!privileged&&values.roles.includes("class_teacher")&&!values.classTeacherClasses.length){setLocalError("Select the homeroom classes");return}
+  if(!privileged&&values.teachingSubjects.length===0){setLocalError("Select at least one teaching subject");return}
   if(modal.kind==="create"&&!/^\d{5}$/.test(values.pin)){setLocalError("Enter a 5-digit PIN");return}
   if(modal.kind==="edit"&&values.pin&&!/^\d{5}$/.test(values.pin)){setLocalError("Enter a 5-digit PIN");return}
   const r=modal.kind==="create"
@@ -144,24 +146,25 @@ export default function AccountManager({actor,request,mutate,working,error}){
        </div>
        <label className="field record-wide">Or photo HTTPS link<input type="url" value={values.photoUrl} onChange={e=>changed("photoUrl",e.target.value)} placeholder="https://..."/></label>
      </div>
-     <Choices label="Teacher Roles" kind="roles" description="You can assign both roles to the same person."
-      options={[{value:"teacher",label:"Teacher",description:"Teaches assigned subjects"},
-       {value:"class_teacher",label:"Class Teacher",description:"Manages homeroom and admissions"}]}
+     <Choices label="কর্মীর ভূমিকা" kind="roles" description="প্রশাসনিক ভূমিকা আলাদা অ্যাকাউন্ট হিসেবে তৈরি করুন।"
+      options={[{value:"teacher",label:"বিষয় শিক্ষক",description:"নির্ধারিত বিষয় পড়াবেন"},
+       {value:"class_teacher",label:"শ্রেণি শিক্ষক",description:"নিজ শ্রেণির কাজ"},
+       ...(modal.kind==="create"?[{value:"assistant_principal",label:"সহকারী প্রধান শিক্ষক",description:"প্রশাসনিক দায়িত্ব"},{value:"staff_manager",label:"স্টাফ ম্যানেজার",description:"সবার PIN রিসেট"}]:[])]}
       values={values.roles} onChange={v=>changed("roles",v)}/>
      <div className="form-grid hmrs-teacher-pin-row">
       <div className="field"><PinInput label={modal.kind==="create"?"5-digit PIN":"New PIN (leave blank to keep current)"} value={values.pin} onChange={v=>changed("pin",v)}/></div>
      </div>
      <div className="hmrs-teacher-grade-pickers">
-       {values.roles.includes("teacher")&&<Choices kind="classes" label="Teaching Classes"
+       {!values.roles.some(r=>["assistant_principal","staff_manager"].includes(r))&&values.roles.includes("teacher")&&<Choices kind="classes" label="Teaching Classes"
         description="Select multiple classes" options={EN_CLASSES}
         values={values.teachingClasses} onChange={v=>changed("teachingClasses",v)}/>}
-       {values.roles.includes("class_teacher")&&<Choices kind="classes" label="Homeroom Classes"
+       {!values.roles.some(r=>["assistant_principal","staff_manager"].includes(r))&&values.roles.includes("class_teacher")&&<Choices kind="classes" label="Homeroom Classes"
         description="Choose responsible classes" options={EN_CLASSES}
         values={values.classTeacherClasses} onChange={v=>changed("classTeacherClasses",v)}/>}
      </div>
-     <Choices kind="subjects" label="Teaching Subjects" description="Only selected subjects appear for marks entry"
+     {!values.roles.some(r=>["assistant_principal","staff_manager"].includes(r))&&<Choices kind="subjects" label="Teaching Subjects" description="Only selected subjects appear for marks entry"
       searchable options={EN_SUBJECTS} values={values.teachingSubjects}
-      onChange={v=>changed("teachingSubjects",v)}/>
+      onChange={v=>changed("teachingSubjects",v)}/>}
      {modal.kind==="edit"&&<button type="button" role="switch" aria-checked={values.active}
       className={"hmrs-teacher-account-switch "+(values.active?"is-on":"")} onClick={()=>changed("active",!values.active)}>
       <span className="hmrs-teacher-switch-knob"/><span>Account {values.active?"Active":"Inactive"}</span>

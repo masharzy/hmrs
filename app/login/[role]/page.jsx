@@ -11,10 +11,13 @@ import { toBanglaDigits } from "../../../lib/bangla-numbers";
 import PinInput from "../../../components/PinInput";
 
 const roles=[
- {key:"student",title:"শিক্ষার্থী",icon:GraduationCap},
- {key:"teacher",title:"শিক্ষক",icon:UserRound},
+ {key:"principal",title:"প্রধান শিক্ষক",icon:UserCog},
+ {key:"assistant_principal",title:"সহকারী প্রধান শিক্ষক",icon:UserCog},
+ {key:"staff_manager",title:"স্টাফ ম্যানেজার",icon:ShieldCheck},
  {key:"class_teacher",title:"শ্রেণি শিক্ষক",icon:UsersRound},
- {key:"principal",title:"প্রধান শিক্ষক",icon:UserCog}
+ {key:"teacher",title:"বিষয় শিক্ষক",icon:UserRound},
+ {key:"guardian",title:"অভিভাবক",icon:UsersRound},
+ {key:"student",title:"শিক্ষার্থী",icon:GraduationCap}
 ];
 export default function Login(){
  const {role}=useParams(), router=useRouter();
@@ -70,11 +73,13 @@ export default function Login(){
        <h1 className="login-heading">আপনার পোর্টালে স্বাগতম</h1>
        <p className="text-center muted text-sm mb-6">মোবাইল নম্বর এবং ৫ সংখ্যার PIN দিয়ে প্রবেশ করুন।</p>
        <div className="portal-switch" aria-label="পোর্টাল নির্বাচন">
-         {roles.map(v=><Link key={v.key} href={"/login/"+v.key} aria-current={role===v.key?"page":undefined}
+         {roles.filter(v=>["principal","assistant_principal","staff_manager","class_teacher","teacher"].includes(v.key)).map(v=><Link key={v.key} href={"/login/"+v.key} aria-current={role===v.key?"page":undefined}
             className={"portal-option "+(role===v.key?"selected":"")} onClick={()=>{setError("");setPin("");setStudentIdentityRequired(false);}}>
            <v.icon size={18}/><span>{v.title}</span>
          </Link>)}
        </div>
+       {(role==="guardian")&&<p className="text-center text-sm mt-3">অভিভাবক অ্যাকাউন্ট নেই? <Link className="font-bold underline" href="/guardian-registration">অভিভাবক আইডির আবেদন করুন</Link></p>}
+       {(role==="student"||role==="guardian")&&<p className="text-center text-xs mt-3"><Link className="underline" href="/login">প্রশাসনিক লগইন প্যানেল</Link></p>}
        <form onSubmit={submit} className="grid gap-5 mt-6">
          <label className="field">মোবাইল নম্বর
            <div className="phone-input-wrap"><Smartphone size={19} color="#71869a"/>

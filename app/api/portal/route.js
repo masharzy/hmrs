@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const iso = () => new Date().toISOString();
-const allowedStaff = ["teacher", "class_teacher", "principal"];
+const allowedStaff = ["teacher", "class_teacher", "principal", "assistant_principal"];
 const asDocs = snap => snap.docs.map(d => { const { section, editTokenHash, studentPinCredential, ...data } = d.data(); return { id: d.id, ...data, ...(studentPinCredential ? { pinConfigured: !!studentPinCredential.hash } : {}) }; });
 const visible = (actor, item) => canAccessClass(actor, item.grade);
 const audit = (actor, action, target) => db().collection("audit").add({ actorUid: actor.uid, action, target: String(target || ""), at: iso() });
@@ -53,7 +53,7 @@ async function studentFor(actor, id) {
   const { section, ...data } = snap.data();
   const student = { id: snap.id, ...data };
   if (student.deleting && actor.role !== "principal") throw Object.assign(Error("শিক্ষার্থী মুছে ফেলা হচ্ছে"), { status: 409 });
-  if (actor.role === "student" ? actor.studentId !== id : !visible(actor, student))
+  if (["student","guardian"].includes(actor.role) ? actor.studentId !== id : !visible(actor, student))
     throw Object.assign(Error("এই শিক্ষার্থী দেখার অনুমতি নেই"), { status: 403 });
   return student;
 }
@@ -66,7 +66,7 @@ export async function GET(req) {
     const store = db();
     // Fast identity-only endpoint. Never load marks, attendance or exams during sign-in.
     if(resource==="identity")return json({actor});
-    if(actor.role==="student"&&resource.startsWith("student.")){
+    if(["student","guardian"].includes(actor.role)&&resource.startsWith("student.")){
       const student=await studentFor(actor,actor.studentId);
       const base={actor,student,dues:student.due||0};
       if(resource==="student.profile")return json(base);
@@ -79,7 +79,7 @@ export async function GET(req) {
       }
     }
     if (resource === "profile") {
-      if (actor.role !== "student") return json({ actor });
+      if (!["student","guardian"].includes(actor.role)) return json({ actor });
       const student = await studentFor(actor, actor.studentId);
       const attendance = await store.collection("attendance").where("studentId", "==", student.id).limit(250).get();
       const dues = student.due || 0;
@@ -104,7 +104,7 @@ export async function GET(req) {
       return json({ items: asDocs(snap).filter(s => studentVisibleForTeaching(actor,s)) });
     }
     if (resource === "admissions") {
-      needRole(actor, ["class_teacher", "principal"]);
+      needRole(actor, ["class_teacher", "principal", "assistant_principal"]);
       const snap = await store.collection("admissions").orderBy("createdAt", "desc").limit(250).get();
       return json({ items: asDocs(snap).filter(a => canManageHomeroom(actor,a.grade)) });
     }
@@ -155,8 +155,13 @@ export async function GET(req) {
       if(!ex.exists||ex.data()?.deleted)return fail("Exam not found",404);
       return json({examId,audit:auditExamScores(examStudents(ex.data(),asDocs(studentsSnap)),asDocs(marksSnap))});
     }
+    if(resource==="guardian.requests"){
+      needRole(actor,["principal","assistant_principal"]);
+      const snap=await store.collection("guardianRequests").where("status","==","pending").limit(250).get();
+      return json({items:snap.docs.map(d=>{const {pinCredential,guardianPhone,...safe}=d.data();return {id:d.id,...safe,guardianPhoneMasked:guardianPhone?guardianPhone.slice(0,3)+"****"+guardianPhone.slice(-4):""}})});
+    }
     if (resource === "staff.accounts") {
-      needRole(actor,["principal"]);
+      needRole(actor,["principal","assistant_principal"]);
       const pageRaw=Number(toAsciiDigits(u.searchParams.get("page")||"1"));
       const page=Number.isSafeInteger(pageRaw)?Math.min(100,Math.max(1,pageRaw)):1;
       const q=cleanText(u.searchParams.get("q"),80).toLowerCase();
@@ -169,7 +174,7 @@ export async function GET(req) {
       return json({items:users.slice((page-1)*size,page*size),total:users.length,page,size});
     }
     if (resource === "users") {
-      needRole(actor,["principal"]);
+      needRole(actor,["principal","assistant_principal"]);
       const snap=await store.collection("users").where("role","in",["teacher","class_teacher"]).limit(1000).get();
       return json({items:asDocs(snap)});
     }
@@ -232,7 +237,7 @@ export async function GET(req) {
       return json({items:permitted,gpaByStudent,publishedIds});
     }
     if (resource === "ledger") {
-      needRole(actor, ["principal", "class_teacher"]);
+      needRole(actor, ["principal", "assistant_principal", "class_teacher"]);
       const snap = await store.collection("ledger").orderBy("createdAt", "desc").limit(600).get();
       return json({ items: asDocs(snap).filter(l => actor.role === "principal" || visible(actor, l)) });
     }
@@ -314,6 +319,22 @@ export async function POST(req) {
     const body = await req.json();
     const action = cleanText(body.action, 60);
     const store = db();
+    if(action==="account.pin.reset"){
+      needRole(actor,["principal","assistant_principal","staff_manager"]);
+      const uid=cleanText(body.uid,128),pin=normalizePin(body.pin);
+      if(!uid||uid.includes("/")||!pin)return fail("অ্যাকাউন্ট ও নতুন ৫ সংখ্যার PIN দিন");
+      const userRef=store.collection("users").doc(uid),credentialRef=store.collection("loginCredentials").doc(uid);
+      const [user,credential]=await Promise.all([userRef.get(),credentialRef.get()]);
+      if(!user.exists||user.data()?.active!==true)return fail("সক্রিয় অ্যাকাউন্ট পাওয়া যায়নি",404);
+      if(!credential.exists)return fail("এই অ্যাকাউন্টে PIN সেট করা নেই",409);
+      const phone=normalizePhone(user.data()?.phone||"");
+      if(!phone)return fail("অ্যাকাউন্টে লগইন মোবাইল নম্বর নেই",409);
+      await credentialRef.set({...makePinCredential(pin),phone,updatedAt:iso(),updatedBy:actor.uid},{merge:true});
+      await store.collection("loginSecurity").doc(uid).set({locked:false,failures:0,history:[],lockReason:"",lockedAt:null,updatedAt:iso(),updatedBy:actor.uid},{merge:true});
+      await adminAuth().revokeRefreshTokens(uid);
+      await audit(actor,action,uid);
+      return json({ok:true});
+    }
     if (action === "pin.change") {
       const oldPin=normalizePin(body.oldPin),newPin=normalizePin(body.newPin);
       if(!oldPin||!newPin)return fail("বর্তমান এবং নতুন PIN পাঁচ সংখ্যার হতে হবে");
@@ -581,7 +602,7 @@ export async function POST(req) {
       return json({ok:true,secondaryPinEnabled:isSet});
     }
     if(action==="student.pin.reset"){
-      needRole(actor,["principal"]);
+      needRole(actor,["principal","assistant_principal","staff_manager"]);
       const id=cleanText(body.studentId,120),pin=normalizePin(body.pin);
       if(!id||id.includes("/")||!pin)return fail("শিক্ষার্থী ও নতুন ৫ সংখ্যার PIN দিন");
       const snap=await store.collection("students").doc(id).get();
@@ -694,23 +715,60 @@ export async function POST(req) {
       await store.collection("settings").doc("school").set({ ...values, updatedAt: iso() }, { merge: true });
       await audit(actor, action, "school"); return json({ ok: true });
     }
+    if(action==="guardian.approve"||action==="guardian.reject"){
+      needRole(actor,["principal","assistant_principal"]);
+      const id=cleanText(body.id,140);
+      if(!id||id.includes("/"))return fail("অভিভাবক আবেদন নির্বাচন করুন");
+      const requestRef=store.collection("guardianRequests").doc(id),requestSnap=await requestRef.get();
+      if(!requestSnap.exists||requestSnap.data()?.status!=="pending")return fail("অপেক্ষমাণ আবেদন পাওয়া যায়নি",404);
+      const request=requestSnap.data();
+      if(action==="guardian.reject"){
+        await requestRef.update({status:"rejected",reviewedAt:iso(),reviewedBy:actor.uid});
+        await audit(actor,action,id);return json({ok:true});
+      }
+      const studentRef=store.collection("students").doc(request.studentId),studentSnap=await studentRef.get();
+      if(!studentSnap.exists||studentSnap.data()?.deleting)return fail("শিক্ষার্থীর রেকর্ড পাওয়া যায়নি",404);
+      const student=studentSnap.data(),phone=normalizePhone(request.guardianPhone||"");
+      if(!phone||![student.fatherPhone,student.motherPhone].some(v=>normalizePhone(v||"")===phone))
+        return fail("অভিভাবকের পরিচয় পুনরায় যাচাই করুন",409);
+      if(!request.pinCredential?.hash||!request.pinCredential?.salt)return fail("আবেদনের PIN তথ্য পাওয়া যায়নি",409);
+      const mappingRef=store.collection("guardianLoginPhones").doc(phone),existing=await mappingRef.get();
+      if(existing.exists)return fail("এই মোবাইল নম্বরে অভিভাবক অ্যাকাউন্ট আগে থেকেই রয়েছে",409);
+      const created=await adminAuth().createUser({displayName:request.guardianName});
+      createdUid=created.uid;
+      await store.runTransaction(async tx=>{
+        const [latest,map,child]=await Promise.all([tx.get(requestRef),tx.get(mappingRef),tx.get(studentRef)]);
+        if(!latest.exists||latest.data()?.status!=="pending")throw Object.assign(Error("আবেদনটি ইতিমধ্যে নিষ্পত্তি হয়েছে"),{status:409});
+        if(map.exists)throw Object.assign(Error("এই মোবাইল নম্বরে অভিভাবক অ্যাকাউন্ট আগে থেকেই রয়েছে"),{status:409});
+        if(!child.exists||child.data()?.deleting)throw Object.assign(Error("শিক্ষার্থীর রেকর্ড পাওয়া যায়নি"),{status:404});
+        tx.create(mappingRef,{uid:created.uid,createdAt:iso()});
+        tx.create(store.collection("loginCredentials").doc(created.uid),{...request.pinCredential,phone,createdAt:iso()});
+        tx.create(store.collection("users").doc(created.uid),{role:"guardian",name:request.guardianName,phone,active:true,pinEnabled:true,studentId:request.studentId,relationship:request.relation,createdAt:iso(),approvedBy:actor.uid});
+        tx.update(requestRef,{status:"approved",guardianUid:created.uid,reviewedAt:iso(),reviewedBy:actor.uid});
+      });
+      createdUid=null;
+      await audit(actor,action,id);return json({ok:true});
+    }
     if (action === "account.create") {
-      needRole(actor, ["principal"]);
+      needRole(actor, ["principal","assistant_principal"]);
       const name=cleanText(body.name,120),phone=normalizePhone(body.phone),pin=normalizePin(body.pin);
       if(!name||!phone||!pin)return fail("নাম, মোবাইল নম্বর ও ৫ সংখ্যার PIN সঠিকভাবে দিন");
       const photoUrl=cleanText(body.photoUrl,1000);
       if(photoUrl&&!/^https:\/\/[^\s]+$/i.test(photoUrl))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
-      const assignments=teacherAssignments({...body,roles:Array.isArray(body.roles)?body.roles:[body.role]},{});
+      const chosenRoles=Array.isArray(body.roles)?body.roles:[body.role];
+      const privilegedRole=chosenRoles.length===1&&["assistant_principal","staff_manager"].includes(chosenRoles[0])?chosenRoles[0]:"";
+      if(privilegedRole&&actor.role!=="principal")return fail("প্রশাসনিক অ্যাকাউন্ট তৈরি করার অনুমতি শুধু প্রধান শিক্ষকের",403);
+      const assignments=privilegedRole?null:teacherAssignments({...body,roles:chosenRoles},{});
       const user = await adminAuth().createUser({ displayName: name });
       createdUid = user.uid;
       await registerPhoneCredential({ uid: user.uid, phone, pin,
-        userPatch: { name, photoUrl, ...assignments, active: true, createdAt: iso() }
+        userPatch: { name, photoUrl, ...(privilegedRole?{role:privilegedRole}:{...assignments}), active: true, createdAt: iso() }
       });
       createdUid = null;
       await audit(actor, action, user.uid); return json({ ok: true });
     }
     if (action === "account.update") {
-      needRole(actor,["principal"]);
+      needRole(actor,["principal","assistant_principal"]);
       const uid=cleanText(body.uid,128),values=body.values||{};
       if(!uid||uid.includes("/"))return fail("অ্যাকাউন্ট সঠিক নয়");
       const userRef=store.collection("users").doc(uid),current=await userRef.get();
