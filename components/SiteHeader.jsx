@@ -11,8 +11,26 @@ export default function SiteHeader(){
  const [signedIn,setSignedIn]=useState(null);
  useEffect(()=>{
   let unsubscribe=()=>{};
+  let checkSequence=0;
   try{
-   unsubscribe=onAuthStateChanged(firebaseAuth(),user=>setSignedIn(!!user),()=>setSignedIn(false));
+   unsubscribe=onAuthStateChanged(firebaseAuth(),async user=>{
+    const sequence=++checkSequence;
+    setSignedIn(null);
+    if(!user){setSignedIn(false);return;}
+    try{
+     const token=await user.getIdToken();
+     const response=await fetch("/api/portal?resource=identity",{
+      headers:{Authorization:"Bearer "+token},
+      cache:"no-store"
+     });
+     const payload=await response.json();
+     if(sequence!==checkSequence)return;
+     const allowedRoles=["principal","assistant_principal","staff_manager","class_teacher","teacher","student","guardian"];
+     setSignedIn(response.ok&&allowedRoles.includes(payload?.actor?.role));
+    }catch{
+     if(sequence===checkSequence)setSignedIn(false);
+    }
+   },()=>setSignedIn(false));
   }catch{setSignedIn(false)}
   return ()=>unsubscribe();
  },[]);
