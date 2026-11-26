@@ -9,6 +9,7 @@ import { firebaseAuth } from "../../../lib/firebase-client";
 import { normalizeBDPhone } from "../../../lib/admission-validation";
 import { toBanglaDigits } from "../../../lib/bangla-numbers";
 import PinInput from "../../../components/PinInput";
+import { loadPublicData } from "../../../lib/public-client";
 
 const roles=[
  {key:"principal",title:"প্রধান শিক্ষক",icon:UserCog},
@@ -25,8 +26,10 @@ export default function Login(){
  const [phone,setPhone]=useState(""),[pin,setPin]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [studentIdentityRequired,setStudentIdentityRequired]=useState(false);
  const [studentGrade,setStudentGrade]=useState(""),[studentGroup,setStudentGroup]=useState(""),[studentRoll,setStudentRoll]=useState("");
- const [device,setDevice]=useState(null),[recognized,setRecognized]=useState(null),[lockedUntil,setLockedUntil]=useState(0);
+ const [device,setDevice]=useState(null),[recognized,setRecognized]=useState(null),[lockedUntil,setLockedUntil]=useState(0),[publicName,setPublicName]=useState("");
  useEffect(()=>{fetch("/api/auth/device",{credentials:"same-origin",cache:"no-store"}).then(r=>r.json()).then(v=>{setDevice(v.device);setLockedUntil(v.lockedUntil||0)}).catch(()=>{});},[]);
+ useEffect(()=>{loadPublicData().then(data=>{const key={principal:"principal",assistant_principal:"assistantPrincipal",staff_manager:"staffManager"}[role];if(key&&typeof data?.settings?.[key+"Name"]==="string")setPublicName(data.settings[key+"Name"].trim())}).catch(()=>{});},[role]);
+ const portalName=recognized?.role===role&&recognized?.name?recognized.name:publicName;
  async function recognize(value){
    const valid=normalizeBDPhone(value);
    if(!valid){setRecognized(null);return;}
@@ -71,7 +74,7 @@ export default function Login(){
        <div className="login-symbol"><School size={25}/></div>
        <p className="kicker text-center mb-2 mt-4">HMRS SECURE LOGIN</p>
        <h1 className="login-heading">{active.title}</h1>
-       {recognized?.role===role&&recognized?.name&&<p className="text-center font-semibold mb-3">{recognized.name}</p>}
+       {portalName&&<p className="text-center font-semibold mb-3">{portalName}</p>}
        <p className="text-center muted text-sm mb-6">মোবাইল নম্বর ও ৫ সংখ্যার PIN দিন।</p>
        {(role==="guardian")&&<p className="text-center text-sm mt-3">অভিভাবক অ্যাকাউন্ট নেই? <Link className="font-bold underline" href="/guardian-registration">অভিভাবক আইডির আবেদন করুন</Link></p>}
        {(role==="student"||role==="guardian")&&<p className="text-center text-xs mt-3"><Link className="underline" href="/login">প্রশাসনিক লগইন প্যানেল</Link></p>}
@@ -105,7 +108,7 @@ export default function Login(){
            </label>
           </div>
          </div>}
-         {recognized?.role===role&&recognized?.name&&<div className="device-recognition"><ShieldCheck size={18}/><div><strong>{recognized.name}</strong></div></div>}
+         
          {device&&<div className="text-xs muted">বর্তমান ডিভাইস: {device.label} · #{device.id}</div>}
          {isLocked&&<div className="alert error" role="alert">এই ডিভাইস থেকে {new Date(lockedUntil).toLocaleString("bn-BD",{dateStyle:"medium",timeStyle:"short"})} পর্যন্ত লগইন বন্ধ থাকবে।</div>}
          <PinInput value={pin} onChange={setPin} disabled={busy||isLocked}/>
