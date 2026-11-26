@@ -32,7 +32,7 @@ export default function SiteHeader(){
     }
    },()=>setSignedIn(false));
   }catch{setSignedIn(false)}
-  return ()=>unsubscribe();
+  return ()=>{checkSequence++;unsubscribe()};
  },[]);
  const mobileItems=signedIn===true?[...items.filter(([label])=>label!=="ফলাফল"),["ড্যাশবোর্ড","/dashboard/overview"]]
   :signedIn===false?[...items,["শিক্ষার্থী লগইন","/login/student"],["শিক্ষক লগইন","/login/teacher"],["প্রধান শিক্ষক","/login/principal"]]:items;
