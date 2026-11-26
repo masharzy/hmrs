@@ -14,7 +14,7 @@ export default function GuardianRequestManager({request,mutate,working}){
  {loading?<p className="empty">আবেদন লোড হচ্ছে...</p>:!items.length?<p className="empty">কোনো অপেক্ষমাণ আবেদন নেই।</p>:
  <div className="grid gap-3">{items.map(item=><article key={item.id} className="rounded-xl border p-4">
   <div className="flex flex-wrap justify-between gap-2"><div><b>{item.guardianName}</b><span className="muted text-sm"> · {relations[item.relation]||"অভিভাবক"}</span>
-   <p className="text-sm mt-1 mb-0">{item.studentName} · শ্রেণি {toBanglaDigits(item.grade)}{item.group?" · "+({science:"বিজ্ঞান",business:"ব্যবসায় শিক্ষা",humanities:"মানবিক"}[item.group]||"")} · রোল {toBanglaDigits(item.roll)}</p>
+   <p className="text-sm mt-1 mb-0">{item.studentName} · শ্রেণি {toBanglaDigits(item.grade)}{item.group?" · "+({science:"বিজ্ঞান",business:"ব্যবসায় শিক্ষা",humanities:"মানবিক"}[item.group]||""):""} · রোল {toBanglaDigits(item.roll)}</p>
    <small className="muted">মোবাইল: {toBanglaDigits(item.guardianPhoneMasked||"")}</small></div>
   <div className="flex items-center gap-2"><button className="btn sm primary" disabled={working} onClick={()=>act("guardian.approve",item.id)}><CheckCircle2 size={14}/> অনুমোদন</button>
    <button className="btn sm danger" disabled={working} onClick={()=>act("guardian.reject",item.id)}><XCircle size={14}/> বাতিল</button></div></div>
