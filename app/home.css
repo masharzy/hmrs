@@ -15,7 +15,7 @@
 .hmrs-home-announce a{color:#fff;font-weight:800;text-decoration:underline}
 
 /* hero */
-.hmrs-home-hero{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,#fff 0%,#f2f5ff 100%);padding:clamp(40px,6vw,76px) 0 clamp(70px,8vw,104px)}
+.hmrs-home-hero{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,#fff 0%,#f2f5ff 100%);padding:clamp(20px,2.5vw,32px) 0 clamp(64px,6vw,84px)}
 .hmrs-home-hero:before{content:"";position:absolute;z-index:-1;inset:0;opacity:.5;background-image:radial-gradient(#2549e822 1.4px,transparent 1.4px);background-size:26px 26px;-webkit-mask-image:linear-gradient(to left,#000,transparent 60%);mask-image:linear-gradient(to left,#000,transparent 60%)}
 .hmrs-home-hero:after{content:"";position:absolute;z-index:-1;width:520px;height:520px;border-radius:50%;background:#2549e8;opacity:.06;right:-160px;top:-200px}
 .hmrs-home-hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:center;gap:clamp(28px,5vw,64px)}
@@ -66,7 +66,7 @@
 .hmrs-home-stat:nth-child(1) strong{color:var(--h-blue)}.hmrs-home-stat:nth-child(2) strong{color:var(--h-emer)}.hmrs-home-stat:nth-child(3) strong{color:var(--h-vio)}.hmrs-home-stat:nth-child(4) strong{color:var(--h-cor)}
 
 /* service cards */
-.hmrs-home-services{scroll-margin-top:84px;padding-top:clamp(64px,8vw,96px)}
+.hmrs-home-services{scroll-margin-top:84px;padding-top:clamp(36px,4vw,56px)}
 .hmrs-home-quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}
 .hmrs-home-quick-card{position:relative;overflow:hidden;display:flex;flex-direction:column;min-width:0;min-height:228px;padding:24px;border-radius:24px;color:#fff;background:var(--c);box-shadow:0 14px 30px color-mix(in srgb,var(--c) 28%,transparent);transition:transform .18s,box-shadow .18s}
 .hmrs-home-quick-card:before{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:currentColor;opacity:.09;right:-46px;top:-46px}
@@ -80,7 +80,7 @@
 .hmrs-home-quick-0{--c:#2549e8}.hmrs-home-quick-1{--c:#007a5e}.hmrs-home-quick-2{--c:#6a3de8}.hmrs-home-quick-3{--c:#ffb020;color:var(--h-ink)}.hmrs-home-quick-4{--c:#d92d5b}
 
 /* portal features */
-.hmrs-home-portal{padding-top:clamp(64px,8vw,96px)}
+.hmrs-home-portal{padding-top:clamp(36px,4vw,56px)}
 .hmrs-home-portal-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);gap:24px;align-items:stretch}
 .hmrs-home-portal-lead{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:40px 34px;border-radius:30px;color:#fff;background:linear-gradient(150deg,#0b1f8f,#2549e8 55%,#6a3de8)}
 .hmrs-home-portal-lead:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;border:2px solid #ffffff26;right:-90px;bottom:-90px}
@@ -96,7 +96,7 @@
 .hmrs-home-feature h3{font-size:20px;font-weight:700;line-height:1.5;margin:18px 0 0}.hmrs-home-feature p{font-size:14px;line-height:1.7;margin:2px 0 0}
 
 /* classes and groups */
-.hmrs-home-classes{margin-top:clamp(64px,8vw,96px);padding:clamp(56px,7vw,92px) 0;background:var(--h-tint)}
+.hmrs-home-classes{margin-top:clamp(36px,4vw,56px);padding:clamp(40px,4.5vw,60px) 0;background:var(--h-tint)}
 .hmrs-home-class-row{display:flex;flex-wrap:wrap;gap:16px}
 .hmrs-home-class{flex:1 1 130px;padding:22px 16px;border-radius:20px;text-align:center;color:#fff;background:var(--c)}
 .hmrs-home-class strong{display:block;font-family:"Anek Bangla","Hind Siliguri",sans-serif;font-size:32px;font-weight:800;line-height:1.2;color:inherit}.hmrs-home-class span{font-size:14px;font-weight:600;opacity:.92}
@@ -108,7 +108,7 @@
 .hmrs-home-group span{padding:6px 12px;border-radius:99px;background:#fff;border:1px solid var(--h-line);color:var(--h-ink);font-size:13px;font-weight:600}
 
 /* leadership (principal / assistant / staff manager, from school settings) */
-.hmrs-leadership-section{padding-top:clamp(64px,8vw,96px)}
+.hmrs-leadership-section{padding-top:clamp(36px,4vw,56px)}
 .hmrs-leadership-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
 .hmrs-leader-card{position:relative;overflow:hidden;display:flex;gap:18px;align-items:center;min-width:0;padding:22px;border-radius:24px;background:#fff;border:1px solid var(--h-line);box-shadow:0 12px 30px #0e13301a}
 .hmrs-leader-card:before{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:var(--c);opacity:.09;right:-50px;top:-50px}
@@ -121,7 +121,7 @@
 .hmrs-leader-login{display:inline-flex;align-items:center;gap:6px;border:0!important;border-radius:10px!important;padding:8px 14px!important;background:var(--c)!important;color:#fff!important;font-size:12px;font-weight:700}
 
 /* teachers */
-.hmrs-home-teachers{padding-top:clamp(64px,8vw,96px)}
+.hmrs-home-teachers{padding-top:clamp(36px,4vw,56px)}
 .hmrs-teacher-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
 .hmrs-teacher-card{padding:28px 18px 24px;border-radius:24px;text-align:center;background:#fff;border:1px solid var(--h-line);box-shadow:0 10px 26px #0e133012;transition:transform .18s,box-shadow .18s}
 .hmrs-teacher-card:hover{transform:translateY(-4px);box-shadow:0 18px 36px #0e133022}
@@ -135,7 +135,7 @@
 .hmrs-teacher-card p{margin:10px 0 0;font-size:13px;line-height:1.7;color:var(--h-body)}
 
 /* notices: every notice, fixed-height scroll area, full-width rows (not cards) */
-.hmrs-home-notices{padding-top:clamp(64px,8vw,96px);scroll-margin-top:25px}
+.hmrs-home-notices{padding-top:clamp(36px,4vw,56px);scroll-margin-top:25px}
 .hmrs-home-notices .notice-board{margin:0;border-radius:24px;border:1px solid var(--h-line);box-shadow:0 16px 40px #0e133018;background:#fff}
 .hmrs-home-notices .notice-board-head{padding:20px 26px;background:linear-gradient(100deg,#fff5f8,#f3f0ff);border-bottom:1px solid var(--h-line)}
 .hmrs-home-notices .notice-board-heading>span{width:46px;height:46px;border-radius:14px;background:var(--h-cor);color:#fff}
@@ -154,7 +154,7 @@
 .hmrs-home-notices .notice-open-icon{color:#8e98cf}
 
 /* final call to action */
-.hmrs-home-final{padding:clamp(64px,8vw,96px) 0 clamp(56px,7vw,88px)}
+.hmrs-home-final{padding:clamp(36px,4vw,56px) 0 clamp(48px,5vw,72px)}
 .hmrs-home-final-card{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:26px;padding:48px 44px;border-radius:32px;background:linear-gradient(120deg,#0b1f8f 0%,#2549e8 45%,#6a3de8 100%);color:#fff}
 .hmrs-home-final-card:before{content:"";position:absolute;z-index:-1;width:320px;height:320px;border-radius:50%;border:2px solid #ffffff26;right:-80px;top:-120px}
 .hmrs-home-final-icon{display:grid;place-items:center;flex:none;width:76px;height:76px;border-radius:22px;background:var(--h-amb);color:var(--h-ink)}
