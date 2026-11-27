@@ -48,7 +48,7 @@ const roles={
  teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["profile","নিজের PIN পরিবর্তন",LockKeyhole]],
  class_teacher: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Class Accounts",Wallet],["profile","নিজের PIN পরিবর্তন",LockKeyhole]],
  assistant_principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["accounts","Staff Accounts & PIN Reset",ShieldCheck],["security","Login Security",LockKeyhole],["profile","নিজের PIN পরিবর্তন",LockKeyhole]],
- staff_manager: [["overview","Overview",LayoutDashboard],["accounts","PIN Reset",ShieldCheck],["profile","নিজের PIN পরিবর্তন",LockKeyhole]],
+ staff_manager: [["overview","Overview",LayoutDashboard],["admissions","ভর্তি অনুমোদন",ClipboardCheck],["accounts","PIN Reset",ShieldCheck],["profile","নিজের PIN পরিবর্তন",LockKeyhole]],
  principal: [["overview","Overview",LayoutDashboard],["students","Student",Users],["admissions","Admission Approvals",ClipboardCheck],["attendance","Attendance",CalendarCheck2],["exams","Exams",GraduationCap],["marks","Marks",FilePenLine],["finance","Finance",Wallet],["notices","Notices",Bell],["accounts","Staff Accounts",ShieldCheck],["security","Login Security",LockKeyhole],["settings","Website Settings",Settings],["profile","নিজের PIN পরিবর্তন",LockKeyhole]]
 };
 const Field=({label,children})=><label className="field">{label}{children}</label>;
@@ -475,7 +475,7 @@ export default function DashboardPortal() {
            </div>
            <span className={"chip "+(a.status==="pending"?"":"gray")}>{({pending:"Pending",approved:"Approved",rejected:"Rejected"})[a.status]||a.status}</span>
           </div>
-          {actor.role==="principal"&&a.status!=="approved"&&<button className="btn sm hmrs-admission-edit" type="button" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> Edit Application</button>}
+          {a.status!=="approved"&&<button className="btn sm hmrs-admission-edit" type="button" onClick={()=>setEditing({type:"application",item:a})}><Pencil size={14}/> Edit Application</button>}
           {a.status==="pending"&&<div className="hmrs-admission-actions"><AdmissionApproval item={a} busy={working} mutate={mutate} principal={["principal","assistant_principal"].includes(actor.role)}/></div>}
          </article>)}
          {!filteredAdmissions.length&&<p className="panel empty">No applications match these filters.</p>}
@@ -613,7 +613,7 @@ export default function DashboardPortal() {
      setEditingExam(null);setCreatingExam(false);
      return true;
     }}/>}
-  {editing&&(actor.role==="principal"||editing.type==="student")&&<PrincipalRecordEditor
+  {editing&&(editing.type==="student"||["principal","assistant_principal","staff_manager","class_teacher"].includes(actor.role))&&<PrincipalRecordEditor
    key={editing.type+":"+editing.item.id} type={editing.type} item={editing.item}
    working={working} error={error} onClose={()=>{setEditing(null);setError("")}}
    canResetPin={actor.role==="principal"}
@@ -646,15 +646,21 @@ export default function DashboardPortal() {
 }
 
 function AdmissionApproval({item,mutate,busy,principal}){
- const [roll,setRoll]=useState(String(item.requestedRoll||"")),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||"");
+ const [roll,setRoll]=useState(String(item.requestedRoll||"")),[phone,setPhone]=useState(item.studentPhone||item.fatherPhone||""),[pin,setPin]=useState("");
+ const pinReady=item.pinConfigured||/^\d{5}$/.test(pin);
  return <div className="flex flex-wrap gap-3 mt-4 items-end">
   <label className="field" style={{maxWidth:90}}>Roll <input value={roll} onChange={e=>setRoll(e.target.value)} inputMode="numeric" required/></label>
   <label className="field" style={{maxWidth:230}}>Login Phone <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+8801712345678" required/></label>
-  <div className="hmrs-approval-pin-state">
-   <ShieldCheck size={17}/>
-   <span>{item.pinConfigured?"Student PIN set during admission":"Student PIN not set. Ask applicant to edit the pending application and set a 5-digit PIN."}</span>
+  <label className="field" style={{maxWidth:190}}> {item.pinConfigured?"নতুন PIN (ঐচ্ছিক)":"শিক্ষার্থীর নতুন ৫ সংখ্যার PIN"}
+   <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={5} value={pin}
+    onChange={e=>setPin(toAsciiDigits(e.target.value).replace(/\D/g,"").slice(0,5))}
+    placeholder={item.pinConfigured?"পরিবর্তন না করলে ফাঁকা রাখুন":"৫ সংখ্যার PIN"} required={!item.pinConfigured}/>
+  </label>
+  <div className="hmrs-approval-pin-state"><ShieldCheck size={17}/>
+   <span>{item.pinConfigured?"আবেদনে PIN আগে থেকেই আছে; চাইলে এখানে নতুন PIN দিন।":"PIN না থাকায় অনুমোদনের সময় নতুন PIN নির্ধারণ করুন।"}</span>
   </div>
-  <button className="btn sm primary" disabled={busy||!item.pinConfigured} onClick={()=>mutate("application.approve",{id:item.id,roll,phone})}><Check size={14}/> Approve Admission</button>
+  <button className="btn sm primary" disabled={busy||!pinReady||(pin.length>0&&pin.length!==5)||!roll||!phone}
+   onClick={()=>mutate("application.approve",{id:item.id,roll,phone,...(pin?{pin}:{})})}><Check size={14}/> Approve Admission</button>
   <button className="btn sm danger" disabled={busy} onClick={()=>{if(confirm("Reject this application?"))mutate("application.reject",{id:item.id})}}><X size={14}/> Rejected</button>
   {principal&&item.paymentStatus!=="verified_manually"&&<button className="btn sm" disabled={busy} onClick={()=>{if(confirm("Have you verified the payment?"))mutate("payment.verify",{id:item.id})}}><CreditCard size={14}/> Payment Verified</button>}
  </div>;
