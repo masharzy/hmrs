@@ -48,18 +48,19 @@ export default function Home(){
     </div>
    </div>
    <div className="hmrs-home-visual">
-    <div className="hmrs-home-photo"><SchoolGallery/></div>
+    <div className="hmrs-home-photo"><SchoolGallery/>
     <span className="hmrs-home-orbit"><GraduationCap size={40}/></span>
     <span className="hmrs-home-chip hmrs-home-chip-admission">অনলাইন ভর্তি</span>
     <span className="hmrs-home-chip hmrs-home-chip-results">ফলাফল প্রকাশ</span>
     <div className="hmrs-home-school-badge"><span className="hmrs-home-school-icon"><School size={24}/></span><div><strong>আলোকিত আগামীর পথে</strong><small>শিক্ষা • মূল্যবোধ • সৃজনশীলতা</small></div></div>
-   </div>
-  </div></section>
-  <section className="container hmrs-home-stats"><div className="hmrs-home-stats-card">{stats.map(([v,l])=><div className="hmrs-home-stat" key={l}><strong>{v}</strong><span>{l}</span></div>)}</div></section>
-  <section className="container hmrs-home-services" id="services"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">DIGITAL SERVICES</span><h2 className="section-title">বিদ্যালয়ের অনলাইন সেবা</h2><p>আপনার প্রয়োজনীয় সেবাটি নির্বাচন করুন</p></div></div>
+</div>
+  <section className="hmrs-home-services hmrs-home-services-under-photo" id="services"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow">DIGITAL SERVICES</span><h2 className="section-title">বিদ্যালয়ের অনলাইন সেবা</h2><p>আপনার প্রয়োজনীয় সেবাটি নির্বাচন করুন</p></div></div>
    <div className="hmrs-home-quick-grid">{services.map(({href,tag,title,text,Icon},i)=><Link className={"hmrs-home-quick-card hmrs-home-quick-"+i} href={href} key={href}>
     <span className="hmrs-home-quick-icon"><Icon size={26}/></span><span className="hmrs-home-quick-chip">{tag}</span><strong>{title}</strong><small>{text}</small><span className="hmrs-home-quick-arrow"><ArrowRight size={16}/></span></Link>)}</div>
   </section>
+   </div>
+  </div></section>
+  <section className="container hmrs-home-stats"><div className="hmrs-home-stats-card">{stats.map(([v,l])=><div className="hmrs-home-stat" key={l}><strong>{v}</strong><span>{l}</span></div>)}</div></section>
   <section className="hmrs-home-classes"><div className="container">
    <div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-violet">CLASSES &amp; GROUPS</span><h2 className="section-title">শ্রেণি ও বিভাগ</h2><p>ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত পাঠদান</p></div></div>
    <div className="hmrs-home-class-row">{classes.map(([n,c])=><div className="hmrs-home-class" key={n} style={{"--c":c}}><strong>{n}</strong><span>শ্রেণি</span></div>)}</div>
