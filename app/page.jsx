@@ -29,7 +29,6 @@ const groups=[
  {name:"ব্যবসায় শিক্ষা",c:"#007a5e",bg:"#e9f7f3",subjects:["হিসাববিজ্ঞান","ফিন্যান্স ও ব্যাংকিং","ব্যবসায় উদ্যোগ"]},
  {name:"মানবিক",c:"#6a3de8",bg:"#f1ecff",subjects:["ইতিহাস","ভূগোল ও পরিবেশ","পৌরনীতি"]}
 ];
-const stats=[["৬ষ্ঠ–১০ম","শ্রেণি"],["৩টি","বিভাগ"],["১১২৩৫৯","EIIN"],["সোনারগাঁ","নারায়ণগঞ্জ"]];
 
 export default function Home(){
  return <><SiteHeader/><main className="hmrs-home hmrs-home-redesign hmrs-home-final">
@@ -40,6 +39,7 @@ export default function Home(){
     <span className="hmrs-home-pill">আমাদের ডিজিটাল বিদ্যালয়ে স্বাগতম</span>
     <h1 className="hmrs-home-title">শিখব আনন্দে,<br/><span>এগিয়ে যাব একসাথে।</span></h1>
     <HomeSchoolDescription/>
+    <Link className="hmrs-home-notice-button" href="#notices"><Bell size={18}/> বিদ্যালয়ের নোটিশ দেখুন <ArrowRight size={17}/></Link>
     <div className="hmrs-home-actions"><Link className="btn hmrs-home-primary" href="/admission">ভর্তির আবেদন করুন <ArrowRight size={18}/></Link><Link className="btn hmrs-home-secondary" href="#services"><BookOpenCheck size={17}/> সকল সেবা দেখুন</Link></div>
     <div className="hmrs-home-highlights">
      <span><i style={{background:"#2549e8"}}><ShieldCheck size={18}/></i> নিরাপদ তথ্যব্যবস্থা</span>
@@ -64,7 +64,6 @@ export default function Home(){
   </div>
    </div>
   </div></section>
-  <section className="container hmrs-home-stats"><div className="hmrs-home-stats-card">{stats.map(([v,l])=><div className="hmrs-home-stat" key={l}><strong>{v}</strong><span>{l}</span></div>)}</div></section>
   <section className="hmrs-home-classes"><div className="container">
    <div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-violet">CLASSES &amp; GROUPS</span><h2 className="section-title">শ্রেণি ও বিভাগ</h2><p>ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত পাঠদান</p></div></div>
    <div className="hmrs-home-class-row">{classes.map(([n,c])=><div className="hmrs-home-class" key={n} style={{"--c":c}}><strong>{n}</strong><span>শ্রেণি</span></div>)}</div>
