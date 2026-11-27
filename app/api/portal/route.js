@@ -167,7 +167,7 @@ export async function GET(req) {
       const page=Number.isSafeInteger(pageRaw)?Math.min(100,Math.max(1,pageRaw)):1;
       const q=cleanText(u.searchParams.get("q"),80).toLowerCase();
       // Only teacher roles are read; student accounts never leave the server.
-      const snap=await store.collection("users").where("role","in",["teacher","class_teacher"]).limit(1000).get();
+      const snap=await store.collection("users").where("role","in",["teacher","class_teacher","assistant_principal","staff_manager"]).limit(1000).get();
       const users=asDocs(snap).filter(item=>!item.deleting && (!q ||
         (String(item.name||"")+" "+String(item.phone||"")+" "+item.role).toLowerCase().includes(q)))
        .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"bn")||a.id.localeCompare(b.id));

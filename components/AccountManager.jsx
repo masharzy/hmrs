@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search, Check, BookOpen, Users, Upload, UserRound } from "lucide-react";
+import { Pencil, Trash2, X, AlertTriangle, UserPlus, Search, Check, BookOpen, Users, Upload, UserRound, KeyRound } from "lucide-react";
 import { firebaseAuth } from "../lib/firebase-client";
 import { toAsciiDigits } from "../lib/bangla-numbers";
 import { CLASS_OPTIONS, TEACHER_SUBJECT_OPTIONS } from "../lib/teacher-subjects";
@@ -40,6 +40,8 @@ export default function AccountManager({actor,request,mutate,working,error}){
  const [loading,setLoading]=useState(true),[revision,setRevision]=useState(0);
  const [modal,setModal]=useState(null),[values,setValues]=useState(empty),[localError,setLocalError]=useState("");
  const [photoBusy,setPhotoBusy]=useState(false);
+ const [resetPin,setResetPin]=useState("");
+ const [resetBusy,setResetBusy]=useState(false);
  useEffect(()=>{const timer=setTimeout(()=>{setDebounced(search.trim());setPage(1)},280);return()=>clearTimeout(timer)},[search]);
  useEffect(()=>{
   let active=true;setLoading(true);
@@ -61,7 +63,21 @@ export default function AccountManager({actor,request,mutate,working,error}){
    classTeacherClasses:roles.includes("class_teacher")?(user.classTeacherClasses||user.assignedClasses||[]).map(String):[],
    teachingSubjects:(user.teachingSubjects||[]).map(String),photoUrl:user.photoUrl||"",active:user.active!==false});
  }
- function close(){if(working||photoBusy)return;setModal(null);setLocalError("")}
+ function close(){if(working||photoBusy||resetBusy)return;setModal(null);setLocalError("");setResetPin("")}
+ async function resetStaffPin(e){
+  e.preventDefault();if(!modal||modal.kind!=="reset"||resetPin.length!==5||resetBusy)return;
+  setResetBusy(true);setLocalError("");
+  try{
+   const user=firebaseAuth().currentUser;if(!user)throw Error("আবার লগইন করুন");
+   const token=await user.getIdToken();
+   const response=await fetch("/api/account-reset",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({uid:modal.user.id,pin:resetPin})});
+   const output=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(output.error||"PIN রিসেট করা যায়নি");
+   setModal(null);setResetPin("");setLocalError("");
+   window.alert(modal.user.name+"-এর নতুন PIN সফলভাবে সেট হয়েছে। পুরোনো সেশন বাতিল করা হয়েছে।");
+  }catch(e){setLocalError(e.message)}
+  finally{setResetBusy(false)}
+ }
  function changed(key,value){setValues(v=>({...v,[key]:value}));setLocalError("")}
  async function uploadPhoto(file){
   if(!file)return;
@@ -111,8 +127,8 @@ export default function AccountManager({actor,request,mutate,working,error}){
     <td>{toAsciiDigits(u.phone||"—")}</td><td>{(u.roles||[u.role]).map(r=>roles[r]).filter(Boolean).join(" + ")}</td>
     <td>{[...new Set([...(u.teachingClasses||[]),...(u.classTeacherClasses||[]),...(u.assignedClasses||[])])].map(toAsciiDigits).join(", ")||"—"}</td>
     <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>enSubject(id,TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name)||id).join(", ")||"—"}</td>
-    <td><div className="inline-actions"><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> Edit</button>
-     <button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> Delete</button></div></td>
+    <td><div className="inline-actions">{["assistant_principal","staff_manager"].includes(u.role)?null:<><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> Edit</button><button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> Delete</button></>}
+     <button className="btn sm" type="button" onClick={()=>{setLocalError("");setResetPin("");setModal({kind:"reset",user:u})}}><KeyRound size={14}/> PIN Reset</button></div></td>
    </tr>)}
   </tbody></table>{loading?<p className="empty">Loading teachers…</p>:!items.length&&<p className="empty">No teachers found.</p>}</div>
   <div className="hmrs-sheet-bottom"><span>{toAsciiDigits(total)} teachers · Page {toAsciiDigits(page)} / {toAsciiDigits(maxPage)}</span>
@@ -120,7 +136,14 @@ export default function AccountManager({actor,request,mutate,working,error}){
     <button className="btn sm" disabled={page>=maxPage||loading} onClick={()=>setPage(p=>p+1)}>Next</button></div>
   </div>
   {modal&&<div className="record-modal-backdrop">
-   {modal.kind==="delete"?<section className="record-modal record-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="teacher-delete-title">
+   {modal.kind==="reset"?<section className="record-modal record-delete-modal" role="dialog" aria-modal="true" aria-labelledby="staff-reset-title">
+    <div className="record-modal-head"><div><h2 id="staff-reset-title"><KeyRound size={19}/> স্টাফের PIN রিসেট</h2><p className="muted text-xs">{modal.user.name} · {toAsciiDigits(modal.user.phone||"")}</p></div><button className="btn sm" type="button" onClick={close} disabled={resetBusy}><X size={17}/></button></div>
+    <form onSubmit={resetStaffPin}><div className="record-modal-body"><p>এই স্টাফের জন্য নতুন ৫ সংখ্যার PIN দিন। প্রথমবার PIN তৈরি করতেও এটি ব্যবহার করা যাবে।</p>
+     <PinInput label="নতুন ৫ সংখ্যার PIN" value={resetPin} onChange={setResetPin} disabled={resetBusy}/>
+     {(localError||error)&&<p role="alert" className="alert error">{localError||error}</p>}
+    </div><div className="record-modal-actions"><button className="btn" type="button" disabled={resetBusy} onClick={close}>বাতিল</button>
+     <button className="btn primary" type="submit" disabled={resetBusy||resetPin.length!==5}>{resetBusy?"রিসেট হচ্ছে…":"PIN রিসেট করুন"}</button></div></form>
+   </section>:modal.kind==="delete"?<section className="record-modal record-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="teacher-delete-title">
     <div className="record-modal-head"><h2 id="teacher-delete-title"><AlertTriangle size={19}/> Delete Teacher?</h2><button className="btn sm" type="button" onClick={close} disabled={working}><X size={17}/></button></div>
     <div className="record-modal-body"><p><b>{modal.user.name}</b>'s teacher account will be permanently deleted.</p>{(localError||error)&&<p className="alert error">{localError||error}</p>}</div>
     <div className="record-modal-actions"><button className="btn" type="button" disabled={working} onClick={close}>Cancel</button>
