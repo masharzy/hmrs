@@ -22,6 +22,7 @@ export async function POST(req) {
     if (Number(req.headers.get("content-length") || 0) > 3400000) return fail("ছবি ৩ MB-এর মধ্যে হতে হবে", 413);
 
     const form = await req.formData();
+    const slot = form.get("slot") === "photoUrl2" ? "photoUrl2" : "photoUrl";
     const uploaded = form.get("file");
     if (!uploaded || typeof uploaded.arrayBuffer !== "function" || uploaded.size < 64 || uploaded.size > 3145728)
       return fail("JPG, PNG বা WebP ছবি দিন (সর্বোচ্চ ৩ MB)");
@@ -38,10 +39,10 @@ export async function POST(req) {
     const now = new Date().toISOString();
     const firestore = db();
     await firestore.collection("settings").doc("school").set({
-      photoUrl, photoUpdatedAt: now
+      [slot]: photoUrl, [slot + "UpdatedAt"]: now
     }, { merge: true });
     await firestore.collection("audit").add({
-      actorUid: actor.uid, action: "school.photo.upload", target: "imgbb:" + imageId, at: now
+      actorUid: actor.uid, action: slot === "photoUrl2" ? "school.photo2.upload" : "school.photo.upload", target: "imgbb:" + imageId, at: now
     });
     return json({ ok: true, photoUrl });
   } catch (e) { return handleError(e); }

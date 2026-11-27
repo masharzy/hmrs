@@ -87,9 +87,9 @@ export default function DashboardPortal() {
  const [selectedPublishedExam,setSelectedPublishedExam]=useState("");
  const [individualGrade,setIndividualGrade]=useState(""),[individualGroup,setIndividualGroup]=useState("");
  const [ledgerForm,setLedgerForm]=useState({type:"income",amount:"",grade:"6",description:""});
- const [photo,setPhoto]=useState(""),[photo2,setPhoto2]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null);
+ const [photo,setPhoto]=useState(""),[photo2,setPhoto2]=useState(""),[subtitle,setSubtitle]=useState(""),[uploadFile,setUploadFile]=useState(null),[uploadFile2,setUploadFile2]=useState(null);
  const [schoolProfiles,setSchoolProfiles]=useState({principalName:"",principalDesignation:"প্রধান শিক্ষক",principalPhotoUrl:"",assistantPrincipalName:"",assistantPrincipalDesignation:"সহকারী প্রধান শিক্ষক",assistantPrincipalPhotoUrl:"",staffManagerName:"",staffManagerDesignation:"স্টাফ ম্যানেজার",staffManagerPhotoUrl:""});
- const photoUploadInput=useRef(null);
+ const photoUploadInput=useRef(null),photo2UploadInput=useRef(null);
  const [studentSubject,setStudentSubject]=useState({group:"science",elective:"agriculture",fourthSubject:"agriculture",optionalId:"agriculture"});
 
  async function request(resource,opts){
@@ -322,18 +322,19 @@ export default function DashboardPortal() {
  function chooseSubject(id){
   setMarkSubject(id);setMarkScores(resultMap[id]||{});
  }
- async function uploadSchoolPhoto(){
-  if(!uploadFile)return;
+ async function uploadSchoolPhoto(slot="photoUrl"){
+  const selectedFile=slot==="photoUrl2"?uploadFile2:uploadFile;
+  if(!selectedFile)return;
   setWorking(true);setError("");setSuccess("");
   try{
-   const formData=new FormData();formData.append("file",uploadFile);
+   const formData=new FormData();formData.append("file",selectedFile);formData.append("slot",slot);
    const token=await firebaseAuth().currentUser.getIdToken();
    const response=await fetch("/api/school-photo",{method:"POST",headers:{Authorization:"Bearer "+token},body:formData});
    const output=await response.json();
    if(!response.ok)throw Error(output.error||"Image upload failed");
-   setPhoto(output.photoUrl);setUploadFile(null);
-   if(photoUploadInput.current)photoUploadInput.current.value="";
-   setSuccess("Image uploaded to ImgBB and published on the home page.");
+   if(slot==="photoUrl2"){setPhoto2(output.photoUrl);setUploadFile2(null);if(photo2UploadInput.current)photo2UploadInput.current.value="";}
+   else{setPhoto(output.photoUrl);setUploadFile(null);if(photoUploadInput.current)photoUploadInput.current.value="";}
+   setSuccess(slot==="photoUrl2"?"দ্বিতীয় ছবি আপলোড করে হোমপেজে প্রকাশ করা হয়েছে।":"প্রথম ছবি আপলোড করে হোমপেজে প্রকাশ করা হয়েছে।");
    await refresh(actor,date,examId,"settings",true);
   }catch(e){setError(e.message)}finally{setWorking(false)}
  }
@@ -582,9 +583,11 @@ export default function DashboardPortal() {
        {tab==="accounts"&&<>{["principal","assistant_principal"].includes(actor.role)&&<AccountManager actor={actor} request={request} working={working} mutate={mutate} error={error}/>}<AccountPinReset/></>}
        {tab==="settings"&&<><h2 className="section-title">Home Page Settings</h2>{actor.role==="principal"&&<SchoolSwitches key={JSON.stringify([data.settings?.admissionOpen,data.settings?.bannerEnabled,data.settings?.bannerText,data.settings?.bannerLinkText])} settings={data.settings} working={working} mutate={mutate}/>}<div className="panel p-6 grid gap-4">
         <div className="alert">Upload a school photo to ImgBB and it will appear on the home page. Use only your school's own images.</div>
-        <Field label="Upload Home Photo (JPG, PNG, WebP; max 3 MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
-        <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={uploadSchoolPhoto}><School size={15}/> Upload Photo</button>
-        <Field label="Or HTTPS Photo URL"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
+        <Field label="প্রথম ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photoUploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></Field>
+        <button className="btn justify-self-start" disabled={working||!uploadFile} onClick={()=>uploadSchoolPhoto("photoUrl")}><School size={15}/> প্রথম ছবি আপলোড</button>
+        <Field label="দ্বিতীয় ছবি আপলোড (JPG, PNG, WebP; সর্বোচ্চ ৩ MB)"><input ref={photo2UploadInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setUploadFile2(e.target.files?.[0]||null)}/></Field>
+        <button className="btn justify-self-start" disabled={working||!uploadFile2} onClick={()=>uploadSchoolPhoto("photoUrl2")}><School size={15}/> দ্বিতীয় ছবি আপলোড</button>
+        <Field label="প্রথম ছবির HTTPS লিংক"><Input value={photo} onChange={setPhoto} placeholder="https://example.com/actual-school.jpg"/></Field>
         <Field label="বিদ্যালয়ের প্রথম ছবির HTTPS লিংক"><Input value={photo} onChange={setPhoto} placeholder="https://..."/></Field>
         <Field label="বিদ্যালয়ের দ্বিতীয় ছবির HTTPS লিংক"><Input value={photo2} onChange={setPhoto2} placeholder="https://..."/></Field>
         {photo&&<img key={photo} src={photo} alt="প্রথম ছবি" className="max-w-sm w-full rounded" onError={e=>e.currentTarget.style.display="none"}/>}
