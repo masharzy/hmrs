@@ -711,8 +711,10 @@ export async function POST(req) {
         if(value&&!/^https:\/\/[^\s]+$/i.test(value))return fail("শুধুমাত্র সঠিক HTTPS ছবি URL গ্রহণযোগ্য");
         values[key]=value;
       }
-      for(const key of ["principalName","principalDesignation","assistantPrincipalName","assistantPrincipalDesignation","staffManagerName","staffManagerDesignation","subtitle"])
+      for(const key of ["principalName","principalDesignation","assistantPrincipalName","assistantPrincipalDesignation","staffManagerName","staffManagerDesignation"])
         values[key]=cleanText(body[key],350);
+      // Keep the full public school description instead of silently truncating it with short profile fields.
+      values.subtitle=cleanText(body.subtitle,3000);
       await store.collection("settings").doc("school").set({ ...values, updatedAt: iso() }, { merge: true });
       await audit(actor, action, "school"); return json({ ok: true });
     }
