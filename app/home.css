@@ -299,3 +299,5 @@
 .hmrs-home-notice-button:hover{background:#b91f49;transform:translateY(-2px)}
 .hmrs-home-notice-button:focus-visible{outline:3px solid #f7a8bc;outline-offset:3px}
 @media(max-width:600px){.hmrs-home-notice-button{width:100%;margin-top:12px;padding:12px 16px}}
+
+.hmrs-home-services-under-photo .hmrs-home-quick-card:last-child{grid-column:1/-1}
