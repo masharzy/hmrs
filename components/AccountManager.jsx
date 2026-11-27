@@ -127,9 +127,8 @@ export default function AccountManager({actor,request,mutate,working,error}){
     <td>{toAsciiDigits(u.phone||"—")}</td><td>{(u.roles||[u.role]).map(r=>roles[r]).filter(Boolean).join(" + ")}</td>
     <td>{[...new Set([...(u.teachingClasses||[]),...(u.classTeacherClasses||[]),...(u.assignedClasses||[])])].map(toAsciiDigits).join(", ")||"—"}</td>
     <td className="hmrs-teacher-subject-summary">{(u.teachingSubjects||[]).map(id=>enSubject(id,TEACHER_SUBJECT_OPTIONS.find(s=>s.id===id)?.name)||id).join(", ")||"—"}</td>
-    <td><div className="inline-actions"><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> Edit</button>
-     <button className="btn sm" type="button" onClick={()=>{setLocalError("");setResetPin("");setModal({kind:"reset",user:u})}}><KeyRound size={14}/> PIN Reset</button>
-     <button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> Delete</button></div></td>
+    <td><div className="inline-actions">{["assistant_principal","staff_manager"].includes(u.role)?null:<><button className="btn sm" type="button" onClick={()=>openEdit(u)}><Pencil size={14}/> Edit</button><button className="btn sm danger" type="button" onClick={()=>{setLocalError("");setModal({kind:"delete",user:u})}}><Trash2 size={14}/> Delete</button></>}
+     <button className="btn sm" type="button" onClick={()=>{setLocalError("");setResetPin("");setModal({kind:"reset",user:u})}}><KeyRound size={14}/> PIN Reset</button></div></td>
    </tr>)}
   </tbody></table>{loading?<p className="empty">Loading teachers…</p>:!items.length&&<p className="empty">No teachers found.</p>}</div>
   <div className="hmrs-sheet-bottom"><span>{toAsciiDigits(total)} teachers · Page {toAsciiDigits(page)} / {toAsciiDigits(maxPage)}</span>
