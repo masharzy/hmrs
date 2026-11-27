@@ -292,3 +292,12 @@
  .hmrs-home-people-under-services .hmrs-leader-card{padding:10px}
  .hmrs-home-people-under-services .hmrs-teacher-grid{gap:8px}
 }
+
+
+/* Notice shortcut directly beneath the school description. */
+.hmrs-home-notice-button{display:inline-flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;padding:12px 20px;border-radius:13px;background:#d92d5b;color:#fff;font-size:16px;font-weight:800;box-shadow:0 10px 22px #d92d5b30;transition:transform .18s,background .18s}
+.hmrs-home-notice-button:hover{background:#b91f49;transform:translateY(-2px)}
+.hmrs-home-notice-button:focus-visible{outline:3px solid #f7a8bc;outline-offset:3px}
+@media(max-width:600px){.hmrs-home-notice-button{width:100%;margin-top:12px;padding:12px 16px}}
+
+.hmrs-home-services-under-photo .hmrs-home-quick-card:last-child{grid-column:1/-1}
