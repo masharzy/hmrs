@@ -599,7 +599,7 @@ export default function DashboardPortal() {
          <Field label="পদবি"><input value={schoolProfiles[key+"Designation"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"Designation"]:e.target.value}))}/></Field>
          <Field label="ছবির HTTPS লিংক"><input value={schoolProfiles[key+"PhotoUrl"]} onChange={e=>setSchoolProfiles(v=>({...v,[key+"PhotoUrl"]:e.target.value}))} placeholder="https://..."/></Field>
         </div>)}
-        <Field label="Short School Description"><textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)}/></Field>
+        <Field label="বিদ্যালয়ের সংক্ষিপ্ত বর্ণনা (সর্বোচ্চ ৩০০০ অক্ষর)"><textarea rows={8} maxLength={3000} value={subtitle} onChange={e=>setSubtitle(e.target.value)} placeholder="বিদ্যালয়ের পরিচিতি, ইতিহাস ও শিক্ষার লক্ষ্য লিখুন..."/></Field>
         <button className="btn primary justify-self-start" disabled={working} onClick={()=>mutate("settings.update",{photoUrl:photo,photoUrl2:photo2,subtitle,...schoolProfiles})}>সব সেটিংস সংরক্ষণ</button>
        </div></>}
       </>}
