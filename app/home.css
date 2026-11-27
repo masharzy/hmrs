@@ -262,3 +262,33 @@
  .hmrs-home-services-under-photo .hmrs-home-quick-card small{font-size:10.5px}
  .hmrs-home-services-under-photo .hmrs-home-section-heading{margin-bottom:10px}
 }
+
+
+/* Leadership and teacher directory in the open area below homepage login cards. */
+.hmrs-home-people-under-services{display:grid;gap:16px;margin-top:18px}
+.hmrs-home-people-block .hmrs-home-section-heading{margin:0 0 10px}
+.hmrs-home-people-block .hmrs-home-section-heading .section-title,
+.hmrs-home-people-under-services .hmrs-home-teachers .section-title{font-size:clamp(20px,1.9vw,25px);margin:0}
+.hmrs-home-people-under-services .hmrs-leadership-grid{grid-template-columns:1fr;gap:9px}
+.hmrs-home-people-under-services .hmrs-leader-card{padding:11px 13px;gap:12px;border-radius:15px;box-shadow:0 5px 15px #0e13300d}
+.hmrs-home-people-under-services .hmrs-leader-photo{width:58px;height:64px;border-radius:12px}
+.hmrs-home-people-under-services .hmrs-leader-photo svg{width:29px;height:29px}
+.hmrs-home-people-under-services .hmrs-leader-kicker{font-size:8px;letter-spacing:1px}
+.hmrs-home-people-under-services .hmrs-leader-copy h3{font-size:14px;margin:2px 0 0}
+.hmrs-home-people-under-services .hmrs-leader-copy p{font-size:12px;margin:0 0 5px}
+.hmrs-home-people-under-services .hmrs-leader-login{font-size:10px;padding:5px 9px!important}
+.hmrs-home-people-under-services .hmrs-home-teachers{padding-top:0}
+.hmrs-home-people-under-services .hmrs-home-teachers .hmrs-home-section-heading{margin:0 0 10px}
+.hmrs-home-people-under-services .hmrs-home-teachers .hmrs-home-section-heading p{font-size:11px}
+.hmrs-home-people-under-services .hmrs-teacher-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.hmrs-home-people-under-services .hmrs-teacher-card{padding:12px 8px;border-radius:14px;box-shadow:0 5px 15px #0e13300d}
+.hmrs-home-people-under-services .hmrs-teacher-avatar{width:54px;height:54px;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--c)}
+.hmrs-home-people-under-services .hmrs-teacher-avatar b{font-size:24px}
+.hmrs-home-people-under-services .hmrs-teacher-card h3{font-size:13px;line-height:1.4;margin:10px 0 5px}
+.hmrs-home-people-under-services .hmrs-teacher-role{font-size:10px;padding:3px 8px}
+.hmrs-home-people-under-services .hmrs-teacher-card p{font-size:10px;margin-top:5px}
+@media(max-width:600px){
+ .hmrs-home-people-under-services{gap:14px;margin-top:14px}
+ .hmrs-home-people-under-services .hmrs-leader-card{padding:10px}
+ .hmrs-home-people-under-services .hmrs-teacher-grid{gap:8px}
+}

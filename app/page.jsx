@@ -58,6 +58,10 @@ export default function Home(){
    <div className="hmrs-home-quick-grid">{services.map(({href,tag,title,text,Icon},i)=><Link className={"hmrs-home-quick-card hmrs-home-quick-"+i} href={href} key={href}>
     <span className="hmrs-home-quick-icon"><Icon size={26}/></span><span className="hmrs-home-quick-chip">{tag}</span><strong>{title}</strong><small>{text}</small><span className="hmrs-home-quick-arrow"><ArrowRight size={16}/></span></Link>)}</div>
   </section>
+  <div className="hmrs-home-people-under-services">
+   <section className="hmrs-home-people-block"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-violet">SCHOOL LEADERSHIP</span><h2 className="section-title">প্রতিষ্ঠানের দায়িত্বপ্রাপ্ত</h2></div></div><HomeLeadership/></section>
+   <HomeTeachers/>
+  </div>
    </div>
   </div></section>
   <section className="container hmrs-home-stats"><div className="hmrs-home-stats-card">{stats.map(([v,l])=><div className="hmrs-home-stat" key={l}><strong>{v}</strong><span>{l}</span></div>)}</div></section>
@@ -67,8 +71,7 @@ export default function Home(){
    <div className="hmrs-home-groups-label"><ClipboardList size={16} style={{verticalAlign:"-3px"}}/> নবম–দশম শ্রেণির বিভাগসমূহ</div>
    <div className="hmrs-home-groups">{groups.map(g=><div className="hmrs-home-group" key={g.name} style={{"--c":g.c,"--bg":g.bg}}><h3>{g.name}</h3><div>{g.subjects.map(s=><span key={s}>{s}</span>)}</div></div>)}</div>
   </div></section>
-  <section className="container hmrs-leadership-section"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-violet">SCHOOL LEADERSHIP</span><h2 className="section-title">বিদ্যালয় পরিচালনায় দায়িত্বপ্রাপ্ত</h2><p>প্রধান শিক্ষক, সহকারী প্রধান শিক্ষক ও স্টাফ ম্যানেজমেন্ট</p></div></div><HomeLeadership/></section>
-  <HomeTeachers/>
+
   <section className="container hmrs-home-notices" id="notices"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-coral">LATEST UPDATES</span><h2 className="section-title">বিদ্যালয়ের নোটিশ</h2><p>সব নোটিশ এক জায়গায় — স্ক্রল করে দেখুন</p></div></div><NoticeBoard full/></section>
   
  </main><SiteFooter/></>;
