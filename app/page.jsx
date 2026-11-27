@@ -14,7 +14,6 @@ const services=[
  {href:"/login",tag:"ADMIN",title:"প্রশাসনিক লগইন",text:"প্রধান শিক্ষক, সহকারী প্রধান শিক্ষক, স্টাফ ম্যানেজার ও শিক্ষক",Icon:UserCog},
  {href:"/login/guardian",tag:"GUARDIAN",title:"অভিভাবক লগইন",text:"সন্তানের বকেয়া, ফলাফল ও হাজিরা",Icon:Users},
  {href:"/login/student",tag:"STUDENT",title:"শিক্ষার্থী লগইন",text:"ফলাফল, হাজিরা ও ব্যক্তিগত তথ্য",Icon:GraduationCap},
- {href:"#notices",tag:"NOTICE",title:"নোটিশ বোর্ড",text:"বিদ্যালয়ের সর্বশেষ বিজ্ঞপ্তি",Icon:Bell}
 ];
 const admissionLink={href:"/admission"};
 const features=[
