@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Bell, BookOpenCheck, CalendarCheck, CalendarDays, ClipboardList, FileText, GraduationCap, MapPin, Megaphone, School, ShieldCheck, Sparkles, UserCog, UserPlus, Users } from "lucide-react";
+import { ArrowRight, Bell, BookOpenCheck, CalendarCheck, CalendarDays, FileText, GraduationCap, MapPin, Megaphone, School, ShieldCheck, Sparkles, UserCog, UserPlus, Users } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
-import NoticeBoard from "../components/NoticeBoard";
 import SchoolGallery from "../components/SchoolGallery";
 import HomeSchoolDescription from "../components/HomeSchoolDescription";
 import HomeLeadership from "../components/HomeLeadership";
@@ -45,6 +44,12 @@ export default function Home(){
      <span><i style={{background:"#007a5e"}}><Users size={18}/></i> শিক্ষার্থী ও শিক্ষক সেবা</span>
      <span><i style={{background:"#6a3de8"}}><Sparkles size={18}/></i> শিক্ষা • শৃঙ্খলা • মানবিকতা</span>
     </div>
+    <section className="hmrs-home-classes-left">
+     <div className="hmrs-home-left-heading"><span className="hmrs-home-eyebrow tone-violet">CLASSES &amp; GROUPS</span><h2>শ্রেণি ও বিভাগ</h2><p>ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত পাঠদান</p></div>
+     <div className="hmrs-home-class-row">{classes.map(([n,c])=><div className="hmrs-home-class" key={n} style={{"--c":c}}><strong>{n}</strong><span>শ্রেণি</span></div>)}</div>
+     <div className="hmrs-home-groups-label">নবম–দশম শ্রেণির বিভাগসমূহ</div>
+     <div className="hmrs-home-groups">{groups.map(g=><div className="hmrs-home-group" key={g.name} style={{"--c":g.c,"--bg":g.bg}}><h3>{g.name}</h3><div>{g.subjects.map(s=><span key={s}>{s}</span>)}</div></div>)}</div>
+    </section>
    </div>
    <div className="hmrs-home-visual">
     <div className="hmrs-home-photo"><SchoolGallery/>
@@ -63,14 +68,6 @@ export default function Home(){
   </div>
    </div>
   </div></section>
-  <section className="hmrs-home-classes"><div className="container">
-   <div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-violet">CLASSES &amp; GROUPS</span><h2 className="section-title">শ্রেণি ও বিভাগ</h2><p>ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত পাঠদান</p></div></div>
-   <div className="hmrs-home-class-row">{classes.map(([n,c])=><div className="hmrs-home-class" key={n} style={{"--c":c}}><strong>{n}</strong><span>শ্রেণি</span></div>)}</div>
-   <div className="hmrs-home-groups-label"><ClipboardList size={16} style={{verticalAlign:"-3px"}}/> নবম–দশম শ্রেণির বিভাগসমূহ</div>
-   <div className="hmrs-home-groups">{groups.map(g=><div className="hmrs-home-group" key={g.name} style={{"--c":g.c,"--bg":g.bg}}><h3>{g.name}</h3><div>{g.subjects.map(s=><span key={s}>{s}</span>)}</div></div>)}</div>
-  </div></section>
-
-  <section className="container hmrs-home-notices" id="notices"><div className="hmrs-home-section-heading"><div><span className="hmrs-home-eyebrow tone-coral">LATEST UPDATES</span><h2 className="section-title">বিদ্যালয়ের নোটিশ</h2><p>সব নোটিশ এক জায়গায় — স্ক্রল করে দেখুন</p></div></div><NoticeBoard full/></section>
   
  </main><SiteFooter/></>;
 }
